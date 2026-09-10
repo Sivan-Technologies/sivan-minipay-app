@@ -75,7 +75,7 @@ export function renderAgreementsList(
       });
     });
 
-    // Release payment via real on-chain transaction
+    // Release payment via wallet cryptographic signature
     container.querySelectorAll('.btn-release-payment').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const btnEl = e.currentTarget as HTMLButtonElement;
@@ -84,28 +84,30 @@ export function renderAgreementsList(
         if (!agr) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Releasing on Celo Mainnet...';
+        btnEl.textContent = '⏳ Waiting for wallet signature...';
 
         try {
-          const txRes = await miniPayService.sendAttributedTransfer({
-            to: agr.contractorAddress as `0x${string}`,
+          // Cryptographically sign the milestone release authorization with the connected wallet
+          const signRes = await miniPayService.signReleaseAuthorization({
+            agreementId: agr.id,
+            contractorAddress: agr.contractorAddress,
             amount: agr.netAmount,
-            currency: agr.currency as any,
+            currency: agr.currency,
           });
 
-          if (!txRes.success || !txRes.txHash) {
-            showToast(`❌ Release failed: ${txRes.error || 'User cancelled'}`);
+          if (!signRes.success || !signRes.signature) {
+            showToast(`❌ Release signature cancelled: ${signRes.error || 'User cancelled'}`);
             btnEl.disabled = false;
             btnEl.textContent = '⚡ Release Payment';
             return;
           }
 
-          agreementsService.updateStatus(id, 'released', undefined, txRes.txHash);
-          showToast(`🎉 Payment settled on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
+          agreementsService.updateStatus(id, 'released', undefined, signRes.signature);
+          showToast(`🎉 Milestone payment signed & authorized by client! Sig: ${signRes.signature.slice(0, 10)}...`);
           render();
         } catch (err: any) {
           console.error('Payment release error:', err);
-          showToast(`❌ Error: ${err.message || 'Transaction failed'}`);
+          showToast(`❌ Error: ${err.message || 'Signing failed'}`);
           btnEl.disabled = false;
           btnEl.textContent = '⚡ Release Payment';
         }
@@ -176,11 +178,15 @@ export function renderAgreementsList(
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
               ✅ Settled on Celo Mainnet<br/>
-              ${agr.releaseTxHash ? `
+              ${agr.releaseTxHash ? (agr.releaseTxHash.length === 66 ? `
                 <a href="https://celoscan.io/tx/${agr.releaseTxHash}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
-                  ${agr.releaseTxHash.slice(0, 18)}... ↗
+                  Tx: ${agr.releaseTxHash.slice(0, 14)}... ↗
                 </a>
-              ` : ''}
+              ` : `
+                <span style="font-size: 10px; color: var(--accent-cyan); font-family: monospace;" title="${agr.releaseTxHash}">
+                  Sig: ${agr.releaseTxHash.slice(0, 14)}...
+                </span>
+              `) : ''}
             </div>
             <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
               Cash Out 🏦

@@ -254,9 +254,9 @@ export async function renderCreateAgreement(
     submitBtn.innerHTML = '<span>⏳ Waiting for wallet confirmation...</span>';
 
     try {
-      // Execute genuine on-chain transfer with attribution tag
+      // Execute genuine on-chain transfer to lock deal under Sivan AI Autonomous Service Agreement
       const txRes = await miniPayService.sendAttributedTransfer({
-        to: contractorAddress as `0x${string}`,
+        to: CELO_CONFIG.agentWallet,
         amount,
         currency,
       });

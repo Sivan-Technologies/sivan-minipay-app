@@ -4,6 +4,13 @@ import { buildAttributedTransferCalldata } from './celo-client';
 import { attachAttributionSuffix } from '../config/attribution';
 import { parseUnits } from 'viem';
 
+function toSafeDecimalString(value: number | string, decimals: number): string {
+  const str = typeof value === 'number' ? value.toString() : value;
+  if (!str.includes('.')) return str;
+  const [whole, fraction] = str.split('.');
+  return `${whole}.${fraction.slice(0, decimals)}`;
+}
+
 class MiniPayService {
   private state: MiniPayDetectionState = {
     isMiniPay: false,
@@ -181,10 +188,11 @@ class MiniPayService {
 
     try {
       let txHash: string;
+      const safeAmountStr = toSafeDecimalString(params.amount, tokenInfo.decimals);
 
       if (params.currency === 'CELO') {
         // Native CELO transfer with ERC-8021 attribution tag in data field
-        const rawAmount = parseUnits(params.amount.toString(), 18);
+        const rawAmount = parseUnits(safeAmountStr, 18);
         const data = attachAttributionSuffix('0x');
 
         txHash = await provider.request({
@@ -198,7 +206,7 @@ class MiniPayService {
         });
       } else {
         // ERC-20 token transfer (USDC, USDT, cUSD, cNGN) with attribution tag
-        const rawAmount = parseUnits(params.amount.toString(), tokenInfo.decimals);
+        const rawAmount = parseUnits(safeAmountStr, tokenInfo.decimals);
         const data = buildAttributedTransferCalldata(params.to, rawAmount);
 
         txHash = await provider.request({
@@ -216,9 +224,60 @@ class MiniPayService {
       console.error('On-chain transaction failed:', err);
       return {
         success: false,
-        error: err.message?.includes('User rejected')
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
           ? 'Transaction was rejected in wallet'
           : (err.message || 'Transaction failed on Celo Mainnet'),
+      };
+    }
+  }
+
+  /**
+   * Prompts connected wallet (MiniPay or MetaMask) to cryptographically sign
+   * the milestone release authorization using personal_sign.
+   */
+  public async signReleaseAuthorization(params: {
+    agreementId: string;
+    contractorAddress: string;
+    amount: number;
+    currency: string;
+  }): Promise<{ success: boolean; signature?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const message = [
+      'Sivan Ai Autonomous Service Agreement',
+      'Action: Authorize Milestone Payment Release',
+      `Agreement ID: ${params.agreementId}`,
+      `Contractor: ${params.contractorAddress}`,
+      `Settlement Net: ${params.amount} ${params.currency}`,
+      `Attribution Tag: ${CELO_CONFIG.attributionTag}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    try {
+      const hexMessage = `0x${Array.from(new TextEncoder().encode(message))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')}`;
+
+      const signature: string = await provider.request({
+        method: 'personal_sign',
+        params: [hexMessage, this.state.address],
+      });
+
+      return { success: true, signature };
+    } catch (err: any) {
+      console.error('Signing release authorization failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Signature request was rejected in wallet'
+          : (err.message || 'Signature request failed'),
       };
     }
   }

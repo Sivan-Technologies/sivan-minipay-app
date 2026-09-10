@@ -38,9 +38,8 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
 
     <!-- Hero Balance Card -->
     <div class="hero-card">
-      <div class="hero-title">
-        <span>${isConnected ? 'Celo Stablecoin Portfolio' : 'Celo Stablecoin Portfolio (Connect to View)'}</span>
-        <span style="cursor: pointer; font-size: 14px;" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
+        <span style="cursor: pointer; font-size: 13px; color: var(--text-muted); opacity: 0.75;" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
       </div>
       <div class="hero-balance">
         $${totalUsd.toFixed(2)} <span>USD</span>
