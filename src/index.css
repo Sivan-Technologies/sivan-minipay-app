@@ -769,3 +769,99 @@ body {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* ---------------------------------------------------------------------------
+   Custom In-DOM Dropdown (Solves Device Emulation / OS Popover Offset)
+--------------------------------------------------------------------------- */
+.custom-select-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  width: 100%;
+  height: 44px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 14px;
+  color: var(--text-primary);
+  user-select: none;
+  transition: var(--transition-smooth);
+}
+
+.custom-select-trigger:hover,
+.custom-select-trigger.active {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 3px var(--accent-emerald-glow);
+}
+
+.custom-select-trigger .chevron {
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.custom-select-trigger.active .chevron {
+  transform: rotate(180deg);
+}
+
+.custom-select-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  min-width: 140px;
+  background: #0f172a;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.65);
+  z-index: 99;
+  overflow: hidden;
+  display: none;
+  animation: slideDownMenu 0.15s ease-out forwards;
+}
+
+.custom-select-menu.open {
+  display: block;
+}
+
+.custom-select-item {
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.custom-select-item:hover {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent-emerald);
+}
+
+.custom-select-item.selected {
+  background: rgba(16, 185, 129, 0.22);
+  color: var(--accent-emerald);
+  font-weight: 600;
+}
+
+@keyframes slideDownMenu {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

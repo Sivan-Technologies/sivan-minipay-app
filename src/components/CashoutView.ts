@@ -30,13 +30,30 @@ export async function renderCashout(
     <form id="form-cashout">
       <div class="form-group">
         <label class="form-label">Source Asset & Amount</label>
-        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 10px;">
-          <select id="cashout-token" class="form-select">
-            <option value="USDT">USDT (Celo)</option>
-            <option value="USDC">USDC (Celo)</option>
-            <option value="cUSD">cUSD (Celo)</option>
-            <option value="cNGN">cNGN (Celo)</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
+          <!-- In-DOM Token Selector Dropdown -->
+          <div class="custom-select-wrap" id="token-select-wrap">
+            <div class="custom-select-trigger" id="token-select-trigger">
+              <span id="selected-token-display">🟢 USDT</span>
+              <span class="chevron">▾</span>
+            </div>
+            <div class="custom-select-menu" id="token-select-menu">
+              <div class="custom-select-item selected" data-value="USDT" data-label="🟢 USDT">
+                <span>🟢</span> <span>USDT (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="USDC" data-label="💵 USDC">
+                <span>💵</span> <span>USDC (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
+                <span>💲</span> <span>cUSD (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
+                <span>🇳🇬</span> <span>cNGN (Celo)</span>
+              </div>
+            </div>
+            <input type="hidden" id="cashout-token" value="USDT" />
+          </div>
+
           <input 
             type="number" 
             id="cashout-amount" 
@@ -102,7 +119,12 @@ export async function renderCashout(
   `;
 
   const amountEl = container.querySelector('#cashout-amount') as HTMLInputElement;
-  const tokenEl = container.querySelector('#cashout-token') as HTMLSelectElement;
+  const tokenHiddenEl = container.querySelector('#cashout-token') as HTMLInputElement;
+  const tokenTrigger = container.querySelector('#token-select-trigger') as HTMLElement;
+  const tokenMenu = container.querySelector('#token-select-menu') as HTMLElement;
+  const tokenDisplay = container.querySelector('#selected-token-display') as HTMLElement;
+  const tokenItems = container.querySelectorAll('.custom-select-item');
+
   const availEl = container.querySelector('#cashout-avail-bal') as HTMLElement;
   const rateEl = container.querySelector('#q-rate') as HTMLElement;
   const grossEl = container.querySelector('#q-gross') as HTMLElement;
@@ -114,7 +136,7 @@ export async function renderCashout(
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
 
   const updateBalanceDisplay = () => {
-    const tok = tokenEl.value;
+    const tok = tokenHiddenEl.value;
     const tokenBal = balances.find(b => b.symbol === tok);
     const balFormatted = tokenBal?.balanceFormatted || '0.00';
     availEl.textContent = state.address 
@@ -124,7 +146,7 @@ export async function renderCashout(
 
   const updateQuote = () => {
     const amt = parseFloat(amountEl.value) || 0;
-    const token = tokenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const quote = fxQuotesService.getQuote(amt, token);
 
     if (token === 'cNGN') {
@@ -138,14 +160,51 @@ export async function renderCashout(
     netEl.textContent = `₦${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
+  // Dropdown open/close event
+  tokenTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = tokenMenu.classList.contains('open');
+    if (isOpen) {
+      tokenMenu.classList.remove('open');
+      tokenTrigger.classList.remove('active');
+    } else {
+      tokenMenu.classList.add('open');
+      tokenTrigger.classList.add('active');
+    }
+  });
+
+  // Select item event
+  tokenItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = e.currentTarget as HTMLElement;
+      const val = el.dataset.value!;
+      const label = el.dataset.label!;
+
+      tokenHiddenEl.value = val;
+      tokenDisplay.textContent = label;
+
+      tokenItems.forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+
+      tokenMenu.classList.remove('open');
+      tokenTrigger.classList.remove('active');
+
+      updateBalanceDisplay();
+      updateQuote();
+    });
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', () => {
+    tokenMenu?.classList.remove('open');
+    tokenTrigger?.classList.remove('active');
+  });
+
   updateBalanceDisplay();
   updateQuote();
 
   amountEl?.addEventListener('input', updateQuote);
-  tokenEl?.addEventListener('change', () => {
-    updateBalanceDisplay();
-    updateQuote();
-  });
 
   const checkAccount = async () => {
     const val = acctEl.value.trim();
@@ -181,7 +240,7 @@ export async function renderCashout(
     }
 
     const amt = parseFloat(amountEl.value);
-    const tok = tokenEl.value;
+    const tok = tokenHiddenEl.value;
 
     if (!amt || amt <= 0) {
       showToast('⚠️ Please enter a valid cashout amount.');

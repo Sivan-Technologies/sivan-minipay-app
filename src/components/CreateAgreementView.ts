@@ -45,13 +45,30 @@ export async function renderCreateAgreement(
 
       <div class="form-group">
         <label class="form-label">Currency & Amount</label>
-        <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px;">
-          <select id="deal-currency" class="form-select">
-            <option value="USDT">USDT</option>
-            <option value="USDC">USDC</option>
-            <option value="cUSD">cUSD</option>
-            <option value="cNGN">cNGN</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
+          <!-- In-DOM Token Selector Dropdown -->
+          <div class="custom-select-wrap" id="deal-currency-wrap">
+            <div class="custom-select-trigger" id="deal-currency-trigger">
+              <span id="deal-currency-display">🟢 USDT</span>
+              <span class="chevron">▾</span>
+            </div>
+            <div class="custom-select-menu" id="deal-currency-menu">
+              <div class="custom-select-item selected" data-value="USDT" data-label="🟢 USDT">
+                <span>🟢</span> <span>USDT (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="USDC" data-label="💵 USDC">
+                <span>💵</span> <span>USDC (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
+                <span>💲</span> <span>cUSD (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
+                <span>🇳🇬</span> <span>cNGN (Celo)</span>
+              </div>
+            </div>
+            <input type="hidden" id="deal-currency" value="USDT" />
+          </div>
+
           <input 
             type="number" 
             id="deal-amount" 
@@ -114,7 +131,12 @@ export async function renderCreateAgreement(
   `;
 
   const amountInput = container.querySelector('#deal-amount') as HTMLInputElement;
-  const currencySelect = container.querySelector('#deal-currency') as HTMLSelectElement;
+  const currencyHiddenInput = container.querySelector('#deal-currency') as HTMLInputElement;
+  const currencyTrigger = container.querySelector('#deal-currency-trigger') as HTMLElement;
+  const currencyMenu = container.querySelector('#deal-currency-menu') as HTMLElement;
+  const currencyDisplay = container.querySelector('#deal-currency-display') as HTMLElement;
+  const currencyItems = container.querySelectorAll('.custom-select-item');
+
   const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;
   const feeEl = container.querySelector('#calc-fee') as HTMLElement;
@@ -122,7 +144,7 @@ export async function renderCreateAgreement(
   const submitBtn = container.querySelector('#btn-submit-deal') as HTMLButtonElement;
 
   const updateBalanceDisplay = () => {
-    const curr = currencySelect.value as SupportedTokenSymbol;
+    const curr = currencyHiddenInput.value as SupportedTokenSymbol;
     const tokenBal = balances.find(b => b.symbol === curr);
     const balFormatted = tokenBal?.balanceFormatted || '0.00';
     availNote.textContent = state.address 
@@ -132,7 +154,7 @@ export async function renderCreateAgreement(
 
   const updateCalc = () => {
     const amt = parseFloat(amountInput.value) || 0;
-    const curr = currencySelect.value;
+    const curr = currencyHiddenInput.value;
     const fee = Math.round(amt * 0.01 * 100) / 100;
     const net = Math.round((amt - fee) * 100) / 100;
 
@@ -147,14 +169,51 @@ export async function renderCreateAgreement(
     }
   };
 
+  // Dropdown open/close event
+  currencyTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = currencyMenu.classList.contains('open');
+    if (isOpen) {
+      currencyMenu.classList.remove('open');
+      currencyTrigger.classList.remove('active');
+    } else {
+      currencyMenu.classList.add('open');
+      currencyTrigger.classList.add('active');
+    }
+  });
+
+  // Select item event
+  currencyItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = e.currentTarget as HTMLElement;
+      const val = el.dataset.value!;
+      const label = el.dataset.label!;
+
+      currencyHiddenInput.value = val;
+      currencyDisplay.textContent = label;
+
+      currencyItems.forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+
+      currencyMenu.classList.remove('open');
+      currencyTrigger.classList.remove('active');
+
+      updateBalanceDisplay();
+      updateCalc();
+    });
+  });
+
+  // Close dropdown on outside click
+  document.addEventListener('click', () => {
+    currencyMenu?.classList.remove('open');
+    currencyTrigger?.classList.remove('active');
+  });
+
   updateBalanceDisplay();
   updateCalc();
 
   amountInput?.addEventListener('input', updateCalc);
-  currencySelect?.addEventListener('change', () => {
-    updateBalanceDisplay();
-    updateCalc();
-  });
 
   // Back button
   container.querySelector('#btn-cancel-create')?.addEventListener('click', () => onNavigate('dashboard'));
@@ -173,7 +232,7 @@ export async function renderCreateAgreement(
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
     const contractorAddress = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
-    const currency = currencySelect.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const currency = currencyHiddenInput.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 
