@@ -1,0 +1,157 @@
+import { agreementsService } from '../services/agreements.service';
+import type { ServiceAgreement } from '../types/minipay.types';
+import { CELO_CONFIG } from '../config/celo.config';
+
+export function renderAgreementsList(
+  container: HTMLElement,
+  onNavigate: (tab: string) => void,
+  showToast: (msg: string) => void
+) {
+  let filter: 'all' | 'active' | 'released' = 'all';
+
+  const render = () => {
+    const allAgreements = agreementsService.getAll();
+    const filtered = allAgreements.filter(a => {
+      if (filter === 'active') return a.status !== 'released';
+      if (filter === 'released') return a.status === 'released';
+      return true;
+    });
+
+    container.innerHTML = `
+      <div class="section-header" style="margin-bottom: 16px;">
+        <h2 class="section-title">Service Agreements</h2>
+        <button class="btn-secondary" style="width: auto; padding: 6px 12px; font-size: 12px;" id="btn-new-deal-header">
+          + New Deal
+        </button>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button class="btn-secondary filter-btn ${filter === 'all' ? 'active-filter' : ''}" data-filter="all" style="flex: 1; padding: 8px;">
+          All (${allAgreements.length})
+        </button>
+        <button class="btn-secondary filter-btn ${filter === 'active' ? 'active-filter' : ''}" data-filter="active" style="flex: 1; padding: 8px;">
+          Active (${allAgreements.filter(a => a.status !== 'released').length})
+        </button>
+        <button class="btn-secondary filter-btn ${filter === 'released' ? 'active-filter' : ''}" data-filter="released" style="flex: 1; padding: 8px;">
+          Released (${allAgreements.filter(a => a.status === 'released').length})
+        </button>
+      </div>
+
+      <!-- Agreements List -->
+      <div class="agreements-container">
+        ${filtered.length === 0 ? `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 10px;">🤝</div>
+            <div>No agreements found in this view</div>
+          </div>
+        ` : filtered.map(agr => renderCard(agr)).join('')}
+      </div>
+    `;
+
+    // Attach listeners
+    container.querySelector('#btn-new-deal-header')?.addEventListener('click', () => onNavigate('create'));
+
+    container.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        filter = (e.currentTarget as HTMLElement).dataset.filter as any;
+        render();
+      });
+    });
+
+    // Mark as delivered
+    container.querySelectorAll('.btn-mark-delivered').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id!;
+        agreementsService.updateStatus(id, 'delivered', 'https://github.com/deliverable-proof-v1');
+        showToast('📦 Milestone marked as delivered! Client can now inspect & release.');
+        render();
+      });
+    });
+
+    // Release payment
+    container.querySelectorAll('.btn-release-payment').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id!;
+        agreementsService.updateStatus(id, 'released');
+        showToast(`🎉 Funds released on Celo Mainnet with tag ${CELO_CONFIG.attributionTag}!`);
+        render();
+      });
+    });
+
+    // Cash out shortcut
+    container.querySelectorAll('.btn-cashout-shortcut').forEach(btn => {
+      btn.addEventListener('click', () => onNavigate('cashout'));
+    });
+  };
+
+  const renderCard = (agr: ServiceAgreement) => {
+    const isReleased = agr.status === 'released';
+    const isDelivered = agr.status === 'delivered';
+    const formattedAmount = agr.currency === 'USDC' 
+      ? `${agr.amount} USDC` 
+      : `₦${agr.amount.toLocaleString()} cNGN`;
+
+    return `
+      <div class="agreement-card" style="margin-bottom: 16px;">
+        <div class="agreement-header">
+          <div>
+            <div class="agreement-title">${agr.title}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">ID: ${agr.id}</div>
+          </div>
+          <span class="agreement-badge badge-${agr.status}">${agr.status.replace('_', ' ')}</span>
+        </div>
+
+        <p class="agreement-desc">${agr.description}</p>
+
+        <div style="background: var(--bg-glass); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 12px;">
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Contractor:</span>
+            <span style="font-family: monospace; color: var(--text-primary);">${agr.contractorIdentifier}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Destination Address:</span>
+            <span style="font-family: monospace; color: var(--text-secondary); font-size: 11px;">
+              ${agr.contractorAddress.slice(0, 8)}...${agr.contractorAddress.slice(-6)}
+            </span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-muted);">Settlement Net:</span>
+            <span style="font-weight: 700; color: var(--text-emerald);">${formattedAmount}</span>
+          </div>
+        </div>
+
+        ${agr.deliverableProofUrl ? `
+          <div style="font-size: 11px; color: var(--accent-cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
+            <span>📎 Deliverable:</span>
+            <a href="${agr.deliverableProofUrl}" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">
+              View Proof Link
+            </a>
+          </div>
+        ` : ''}
+
+        ${isReleased ? `
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
+              ✅ Settled on Celo Mainnet<br/>
+              <code style="font-size: 10px; color: var(--accent-cyan);">${agr.releaseTxHash?.slice(0, 18)}...</code>
+            </div>
+            <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
+              Cash Out 🏦
+            </button>
+          </div>
+        ` : isDelivered ? `
+          <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="font-size: 13px; padding: 12px;">
+            <span>⚡ Release ${formattedAmount} (Attributed)</span>
+          </button>
+        ` : `
+          <button class="btn-secondary btn-mark-delivered" data-id="${agr.id}" style="font-size: 12px; padding: 10px;">
+            <span>📤 Mark Deliverable as Ready</span>
+          </button>
+        `}
+      </div>
+    `;
+  };
+
+  render();
+}
