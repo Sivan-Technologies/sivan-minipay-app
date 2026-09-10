@@ -49,7 +49,6 @@ export async function renderCreateAgreement(
           <select id="deal-currency" class="form-select">
             <option value="USDT">USDT</option>
             <option value="USDC">USDC</option>
-            <option value="CELO">CELO</option>
             <option value="cUSD">cUSD</option>
             <option value="cNGN">cNGN</option>
           </select>
@@ -174,7 +173,7 @@ export async function renderCreateAgreement(
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
     const contractorAddress = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
-    const currency = currencySelect.value as SupportedTokenSymbol;
+    const currency = currencySelect.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 

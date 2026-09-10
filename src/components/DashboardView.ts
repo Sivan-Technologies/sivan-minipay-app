@@ -12,7 +12,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
 
   const totalUsd = isConnected ? balances.reduce((sum, b) => sum + b.usdValue, 0) : 0;
 
-  const celoBal = balances.find(b => b.symbol === 'CELO')?.balanceFormatted || '0.00';
   const usdtBal = balances.find(b => b.symbol === 'USDT')?.balanceFormatted || '0.00';
   const usdcBal = balances.find(b => b.symbol === 'USDC')?.balanceFormatted || '0.00';
   const cusdBal = balances.find(b => b.symbol === 'cUSD')?.balanceFormatted || '0.00';
@@ -40,7 +39,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     <!-- Hero Balance Card -->
     <div class="hero-card">
       <div class="hero-title">
-        <span>${isConnected ? 'Celo Live Portfolio' : 'Celo Portfolio (Connect to View)'}</span>
+        <span>${isConnected ? 'Celo Stablecoin Portfolio' : 'Celo Stablecoin Portfolio (Connect to View)'}</span>
         <span style="cursor: pointer; font-size: 14px;" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
       </div>
       <div class="hero-balance">
@@ -48,13 +47,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       </div>
 
       <div class="token-pill-row">
-        <div class="token-pill">
-          <span class="token-pill-icon">🟡</span>
-          <div class="token-pill-info">
-            <span class="token-pill-val">${celoBal} CELO</span>
-            <span class="token-pill-lbl">Celo Native</span>
-          </div>
-        </div>
         <div class="token-pill">
           <span class="token-pill-icon">🟢</span>
           <div class="token-pill-info">
@@ -76,11 +68,11 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
             <span class="token-pill-lbl">Celo Dollar</span>
           </div>
         </div>
-        <div class="token-pill" style="grid-column: span 2;">
+        <div class="token-pill">
           <span class="token-pill-icon">🇳🇬</span>
           <div class="token-pill-info">
-            <span class="token-pill-val">₦${cngnBal} cNGN</span>
-            <span class="token-pill-lbl">Compliant Nigerian Naira</span>
+            <span class="token-pill-val">₦${cngnBal}</span>
+            <span class="token-pill-lbl">Compliant Naira</span>
           </div>
         </div>
       </div>

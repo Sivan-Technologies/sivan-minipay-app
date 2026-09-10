@@ -50,7 +50,7 @@ class AgreementsService {
     contractorIdentifier: string;
     contractorAddress: string;
     amount: number;
-    currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' | 'CELO';
+    currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     deadlineHours: number;
     fundingTxHash: string;
   }): ServiceAgreement {
