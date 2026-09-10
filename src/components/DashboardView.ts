@@ -15,6 +15,13 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   const usdtBal = balances.find(b => b.symbol === 'USDT')?.balanceFormatted || '0.00';
   const cngnBal = balances.find(b => b.symbol === 'cNGN')?.balanceFormatted || '0.00';
   const cusdBal = balances.find(b => b.symbol === 'cUSD')?.balanceFormatted || '0.00';
+  const celoBal = balances.find(b => b.symbol === 'CELO');
+  const celoFormatted = celoBal?.balanceFormatted || '0.0000';
+  const celoUsd = celoBal?.usdValue || 0;
+  // Derive live CELO price per token from fetched data
+  const celoPriceDisplay = celoUsd > 0 && parseFloat(celoFormatted) > 0
+    ? `$${(celoUsd / parseFloat(celoFormatted)).toFixed(4)}`
+    : '$0.075 est.';
 
   container.innerHTML = `
     <!-- Network Ribbon -->
@@ -30,12 +37,29 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     <!-- Hero Balance Card -->
     <div class="hero-card">
       <div class="hero-title">
-        <span>Celo Stablecoin Portfolio</span>
+        <span>Celo Portfolio</span>
         <span style="cursor: pointer; font-size: 14px;" id="btn-refresh-bal" title="Refresh balances">🔄</span>
       </div>
       <div class="hero-balance">
         $${totalUsd.toFixed(2)} <span>USD</span>
       </div>
+
+      <!-- CELO native row -->
+      ${parseFloat(celoFormatted) > 0 ? `
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-subtle); margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🟡</span>
+          <div>
+            <div style="font-size: 13px; font-weight: 600;">${celoFormatted} CELO</div>
+            <div style="font-size: 11px; color: var(--text-muted);">Native Gas Token</div>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 13px; font-weight: 600; color: var(--text-emerald);">$${celoUsd.toFixed(2)}</div>
+          <div style="font-size: 11px; color: var(--text-muted);">${celoPriceDisplay}/CELO</div>
+        </div>
+      </div>
+      ` : ''}
 
       <div class="token-pill-row">
         <div class="token-pill">

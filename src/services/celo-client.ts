@@ -15,6 +15,32 @@ export const publicClient = createPublicClient({
   transport: http(CELO_CONFIG.rpcUrl),
 });
 
+// Cache CELO price for 60 seconds to avoid hammering the API
+let _celoPriceUsd: number = 0.075; // fallback: last known ~price
+let _celoPriceLastFetched = 0;
+
+async function getCeloPriceUsd(): Promise<number> {
+  const now = Date.now();
+  if (now - _celoPriceLastFetched < 60_000) return _celoPriceUsd;
+
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=celo&vs_currencies=usd',
+      { signal: AbortSignal.timeout(4000) }
+    );
+    if (res.ok) {
+      const data = await res.json() as { celo?: { usd?: number } };
+      if (data?.celo?.usd) {
+        _celoPriceUsd = data.celo.usd;
+        _celoPriceLastFetched = now;
+      }
+    }
+  } catch {
+    // Network unavailable — keep last cached value
+  }
+  return _celoPriceUsd;
+}
+
 export async function fetchTokenBalances(address: string | null): Promise<TokenBalance[]> {
   if (!address || !address.startsWith('0x') || address.length !== 42) {
     return getDefaultBalances();
@@ -23,11 +49,14 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
   const tokens = CELO_CONFIG.tokens;
   const results: TokenBalance[] = [];
 
+  // Fetch live CELO price once per batch
+  const celoPriceUsd = await getCeloPriceUsd();
+
   for (const [key, token] of Object.entries(tokens)) {
     try {
       if (token.symbol === 'CELO') {
         const rawBal = await publicClient.getBalance({ address: address as `0x${string}` });
-        const formatted = parseFloat(formatUnits(rawBal, token.decimals)).toFixed(2);
+        const formatted = parseFloat(formatUnits(rawBal, token.decimals)).toFixed(4);
         results.push({
           symbol: key as SupportedTokenSymbol,
           name: token.name,
@@ -35,7 +64,7 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
           balanceRaw: rawBal,
           decimals: token.decimals,
           icon: token.icon,
-          usdValue: parseFloat(formatted) * 0.5, // approximate CELO price
+          usdValue: parseFloat(formatted) * celoPriceUsd,
         });
       } else {
         const rawBal = await publicClient.readContract({
@@ -44,7 +73,8 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
           functionName: 'balanceOf',
           args: [address as `0x${string}`],
         });
-        const formatted = parseFloat(formatUnits(rawBal, token.decimals)).toFixed(2);
+        const formatted = parseFloat(formatUnits(rawBal, token.decimals)).toFixed(token.decimals === 18 ? 4 : 2);
+        // cNGN is NGN-pegged; cUSD is $1.00; USDC/USDT are $1.00 stablecoins
         const usdRate = token.symbol === 'cNGN' ? 1 / 1450 : 1.0;
         results.push({
           symbol: key as SupportedTokenSymbol,
@@ -79,7 +109,7 @@ function getDefaultBalances(): TokenBalance[] {
     { symbol: 'USDT', name: 'Tether USD', balanceFormatted: '15.00', balanceRaw: 15000000n, decimals: 6, icon: '🟢', usdValue: 15 },
     { symbol: 'cNGN', name: 'Compliant Naira', balanceFormatted: '36,250.00', balanceRaw: 36250000000n, decimals: 6, icon: '🇳🇬', usdValue: 25 },
     { symbol: 'cUSD', name: 'Celo Dollar', balanceFormatted: '10.00', balanceRaw: 10000000000000000000n, decimals: 18, icon: '💲', usdValue: 10 },
-    { symbol: 'CELO', name: 'Celo Native', balanceFormatted: '12.50', balanceRaw: 12500000000000000000n, decimals: 18, icon: '🟡', usdValue: 6.25 },
+    { symbol: 'CELO', name: 'Celo Native', balanceFormatted: '12.50', balanceRaw: 12500000000000000000n, decimals: 18, icon: '🟡', usdValue: 0.94 },
   ];
 }
 
