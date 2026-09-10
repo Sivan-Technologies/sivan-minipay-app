@@ -1,14 +1,15 @@
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { CELO_CONFIG } from '../config/celo.config';
-
-export const DEMO_EVALUATOR_ADDRESS = '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc';
+import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
+import { buildAttributedTransferCalldata } from './celo-client';
+import { attachAttributionSuffix } from '../config/attribution';
+import { parseUnits } from 'viem';
 
 class MiniPayService {
   private state: MiniPayDetectionState = {
     isMiniPay: false,
     address: null,
     chainId: null,
-    mode: 'desktop_evaluator',
+    mode: 'disconnected',
   };
 
   private listeners: ((state: MiniPayDetectionState) => void)[] = [];
@@ -41,7 +42,7 @@ class MiniPayService {
           isMiniPay: true,
           address: accounts[0] || null,
           chainId,
-          mode: 'live_minipay',
+          mode: accounts[0] ? 'live_minipay' : 'disconnected',
         };
       } catch (err) {
         console.warn('MiniPay provider detected but account access denied:', err);
@@ -49,41 +50,46 @@ class MiniPayService {
           isMiniPay: true,
           address: null,
           chainId: CELO_CONFIG.chainId,
-          mode: 'live_minipay',
+          mode: 'disconnected',
         };
       }
-    } else {
-      const savedMode = localStorage.getItem('sivan_wallet_mode');
-
-      if (savedMode === 'disconnected') {
+    } else if (this.hasInjectedWallet()) {
+      try {
+        const provider = (window as any).ethereum;
+        // eth_accounts checks if already authorized without opening a popup
+        const accounts: string[] = await provider.request({ method: 'eth_accounts' });
+        if (accounts && accounts.length > 0) {
+          const chainIdHex: string = await provider.request({ method: 'eth_chainId' });
+          this.state = {
+            isMiniPay: false,
+            address: accounts[0],
+            chainId: parseInt(chainIdHex, 16),
+            mode: 'connected_wallet',
+          };
+        } else {
+          this.state = {
+            isMiniPay: false,
+            address: null,
+            chainId: CELO_CONFIG.chainId,
+            mode: 'disconnected',
+          };
+        }
+      } catch (err) {
+        console.warn('Error checking existing wallet accounts:', err);
         this.state = {
           isMiniPay: false,
           address: null,
           chainId: CELO_CONFIG.chainId,
           mode: 'disconnected',
         };
-      } else if (savedMode === 'connected_wallet' && this.hasInjectedWallet()) {
-        try {
-          const provider = (window as any).ethereum;
-          const accounts: string[] = await provider.request({ method: 'eth_accounts' });
-          if (accounts.length > 0) {
-            const chainIdHex: string = await provider.request({ method: 'eth_chainId' });
-            this.state = {
-              isMiniPay: false,
-              address: accounts[0],
-              chainId: parseInt(chainIdHex, 16),
-              mode: 'connected_wallet',
-            };
-          } else {
-            this.useEvaluatorMode();
-          }
-        } catch {
-          this.useEvaluatorMode();
-        }
-      } else {
-        // Default to evaluator mode for desktop testing
-        this.useEvaluatorMode();
       }
+    } else {
+      this.state = {
+        isMiniPay: false,
+        address: null,
+        chainId: CELO_CONFIG.chainId,
+        mode: 'disconnected',
+      };
     }
 
     this.notify();
@@ -99,10 +105,10 @@ class MiniPayService {
       const provider = (window as any).ethereum;
       const accounts: string[] = await provider.request({ method: 'eth_requestAccounts' });
       if (!accounts || accounts.length === 0) {
-        return { success: false, error: 'No account selected' };
+        return { success: false, error: 'No account selected in MetaMask' };
       }
 
-      // Check / switch to Celo Mainnet (42220 / 0xa4ec)
+      // Check and switch to Celo Mainnet (42220 / 0xa4ec)
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
@@ -132,8 +138,6 @@ class MiniPayService {
         mode: 'connected_wallet',
       };
 
-      localStorage.setItem('sivan_wallet_mode', 'connected_wallet');
-      localStorage.setItem('sivan_connected_address', accounts[0]);
       this.notify();
       return { success: true };
     } catch (err: any) {
@@ -149,22 +153,74 @@ class MiniPayService {
       chainId: CELO_CONFIG.chainId,
       mode: 'disconnected',
     };
-    localStorage.setItem('sivan_wallet_mode', 'disconnected');
-    localStorage.removeItem('sivan_evaluator_address');
-    localStorage.removeItem('sivan_connected_address');
     this.notify();
   }
 
-  public useEvaluatorMode(demoAddress: string = DEMO_EVALUATOR_ADDRESS) {
-    this.state = {
-      isMiniPay: false,
-      address: demoAddress,
-      chainId: CELO_CONFIG.chainId,
-      mode: 'desktop_evaluator',
-    };
-    localStorage.setItem('sivan_wallet_mode', 'desktop_evaluator');
-    localStorage.setItem('sivan_evaluator_address', demoAddress);
-    this.notify();
+  /**
+   * Sends a genuine transaction on Celo Mainnet via the connected wallet,
+   * appended with Sivan's official ERC-8021 attribution tag.
+   */
+  public async sendAttributedTransfer(params: {
+    to: `0x${string}`;
+    amount: number;
+    currency: SupportedTokenSymbol;
+  }): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const tokenInfo = CELO_CONFIG.tokens[params.currency];
+    if (!tokenInfo) {
+      return { success: false, error: `Unsupported currency: ${params.currency}` };
+    }
+
+    try {
+      let txHash: string;
+
+      if (params.currency === 'CELO') {
+        // Native CELO transfer with ERC-8021 attribution tag in data field
+        const rawAmount = parseUnits(params.amount.toString(), 18);
+        const data = attachAttributionSuffix('0x');
+
+        txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: this.state.address,
+            to: params.to,
+            value: `0x${rawAmount.toString(16)}`,
+            data,
+          }],
+        });
+      } else {
+        // ERC-20 token transfer (USDC, USDT, cUSD, cNGN) with attribution tag
+        const rawAmount = parseUnits(params.amount.toString(), tokenInfo.decimals);
+        const data = buildAttributedTransferCalldata(params.to, rawAmount);
+
+        txHash = await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: this.state.address,
+            to: tokenInfo.address,
+            data,
+          }],
+        });
+      }
+
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('On-chain transaction failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected')
+          ? 'Transaction was rejected in wallet'
+          : (err.message || 'Transaction failed on Celo Mainnet'),
+      };
+    }
   }
 
   public getState(): MiniPayDetectionState {
@@ -191,9 +247,9 @@ class MiniPayService {
     eth.on?.('accountsChanged', (accounts: string[]) => {
       if (accounts.length === 0) {
         this.disconnectWallet();
-      } else if (this.state.mode === 'connected_wallet') {
+      } else {
         this.state.address = accounts[0];
-        localStorage.setItem('sivan_connected_address', accounts[0]);
+        this.state.mode = this.isMiniPayInjected() ? 'live_minipay' : 'connected_wallet';
         this.notify();
       }
     });

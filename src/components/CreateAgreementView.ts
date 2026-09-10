@@ -1,11 +1,16 @@
 import { agreementsService } from '../services/agreements.service';
-import { CELO_CONFIG } from '../config/celo.config';
+import { miniPayService } from '../services/minipay.service';
+import { fetchTokenBalances } from '../services/celo-client';
+import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
 
-export function renderCreateAgreement(
+export async function renderCreateAgreement(
   container: HTMLElement,
   onNavigate: (tab: string) => void,
   showToast: (msg: string) => void
 ) {
+  const state = miniPayService.getState();
+  const balances = await fetchTokenBalances(state.address);
+
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 20px;">
       <h2 class="section-title">New Service Agreement</h2>
@@ -19,46 +24,48 @@ export function renderCreateAgreement(
           type="text" 
           id="deal-title" 
           class="form-input" 
-          placeholder="e.g. Mobile UI Design or Smart Contract Audit" 
+          placeholder="e.g. Mobile App UI Design or Smart Contract Review" 
           required 
-          value="Figma Mobile Prototype"
         />
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="deal-contractor">Contractor Identifier</label>
+        <label class="form-label" for="deal-contractor">Contractor Celo 0x Address</label>
         <input 
           type="text" 
           id="deal-contractor" 
           class="form-input" 
-          placeholder="Phone (+234...), Celo 0x address, or Telegram" 
+          placeholder="0x..." 
           required 
-          value="+234 812 345 6789"
+          pattern="^0x[a-fA-F0-9]{40}$"
+          title="Must be a valid 42-character Celo/Ethereum address starting with 0x"
         />
-        <div class="form-helper">MiniPay user, phone number, or Celo 0x address</div>
+        <div class="form-helper">Destination wallet address where funds will settle upon completion</div>
       </div>
 
       <div class="form-group">
         <label class="form-label">Currency & Amount</label>
         <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px;">
           <select id="deal-currency" class="form-select">
-            <option value="USDC">USDC</option>
             <option value="USDT">USDT</option>
-            <option value="cNGN">cNGN</option>
+            <option value="USDC">USDC</option>
+            <option value="CELO">CELO</option>
             <option value="cUSD">cUSD</option>
+            <option value="cNGN">cNGN</option>
           </select>
           <input 
             type="number" 
             id="deal-amount" 
             class="form-input" 
-            placeholder="Amount" 
-            min="1" 
+            placeholder="0.00" 
+            min="0.01" 
             step="any" 
             required 
-            value="25"
           />
         </div>
-        <div class="form-helper">Recommended realistic test range: 5 to 50 USDC / USDT</div>
+        <div id="avail-bal-note" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 4px;">
+          Available: Loading...
+        </div>
       </div>
 
       <div class="form-group">
@@ -76,43 +83,53 @@ export function renderCreateAgreement(
         <textarea 
           id="deal-desc" 
           class="form-textarea" 
-          placeholder="Describe what must be delivered before milestone funds are released..." 
+          placeholder="Describe deliverables and verification requirements before payment is released..." 
           required
-        >Deliver 8 high-fidelity mobile prototype screens on Figma with click-through navigation.</textarea>
+        ></textarea>
       </div>
 
       <!-- Live Calculation Box -->
       <div class="quote-box" id="calc-box">
         <div class="quote-row">
           <span>Gross Agreement Value:</span>
-          <span id="calc-gross">25.00 USDC</span>
+          <span id="calc-gross">0.00 USDT</span>
         </div>
         <div class="quote-row">
           <span>Sivan Protocol Fee (1%):</span>
-          <span id="calc-fee">0.25 USDC</span>
+          <span id="calc-fee">0.00 USDT</span>
         </div>
         <div class="quote-row">
           <span>Net Contractor Payout:</span>
-          <span id="calc-net">24.75 USDC</span>
+          <span id="calc-net">0.00 USDT</span>
         </div>
         <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-          <span>🏷️ Attributed:</span>
+          <span>🏷️ Official Attribution:</span>
           <code style="color: var(--accent-cyan);">${CELO_CONFIG.attributionTag}</code>
         </div>
       </div>
 
-      <button type="submit" class="btn-primary" id="btn-submit-deal">
-        <span>🔒 Fund & Lock Deal</span>
+      <button type="submit" class="btn-primary" id="btn-submit-deal" style="margin-top: 10px;">
+        <span>🔒 Fund & Lock Deal (Celo Mainnet)</span>
       </button>
     </form>
   `;
 
-  // Calculator update
   const amountInput = container.querySelector('#deal-amount') as HTMLInputElement;
   const currencySelect = container.querySelector('#deal-currency') as HTMLSelectElement;
+  const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;
   const feeEl = container.querySelector('#calc-fee') as HTMLElement;
   const netEl = container.querySelector('#calc-net') as HTMLElement;
+  const submitBtn = container.querySelector('#btn-submit-deal') as HTMLButtonElement;
+
+  const updateBalanceDisplay = () => {
+    const curr = currencySelect.value as SupportedTokenSymbol;
+    const tokenBal = balances.find(b => b.symbol === curr);
+    const balFormatted = tokenBal?.balanceFormatted || '0.00';
+    availNote.textContent = state.address 
+      ? `Wallet Balance: ${balFormatted} ${curr}`
+      : 'Wallet not connected (Connect to fund deal)';
+  };
 
   const updateCalc = () => {
     const amt = parseFloat(amountInput.value) || 0;
@@ -131,33 +148,87 @@ export function renderCreateAgreement(
     }
   };
 
+  updateBalanceDisplay();
+  updateCalc();
+
   amountInput?.addEventListener('input', updateCalc);
-  currencySelect?.addEventListener('change', updateCalc);
+  currencySelect?.addEventListener('change', () => {
+    updateBalanceDisplay();
+    updateCalc();
+  });
 
   // Back button
   container.querySelector('#btn-cancel-create')?.addEventListener('click', () => onNavigate('dashboard'));
 
-  // Form submission
+  // Form submission with real on-chain transaction execution
   const form = container.querySelector('#form-create-deal') as HTMLFormElement;
-  form?.addEventListener('submit', (e) => {
+  form?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const title = (container.querySelector('#deal-title') as HTMLInputElement).value;
-    const contractorIdentifier = (container.querySelector('#deal-contractor') as HTMLInputElement).value;
+
+    if (!state.address) {
+      showToast('⚠️ Please connect your MetaMask or MiniPay wallet first.');
+      const res = await miniPayService.connectMetaMask();
+      if (!res.success) return;
+    }
+
+    const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
+    const contractorAddress = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
-    const currency = currencySelect.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const currency = currencySelect.value as SupportedTokenSymbol;
     const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
-    const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value;
+    const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 
-    const newDeal = agreementsService.createAgreement({
-      title,
-      description,
-      contractorIdentifier,
-      amount,
-      currency,
-      deadlineHours,
-    });
+    if (!amount || amount <= 0) {
+      showToast('⚠️ Please enter a valid amount.');
+      return;
+    }
 
-    showToast(`✅ Deal "${newDeal.title}" funded & locked on Celo!`);
-    onNavigate('deals');
+    // Check available balance
+    const currentBal = balances.find(b => b.symbol === currency);
+    const availableNum = currentBal ? parseFloat(currentBal.balanceFormatted.replace(/,/g, '')) : 0;
+
+    if (amount > availableNum) {
+      showToast(`⚠️ Insufficient ${currency} balance. You have ${availableNum} ${currency}.`);
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>⏳ Waiting for wallet confirmation...</span>';
+
+    try {
+      // Execute genuine on-chain transfer with attribution tag
+      const txRes = await miniPayService.sendAttributedTransfer({
+        to: contractorAddress as `0x${string}`,
+        amount,
+        currency,
+      });
+
+      if (!txRes.success || !txRes.txHash) {
+        showToast(`❌ Transaction failed: ${txRes.error || 'User cancelled'}`);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🔒 Fund & Lock Deal (Celo Mainnet)</span>';
+        return;
+      }
+
+      // Save genuine service agreement
+      agreementsService.createAgreement({
+        title,
+        description,
+        contractorIdentifier: `${contractorAddress.slice(0, 6)}...${contractorAddress.slice(-4)}`,
+        contractorAddress,
+        amount,
+        currency,
+        deadlineHours,
+        fundingTxHash: txRes.txHash,
+      });
+
+      showToast(`🎉 Deal confirmed on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
+      onNavigate('deals');
+    } catch (err: any) {
+      console.error('Deal funding error:', err);
+      showToast(`❌ Error: ${err.message || 'Transaction could not be completed'}`);
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>🔒 Fund & Lock Deal (Celo Mainnet)</span>';
+    }
   });
 }

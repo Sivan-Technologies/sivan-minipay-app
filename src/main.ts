@@ -4,6 +4,7 @@ import { renderDashboard } from './components/DashboardView';
 import { renderCreateAgreement } from './components/CreateAgreementView';
 import { renderAgreementsList } from './components/AgreementsListView';
 import { renderCashout } from './components/CashoutView';
+import { miniPayService } from './services/minipay.service';
 
 type Tab = 'dashboard' | 'deals' | 'create' | 'cashout';
 
@@ -17,6 +18,11 @@ class SivanMiniPayApp {
   constructor() {
     this.initDOM();
     this.render();
+
+    // Re-render views when wallet connects, disconnects, or switches accounts
+    miniPayService.subscribe(() => {
+      this.renderMainContent();
+    });
   }
 
   private initDOM() {

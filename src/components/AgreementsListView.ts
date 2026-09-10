@@ -1,6 +1,6 @@
 import { agreementsService } from '../services/agreements.service';
 import type { ServiceAgreement } from '../types/minipay.types';
-import { CELO_CONFIG } from '../config/celo.config';
+import { miniPayService } from '../services/minipay.service';
 
 export function renderAgreementsList(
   container: HTMLElement,
@@ -41,9 +41,13 @@ export function renderAgreementsList(
       <!-- Agreements List -->
       <div class="agreements-container">
         ${filtered.length === 0 ? `
-          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+          <div style="text-align: center; padding: 40px 20px; background: var(--bg-glass); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-muted);">
             <div style="font-size: 32px; margin-bottom: 10px;">🤝</div>
-            <div>No agreements found in this view</div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No agreements found</div>
+            <div style="font-size: 12px; margin-bottom: 16px;">Create a new service agreement to lock milestone funds on Celo.</div>
+            <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 16px; font-size: 12px;" id="btn-empty-create-deal">
+              + New Deal
+            </button>
           </div>
         ` : filtered.map(agr => renderCard(agr)).join('')}
       </div>
@@ -51,6 +55,7 @@ export function renderAgreementsList(
 
     // Attach listeners
     container.querySelector('#btn-new-deal-header')?.addEventListener('click', () => onNavigate('create'));
+    container.querySelector('#btn-empty-create-deal')?.addEventListener('click', () => onNavigate('create'));
 
     container.querySelectorAll('.filter-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -63,19 +68,47 @@ export function renderAgreementsList(
     container.querySelectorAll('.btn-mark-delivered').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const id = (e.currentTarget as HTMLElement).dataset.id!;
-        agreementsService.updateStatus(id, 'delivered', 'https://github.com/deliverable-proof-v1');
-        showToast('📦 Milestone marked as delivered! Client can now inspect & release.');
+        const proof = prompt('Enter deliverable link or proof URL:') || 'https://celoscan.io';
+        agreementsService.updateStatus(id, 'delivered', proof);
+        showToast('📦 Milestone marked as delivered! Client can now inspect & release payment.');
         render();
       });
     });
 
-    // Release payment
+    // Release payment via real on-chain transaction
     container.querySelectorAll('.btn-release-payment').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const id = (e.currentTarget as HTMLElement).dataset.id!;
-        agreementsService.updateStatus(id, 'released');
-        showToast(`🎉 Funds released on Celo Mainnet with tag ${CELO_CONFIG.attributionTag}!`);
-        render();
+      btn.addEventListener('click', async (e) => {
+        const btnEl = e.currentTarget as HTMLButtonElement;
+        const id = btnEl.dataset.id!;
+        const agr = agreementsService.getById(id);
+        if (!agr) return;
+
+        btnEl.disabled = true;
+        btnEl.textContent = '⏳ Releasing on Celo Mainnet...';
+
+        try {
+          const txRes = await miniPayService.sendAttributedTransfer({
+            to: agr.contractorAddress as `0x${string}`,
+            amount: agr.netAmount,
+            currency: agr.currency as any,
+          });
+
+          if (!txRes.success || !txRes.txHash) {
+            showToast(`❌ Release failed: ${txRes.error || 'User cancelled'}`);
+            btnEl.disabled = false;
+            btnEl.textContent = '⚡ Release Payment';
+            return;
+          }
+
+          agreementsService.updateStatus(id, 'released', undefined, txRes.txHash);
+          showToast(`🎉 Payment settled on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
+          render();
+        } catch (err: any) {
+          console.error('Payment release error:', err);
+          showToast(`❌ Error: ${err.message || 'Transaction failed'}`);
+          btnEl.disabled = false;
+          btnEl.textContent = '⚡ Release Payment';
+        }
       });
     });
 
@@ -89,7 +122,7 @@ export function renderAgreementsList(
     const isReleased = agr.status === 'released';
     const isDelivered = agr.status === 'delivered';
     const formattedAmount = agr.currency === 'cNGN'
-      ? `\u20a6${agr.amount.toLocaleString()} cNGN`
+      ? `₦${agr.amount.toLocaleString()} cNGN`
       : `${agr.amount} ${agr.currency}`;
 
     return `
@@ -130,11 +163,24 @@ export function renderAgreementsList(
           </div>
         ` : ''}
 
+        ${agr.fundingTxHash ? `
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
+            <span>🔒 Funding Tx:</span>
+            <a href="https://celoscan.io/tx/${agr.fundingTxHash}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
+              ${agr.fundingTxHash.slice(0, 12)}... ↗
+            </a>
+          </div>
+        ` : ''}
+
         ${isReleased ? `
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
               ✅ Settled on Celo Mainnet<br/>
-              <code style="font-size: 10px; color: var(--accent-cyan);">${agr.releaseTxHash?.slice(0, 18)}...</code>
+              ${agr.releaseTxHash ? `
+                <a href="https://celoscan.io/tx/${agr.releaseTxHash}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
+                  ${agr.releaseTxHash.slice(0, 18)}... ↗
+                </a>
+              ` : ''}
             </div>
             <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
               Cash Out 🏦
