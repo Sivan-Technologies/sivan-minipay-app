@@ -11,7 +11,7 @@ export function renderHeader(container: HTMLElement) {
     container.innerHTML = `
       <header class="app-header">
         <div class="brand-wrapper">
-          <div class="brand-icon">S</div>
+          <img src="/sivan-logo.png" alt="Sivan Ai" class="brand-icon-img" />
           <div class="brand-text">
             <h1>Sivan Ai <span class="brand-badge">MiniPay</span></h1>
             <div class="brand-tagline">Autonomous Service Agreements</div>

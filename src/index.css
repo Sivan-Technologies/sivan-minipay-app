@@ -106,6 +106,14 @@ body {
   box-shadow: 0 2px 10px var(--accent-emerald-glow);
 }
 
+.brand-icon-img {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  display: block;
+}
+
 .brand-text h1 {
   font-family: var(--font-display);
   font-size: 17px;
