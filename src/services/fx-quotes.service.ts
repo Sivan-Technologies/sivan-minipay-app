@@ -17,10 +17,13 @@ export const PROTOCOL_FEE_PERCENT = 0.01; // 1% Sivan protocol fee
 
 export class FXQuotesService {
   /**
-   * Get firm conversion quote for USDC or cNGN to Nigerian Naira
+   * Get firm conversion quote for USDC, USDT, cUSD, or cNGN to Nigerian Naira
    */
-  public getQuote(sourceAmount: number, sourceCurrency: 'USDC' | 'cNGN' = 'USDC'): FXQuote {
-    const rate = sourceCurrency === 'USDC' ? CURRENT_USDC_NGN_RATE : 1.0;
+  public getQuote(
+    sourceAmount: number, 
+    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC'
+  ): FXQuote {
+    const rate = sourceCurrency === 'cNGN' ? 1.0 : CURRENT_USDC_NGN_RATE;
     const gross = sourceAmount * rate;
     const fee = gross * PROTOCOL_FEE_PERCENT;
     const net = gross - fee;

@@ -40,10 +40,12 @@ export function renderCreateAgreement(
 
       <div class="form-group">
         <label class="form-label">Currency & Amount</label>
-        <div style="display: grid; grid-template-columns: 100px 1fr; gap: 10px;">
+        <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px;">
           <select id="deal-currency" class="form-select">
             <option value="USDC">USDC</option>
+            <option value="USDT">USDT</option>
             <option value="cNGN">cNGN</option>
+            <option value="cUSD">cUSD</option>
           </select>
           <input 
             type="number" 
@@ -56,7 +58,7 @@ export function renderCreateAgreement(
             value="25"
           />
         </div>
-        <div class="form-helper">Recommended realistic test range: 5 to 50 USDC</div>
+        <div class="form-helper">Recommended realistic test range: 5 to 50 USDC / USDT</div>
       </div>
 
       <div class="form-group">
@@ -118,14 +120,14 @@ export function renderCreateAgreement(
     const fee = Math.round(amt * 0.01 * 100) / 100;
     const net = Math.round((amt - fee) * 100) / 100;
 
-    if (curr === 'USDC') {
-      grossEl.textContent = `${amt.toFixed(2)} USDC`;
-      feeEl.textContent = `${fee.toFixed(2)} USDC`;
-      netEl.textContent = `${net.toFixed(2)} USDC`;
-    } else {
+    if (curr === 'cNGN') {
       grossEl.textContent = `₦${amt.toLocaleString()} cNGN`;
       feeEl.textContent = `₦${fee.toLocaleString()} cNGN`;
       netEl.textContent = `₦${net.toLocaleString()} cNGN`;
+    } else {
+      grossEl.textContent = `${amt.toFixed(2)} ${curr}`;
+      feeEl.textContent = `${fee.toFixed(2)} ${curr}`;
+      netEl.textContent = `${net.toFixed(2)} ${curr}`;
     }
   };
 
@@ -142,7 +144,7 @@ export function renderCreateAgreement(
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value;
     const contractorIdentifier = (container.querySelector('#deal-contractor') as HTMLInputElement).value;
     const amount = parseFloat(amountInput.value);
-    const currency = currencySelect.value as 'USDC' | 'cNGN';
+    const currency = currencySelect.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value;
 

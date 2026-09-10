@@ -88,9 +88,9 @@ export function renderAgreementsList(
   const renderCard = (agr: ServiceAgreement) => {
     const isReleased = agr.status === 'released';
     const isDelivered = agr.status === 'delivered';
-    const formattedAmount = agr.currency === 'USDC' 
-      ? `${agr.amount} USDC` 
-      : `₦${agr.amount.toLocaleString()} cNGN`;
+    const formattedAmount = agr.currency === 'cNGN'
+      ? `\u20a6${agr.amount.toLocaleString()} cNGN`
+      : `${agr.amount} ${agr.currency}`;
 
     return `
       <div class="agreement-card" style="margin-bottom: 16px;">

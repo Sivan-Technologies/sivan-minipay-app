@@ -4,7 +4,7 @@ export interface MiniPayDetectionState {
   isMiniPay: boolean;
   address: string | null;
   chainId: number | null;
-  mode: 'live_minipay' | 'desktop_evaluator';
+  mode: 'live_minipay' | 'connected_wallet' | 'desktop_evaluator' | 'disconnected';
 }
 
 export interface TokenBalance {
@@ -26,7 +26,7 @@ export interface ServiceAgreement {
   contractorIdentifier: string; // Phone, Celo 0x, or handle
   contractorAddress: string;
   amount: number;
-  currency: 'USDC' | 'cNGN';
+  currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
   protocolFee: number; // 1%
   netAmount: number;
   status: AgreementStatus;
@@ -41,7 +41,7 @@ export interface ServiceAgreement {
 
 export interface FXQuote {
   sourceAmount: number;
-  sourceCurrency: 'USDC' | 'cNGN';
+  sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
   targetCurrency: 'NGN' | 'USDC';
   exchangeRate: number; // e.g. 1 USDC = 1,450 NGN
   grossOutput: number;
@@ -52,7 +52,7 @@ export interface FXQuote {
 }
 
 export interface BankCashoutRequest {
-  sourceToken: 'USDC' | 'cNGN';
+  sourceToken: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
   amount: number;
   bankCode: string;
   bankName: string;

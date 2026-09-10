@@ -76,6 +76,7 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
 function getDefaultBalances(): TokenBalance[] {
   return [
     { symbol: 'USDC', name: 'USD Coin', balanceFormatted: '25.00', balanceRaw: 25000000n, decimals: 6, icon: '💵', usdValue: 25 },
+    { symbol: 'USDT', name: 'Tether USD', balanceFormatted: '15.00', balanceRaw: 15000000n, decimals: 6, icon: '🟢', usdValue: 15 },
     { symbol: 'cNGN', name: 'Compliant Naira', balanceFormatted: '36,250.00', balanceRaw: 36250000000n, decimals: 6, icon: '🇳🇬', usdValue: 25 },
     { symbol: 'cUSD', name: 'Celo Dollar', balanceFormatted: '10.00', balanceRaw: 10000000000000000000n, decimals: 18, icon: '💲', usdValue: 10 },
     { symbol: 'CELO', name: 'Celo Native', balanceFormatted: '12.50', balanceRaw: 12500000000000000000n, decimals: 18, icon: '🟡', usdValue: 6.25 },

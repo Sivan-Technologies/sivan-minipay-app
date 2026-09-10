@@ -106,7 +106,7 @@ class AgreementsService {
     contractorIdentifier: string;
     contractorAddress?: string;
     amount: number;
-    currency: 'USDC' | 'cNGN';
+    currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     deadlineHours: number;
   }): ServiceAgreement {
     const fee = Math.round(data.amount * 0.01 * 100) / 100;

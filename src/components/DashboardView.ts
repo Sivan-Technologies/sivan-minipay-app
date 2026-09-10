@@ -12,7 +12,9 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   const totalUsd = balances.reduce((sum, b) => sum + b.usdValue, 0);
 
   const usdcBal = balances.find(b => b.symbol === 'USDC')?.balanceFormatted || '0.00';
+  const usdtBal = balances.find(b => b.symbol === 'USDT')?.balanceFormatted || '0.00';
   const cngnBal = balances.find(b => b.symbol === 'cNGN')?.balanceFormatted || '0.00';
+  const cusdBal = balances.find(b => b.symbol === 'cUSD')?.balanceFormatted || '0.00';
 
   container.innerHTML = `
     <!-- Network Ribbon -->
@@ -22,7 +24,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         <span style="color: var(--text-muted);">|</span>
         <span style="font-family: monospace; font-size: 11px;">Tag: ${CELO_CONFIG.attributionTag}</span>
       </div>
-      <span class="evaluator-tag">${state.mode === 'live_minipay' ? 'Mobile WebView' : 'Evaluator Mode'}</span>
+      <span class="evaluator-tag">${state.mode === 'live_minipay' ? 'Mobile WebView' : state.mode === 'connected_wallet' ? 'MetaMask' : 'Evaluator Mode'}</span>
     </div>
 
     <!-- Hero Balance Card -->
@@ -44,10 +46,24 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
           </div>
         </div>
         <div class="token-pill">
+          <span class="token-pill-icon">🟢</span>
+          <div class="token-pill-info">
+            <span class="token-pill-val">${usdtBal} USDT</span>
+            <span class="token-pill-lbl">Tether USD</span>
+          </div>
+        </div>
+        <div class="token-pill">
           <span class="token-pill-icon">🇳🇬</span>
           <div class="token-pill-info">
             <span class="token-pill-val">₦${cngnBal}</span>
             <span class="token-pill-lbl">Compliant Naira</span>
+          </div>
+        </div>
+        <div class="token-pill">
+          <span class="token-pill-icon">💲</span>
+          <div class="token-pill-info">
+            <span class="token-pill-val">${cusdBal} cUSD</span>
+            <span class="token-pill-lbl">Celo Dollar</span>
           </div>
         </div>
       </div>
@@ -85,7 +101,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
           <p class="agreement-desc">${agr.description}</p>
           <div class="agreement-meta">
             <span class="agreement-amount">
-              ${agr.currency === 'USDC' ? `${agr.amount} USDC` : `₦${agr.amount.toLocaleString()} cNGN`}
+              ${agr.currency === 'cNGN' ? `\u20a6${agr.amount.toLocaleString()} cNGN` : `${agr.amount} ${agr.currency}`}
             </span>
             <span style="color: var(--text-muted); font-size: 11px;">
               ${agr.status === 'released' ? 'Settled' : `${agr.deadlineHours}h timer`}

@@ -25,6 +25,13 @@ export const CELO_CONFIG = {
       decimals: 6,
       icon: '💵',
     },
+    USDT: {
+      address: '0x48065fbBE25f71C9282ddf5e1cD6D6A887483D5e' as `0x${string}`,
+      symbol: 'USDT',
+      name: 'Tether USD',
+      decimals: 6,
+      icon: '🟢',
+    },
     cNGN: {
       address: '0xF6829D7393dAe24509eb1E52eE8e572e2E271a4f' as `0x${string}`,
       symbol: 'cNGN',

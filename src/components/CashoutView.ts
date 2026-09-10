@@ -25,9 +25,11 @@ export function renderCashout(
     <form id="form-cashout">
       <div class="form-group">
         <label class="form-label">Source Asset & Amount</label>
-        <div style="display: grid; grid-template-columns: 110px 1fr; gap: 10px;">
+        <div style="display: grid; grid-template-columns: 120px 1fr; gap: 10px;">
           <select id="cashout-token" class="form-select">
             <option value="USDC">USDC (Celo)</option>
+            <option value="USDT">USDT (Celo)</option>
+            <option value="cUSD">cUSD (Celo)</option>
             <option value="cNGN">cNGN (Celo)</option>
           </select>
           <input 
@@ -105,13 +107,13 @@ export function renderCashout(
 
   const updateQuote = () => {
     const amt = parseFloat(amountEl.value) || 0;
-    const token = tokenEl.value as 'USDC' | 'cNGN';
+    const token = tokenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const quote = fxQuotesService.getQuote(amt, token);
 
-    if (token === 'USDC') {
-      rateEl.textContent = `1 USDC = ₦${CURRENT_USDC_NGN_RATE.toLocaleString()}`;
-    } else {
+    if (token === 'cNGN') {
       rateEl.textContent = '1 cNGN = ₦1.00 (Parity)';
+    } else {
+      rateEl.textContent = `1 ${token} = ₦${CURRENT_USDC_NGN_RATE.toLocaleString()}`;
     }
 
     grossEl.textContent = `₦${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
