@@ -1,6 +1,7 @@
 import { fxQuotesService, NIGERIAN_BANKS, CURRENT_USDC_NGN_RATE } from '../services/fx-quotes.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
+import type { SupportedTokenSymbol } from '../config/celo.config';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -263,11 +264,33 @@ export async function renderCashout(
 
     const bankName = bankEl.options[bankEl.selectedIndex].text;
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>⚡ Processing Celo Settlement...</span>';
+    submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 
-    showToast(`🚀 Off-ramp initiated! ${amt} ${tok} dispatched to ${bankName}. NIBSS settlement in 1-2 mins.`);
-    setTimeout(() => {
-      onNavigate('dashboard');
-    }, 1800);
+    try {
+      // Execute on-chain transfer on Celo Mainnet to Sivan / Textile settlement address
+      const txRes = await miniPayService.sendAttributedTransfer({
+        to: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+        amount: amt,
+        currency: tok as SupportedTokenSymbol,
+      });
+
+      if (!txRes.success || !txRes.txHash) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
+        showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
+        return;
+      }
+
+      submitBtn.innerHTML = '<span>🚀 Off-Ramp Dispatched...</span>';
+      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Dispatched to ${bankName}. NIBSS credit in 1-2 mins!`);
+
+      setTimeout(() => {
+        onNavigate('dashboard');
+      }, 2500);
+    } catch (err: any) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
+      showToast(`❌ Off-ramp error: ${err.message || 'Execution failed'}`);
+    }
   });
 }
