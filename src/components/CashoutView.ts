@@ -1,4 +1,4 @@
-import { fxQuotesService, NIGERIAN_BANKS } from '../services/fx-quotes.service';
+import { fxQuotesService } from '../services/fx-quotes.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import type { SupportedTokenSymbol } from '../config/celo.config';
@@ -93,7 +93,7 @@ export async function renderCashout(
       <div class="form-group">
         <label class="form-label" for="cashout-bank">Destination Bank</label>
         <select id="cashout-bank" class="form-select">
-          ${NIGERIAN_BANKS.map(b => `<option value="${b.code}">${b.name}</option>`).join('')}
+          <option value="">Loading banks from Sivan API...</option>
         </select>
       </div>
 
@@ -135,6 +135,14 @@ export async function renderCashout(
   const acctEl = container.querySelector('#cashout-acct') as HTMLInputElement;
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
+
+  // Dynamically load banks from Sivan Payment backend API
+  void fxQuotesService.fetchBanks().then(banks => {
+    bankEl.innerHTML = banks.map(b => `<option value="${b.code}">${b.name}</option>`).join('');
+    if (acctEl.value.trim().length === 10) {
+      void checkAccount();
+    }
+  });
 
   const updateBalanceDisplay = () => {
     const tok = tokenHiddenEl.value;
