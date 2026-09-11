@@ -30,7 +30,7 @@ export function renderHeader(container: HTMLElement) {
       dotClass = 'pulse-dot';
     }
 
-    const netBadgeLabel = isTestnet ? 'Alfajores Testnet' : 'Celo Mainnet';
+    const netBadgeLabel = isTestnet ? 'Celo Sepolia' : 'Celo Mainnet';
     const netBadgeColor = isTestnet ? '#f59e0b' : 'var(--accent-emerald)';
     const netBadgeDot = isTestnet ? 'background: #f59e0b;' : 'background: var(--accent-emerald);';
 
@@ -48,7 +48,7 @@ export function renderHeader(container: HTMLElement) {
           <!-- Network Badge / Toggle -->
           <button class="header-network-pill" id="btn-network-toggle" title="Switch Network (Mainnet / Testnet)" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: ${netBadgeColor};">
             <span style="width: 7px; height: 7px; border-radius: 50%; ${netBadgeDot}"></span>
-            <span style="font-weight: 600;">${isTestnet ? 'Testnet' : 'Mainnet'}</span>
+            <span style="font-weight: 600;">${isTestnet ? 'Sepolia Testnet' : 'Mainnet'}</span>
           </button>
 
           <!-- Wallet Status Pill -->
@@ -81,7 +81,7 @@ export function renderHeader(container: HTMLElement) {
                   🟢 Celo Mainnet (42220)
                 </button>
                 <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer;">
-                  🟡 Alfajores Testnet (44787)
+                  🟡 Celo Sepolia (11142220)
                 </button>
               </div>
 
@@ -94,6 +94,22 @@ export function renderHeader(container: HTMLElement) {
                   Switching networks will prompt MetaMask to switch chains.
                 </div>
               `}
+            </div>
+
+            <!-- Token / USDC Helper -->
+            <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">USDC on ${isTestnet ? 'Sepolia' : 'Mainnet'}</span>
+                <span style="font-size: 10px; color: var(--text-muted);">Decimals: 6</span>
+              </div>
+              <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px; word-break: break-all;">
+                Contract: <code style="font-size: 10px; color: var(--accent-cyan);">${activeNet.tokens.USDC.address}</code>
+              </div>
+              ${isMetaMask ? `
+                <button type="button" class="btn-secondary" id="btn-import-usdc" style="width: 100%; font-size: 11px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
+                  <span>🦊 Import USDC to MetaMask</span>
+                </button>
+              ` : ''}
             </div>
 
             <!-- Connection Status -->
@@ -201,6 +217,16 @@ export function renderHeader(container: HTMLElement) {
       miniPayService.disconnectWallet();
       isModalOpen = false;
       overlay?.classList.remove('active');
+    });
+
+    const importUsdcBtn = container.querySelector('#btn-import-usdc');
+    importUsdcBtn?.addEventListener('click', async () => {
+      const res = await miniPayService.addTokenToWallet('USDC');
+      if (res.success) {
+        alert('USDC token added to MetaMask successfully!');
+      } else {
+        alert(res.error || 'Failed to add USDC token to MetaMask');
+      }
     });
 
     // Copy address handler

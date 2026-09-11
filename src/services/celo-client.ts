@@ -1,5 +1,5 @@
 import { createPublicClient, http, formatUnits, encodeFunctionData, parseAbi } from 'viem';
-import { celo, celoAlfajores } from 'viem/chains';
+import { celo, celoSepolia } from 'viem/chains';
 import { getActiveNetwork, type SupportedTokenSymbol } from '../config/celo.config';
 import type { TokenBalance } from '../types/minipay.types';
 import { attachAttributionSuffix } from '../config/attribution';
@@ -13,7 +13,7 @@ const ERC20_ABI = parseAbi([
 export function getPublicClient() {
   const network = getActiveNetwork();
   return createPublicClient({
-    chain: network.mode === 'testnet' ? celoAlfajores : celo,
+    chain: network.mode === 'testnet' ? celoSepolia : celo,
     transport: http(network.rpcUrl),
   });
 }

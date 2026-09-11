@@ -1,6 +1,7 @@
 import type { MiniPayDetectionState } from '../types/minipay.types';
 import {
   CELO_CONFIG,
+  getActiveNetwork,
   setActiveNetworkMode,
   NETWORKS,
   type NetworkMode,
@@ -121,23 +122,24 @@ class MiniPayService {
         return { success: false, error: 'No account selected in MetaMask' };
       }
 
-      // Check and switch to Celo Mainnet (42220 / 0xa4ec)
+      const activeNet = getActiveNetwork();
+      // Check and switch to the active Celo network (Mainnet or Celo Sepolia)
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0xa4ec' }],
+          params: [{ chainId: activeNet.chainIdHex }],
         });
       } catch (switchError: any) {
-        // Chain not added to wallet - prompt to add Celo Mainnet
+        // Chain not added to wallet - prompt to add active Celo network
         if (switchError.code === 4902) {
           await provider.request({
             method: 'wallet_addEthereumChain',
             params: [{
-              chainId: '0xa4ec',
-              chainName: 'Celo Mainnet',
+              chainId: activeNet.chainIdHex,
+              chainName: activeNet.chainName,
               nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-              rpcUrls: ['https://forno.celo.org'],
-              blockExplorerUrls: ['https://celoscan.io'],
+              rpcUrls: [activeNet.rpcUrl],
+              blockExplorerUrls: [activeNet.blockExplorerUrl],
             }],
           });
         }
@@ -156,6 +158,41 @@ class MiniPayService {
     } catch (err: any) {
       console.error('Failed to connect wallet:', err);
       return { success: false, error: err.message || 'Connection rejected' };
+    }
+  }
+
+  /**
+   * Prompts MetaMask to import an ERC-20 token (e.g. USDC) into the user's asset view.
+   */
+  public async addTokenToWallet(symbol: SupportedTokenSymbol = 'USDC'): Promise<{ success: boolean; error?: string }> {
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'No Web3 wallet detected in browser' };
+    }
+
+    const activeNet = getActiveNetwork();
+    const tokenInfo = activeNet.tokens[symbol];
+    if (!tokenInfo) {
+      return { success: false, error: `Token ${symbol} not found on ${activeNet.chainName}` };
+    }
+
+    try {
+      const provider = (window as any).ethereum;
+      const wasAdded = await provider.request({
+        method: 'wallet_watchAsset',
+        params: {
+          type: 'ERC20',
+          options: {
+            address: tokenInfo.address,
+            symbol: tokenInfo.symbol,
+            decimals: tokenInfo.decimals,
+            image: `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/celo/assets/${tokenInfo.address}/logo.png`,
+          },
+        },
+      });
+      return { success: !!wasAdded };
+    } catch (err: any) {
+      console.error('Failed to add token to wallet:', err);
+      return { success: false, error: err.message || 'Failed to import token' };
     }
   }
 
