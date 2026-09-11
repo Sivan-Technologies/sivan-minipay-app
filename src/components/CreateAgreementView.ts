@@ -1,4 +1,5 @@
 import { agreementsService } from '../services/agreements.service';
+import { agreementFeeService } from '../services/agreement-fee.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
@@ -111,7 +112,7 @@ export async function renderCreateAgreement(
           <span id="calc-gross">0.00 USDT</span>
         </div>
         <div class="quote-row">
-          <span>Sivan Protocol Fee (1%):</span>
+          <span id="calc-fee-label">Sivan Platform Fee:</span>
           <span id="calc-fee">0.00 USDT</span>
         </div>
         <div class="quote-row">
@@ -139,6 +140,7 @@ export async function renderCreateAgreement(
 
   const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;
+  const feeLabel = container.querySelector('#calc-fee-label') as HTMLElement;
   const feeEl = container.querySelector('#calc-fee') as HTMLElement;
   const netEl = container.querySelector('#calc-net') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-deal') as HTMLButtonElement;
@@ -155,17 +157,18 @@ export async function renderCreateAgreement(
   const updateCalc = () => {
     const amt = parseFloat(amountInput.value) || 0;
     const curr = currencyHiddenInput.value;
-    const fee = Math.round(amt * 0.01 * 100) / 100;
-    const net = Math.round((amt - fee) * 100) / 100;
+    const feeResult = agreementFeeService.calculateFee(amt, curr);
 
     if (curr === 'cNGN') {
       grossEl.textContent = `₦${amt.toLocaleString()} cNGN`;
-      feeEl.textContent = `₦${fee.toLocaleString()} cNGN`;
-      netEl.textContent = `₦${net.toLocaleString()} cNGN`;
+      feeLabel.textContent = `Sivan Fee (${feeResult.feeFormula}):`;
+      feeEl.textContent = `₦${feeResult.protocolFee.toLocaleString()} cNGN`;
+      netEl.textContent = `₦${feeResult.netAmount.toLocaleString()} cNGN`;
     } else {
       grossEl.textContent = `${amt.toFixed(2)} ${curr}`;
-      feeEl.textContent = `${fee.toFixed(2)} ${curr}`;
-      netEl.textContent = `${net.toFixed(2)} ${curr}`;
+      feeLabel.textContent = `Sivan Fee (${feeResult.feeFormula}):`;
+      feeEl.textContent = `${feeResult.protocolFee.toFixed(2)} ${curr}`;
+      netEl.textContent = `${feeResult.netAmount.toFixed(2)} ${curr}`;
     }
   };
 

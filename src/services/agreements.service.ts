@@ -1,5 +1,6 @@
 import type { ServiceAgreement, AgreementStatus } from '../types/minipay.types';
 import { CELO_CONFIG } from '../config/celo.config';
+import { agreementFeeService } from './agreement-fee.service';
 
 const STORAGE_KEY = 'sivan_minipay_agreements';
 
@@ -54,8 +55,9 @@ class AgreementsService {
     deadlineHours: number;
     fundingTxHash: string;
   }): ServiceAgreement {
-    const fee = Math.round(data.amount * 0.01 * 100) / 100;
-    const net = Math.round((data.amount - fee) * 100) / 100;
+    const feeCalculation = agreementFeeService.calculateFee(data.amount, data.currency);
+    const fee = feeCalculation.protocolFee;
+    const net = feeCalculation.netAmount;
 
     const newAgreement: ServiceAgreement = {
       id: `agr_${Date.now()}`,
