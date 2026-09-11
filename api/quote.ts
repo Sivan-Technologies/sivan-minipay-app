@@ -8,7 +8,7 @@ export default async function handler(request: Request): Promise<Response> {
   const amount = parseFloat(url.searchParams.get('amount') || '10');
 
   // cNGN is strict 1:1 parity with Nigerian Naira
-  if (token === 'cNGN') {
+  if (token === 'CNGN' || token === 'cNGN') {
     return new Response(
       JSON.stringify({
         token: 'cNGN',
