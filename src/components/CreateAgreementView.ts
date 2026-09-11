@@ -60,12 +60,6 @@ export async function renderCreateAgreement(
               <div class="custom-select-item" data-value="USDC" data-label="💵 USDC">
                 <span>💵</span> <span>USDC (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
-                <span>💲</span> <span>cUSD (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
-                <span>🇳🇬</span> <span>cNGN (Celo)</span>
-              </div>
             </div>
             <input type="hidden" id="deal-currency" value="USDT" />
           </div>
@@ -159,26 +153,19 @@ export async function renderCreateAgreement(
     const curr = currencyHiddenInput.value;
 
     if (amt <= 0) {
-      grossEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
-      feeEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
-      netEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
+      grossEl.textContent = `0.00 ${curr}`;
+      feeEl.textContent = `0.00 ${curr}`;
+      netEl.textContent = `0.00 ${curr}`;
       feeLabel.textContent = 'Sivan Platform Fee:';
       return;
     }
 
     const feeResult = await agreementFeeService.getDynamicFeeQuote(amt, curr);
 
-    if (curr === 'cNGN') {
-      grossEl.textContent = `₦${amt.toLocaleString()} cNGN`;
-      feeLabel.textContent = `Sivan Fee (${feeResult.feeFormula}):`;
-      feeEl.textContent = `₦${feeResult.protocolFee.toLocaleString()} cNGN`;
-      netEl.textContent = `₦${feeResult.netAmount.toLocaleString()} cNGN`;
-    } else {
-      grossEl.textContent = `${amt.toFixed(2)} ${curr}`;
-      feeLabel.textContent = `Sivan Fee (${feeResult.feeFormula}):`;
-      feeEl.textContent = `${feeResult.protocolFee.toFixed(2)} ${curr}`;
-      netEl.textContent = `${feeResult.netAmount.toFixed(2)} ${curr}`;
-    }
+    grossEl.textContent = `${amt.toFixed(2)} ${curr}`;
+    feeLabel.textContent = `Sivan Fee (${feeResult.feeFormula}):`;
+    feeEl.textContent = `${feeResult.protocolFee.toFixed(2)} ${curr}`;
+    netEl.textContent = `${feeResult.netAmount.toFixed(2)} ${curr}`;
   };
 
   // Dropdown open/close event
