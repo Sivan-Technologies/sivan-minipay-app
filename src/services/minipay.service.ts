@@ -1,5 +1,11 @@
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
+import {
+  CELO_CONFIG,
+  setActiveNetworkMode,
+  NETWORKS,
+  type NetworkMode,
+  type SupportedTokenSymbol,
+} from '../config/celo.config';
 import { buildAttributedTransferCalldata } from './celo-client';
 import { attachAttributionSuffix } from '../config/attribution';
 import { parseUnits } from 'viem';
@@ -161,6 +167,45 @@ class MiniPayService {
       mode: 'disconnected',
     };
     this.notify();
+  }
+
+  public async switchNetwork(mode: NetworkMode): Promise<{ success: boolean; error?: string }> {
+    const target = NETWORKS[mode];
+    setActiveNetworkMode(mode);
+
+    if (this.hasInjectedWallet() && !this.isMiniPayInjected()) {
+      try {
+        const provider = (window as any).ethereum;
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: target.chainIdHex }],
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902) {
+          try {
+            const provider = (window as any).ethereum;
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: target.chainIdHex,
+                chainName: target.chainName,
+                nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                rpcUrls: [target.rpcUrl],
+                blockExplorerUrls: [target.blockExplorerUrl],
+              }],
+            });
+          } catch (addError: any) {
+            return { success: false, error: addError.message };
+          }
+        } else {
+          return { success: false, error: switchError.message };
+        }
+      }
+    }
+
+    this.state.chainId = target.chainId;
+    this.notify();
+    return { success: true };
   }
 
   /**

@@ -1,6 +1,6 @@
 import { createPublicClient, http, formatUnits, encodeFunctionData, parseAbi } from 'viem';
-import { celo } from 'viem/chains';
-import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
+import { celo, celoAlfajores } from 'viem/chains';
+import { getActiveNetwork, type SupportedTokenSymbol } from '../config/celo.config';
 import type { TokenBalance } from '../types/minipay.types';
 import { attachAttributionSuffix } from '../config/attribution';
 
@@ -10,10 +10,15 @@ const ERC20_ABI = parseAbi([
   'function transfer(address to, uint256 amount) returns (bool)',
 ]);
 
-export const publicClient = createPublicClient({
-  chain: celo,
-  transport: http(CELO_CONFIG.rpcUrl),
-});
+export function getPublicClient() {
+  const network = getActiveNetwork();
+  return createPublicClient({
+    chain: network.mode === 'testnet' ? celoAlfajores : celo,
+    transport: http(network.rpcUrl),
+  });
+}
+
+export const publicClient = getPublicClient();
 
 export function getZeroBalances(): TokenBalance[] {
   return [
@@ -29,7 +34,9 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
     return getZeroBalances();
   }
 
-  const tokens = CELO_CONFIG.tokens;
+  const network = getActiveNetwork();
+  const client = getPublicClient();
+  const tokens = network.tokens;
   const results: TokenBalance[] = [];
 
   // Strictly the 4 primary stablecoins: USDT, USDC, cUSD, cNGN
@@ -40,7 +47,7 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
     if (!token) continue;
 
     try {
-      const rawBal = await publicClient.readContract({
+      const rawBal = await client.readContract({
         address: token.address,
         abi: ERC20_ABI,
         functionName: 'balanceOf',

@@ -1,14 +1,16 @@
 import { miniPayService } from '../services/minipay.service';
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { CELO_CONFIG } from '../config/celo.config';
+import { getActiveNetwork } from '../config/celo.config';
 
 export function renderHeader(container: HTMLElement) {
   let isModalOpen = false;
 
   const update = (state: MiniPayDetectionState) => {
+    const activeNet = getActiveNetwork();
     const isLiveMiniPay = state.mode === 'live_minipay';
     const isMetaMask = state.mode === 'connected_wallet';
     const isConnected = !!state.address;
+    const isTestnet = activeNet.mode === 'testnet';
 
     const shortAddr = state.address 
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
@@ -28,6 +30,10 @@ export function renderHeader(container: HTMLElement) {
       dotClass = 'pulse-dot';
     }
 
+    const netBadgeLabel = isTestnet ? 'Alfajores Testnet' : 'Celo Mainnet';
+    const netBadgeColor = isTestnet ? '#f59e0b' : 'var(--accent-emerald)';
+    const netBadgeDot = isTestnet ? 'background: #f59e0b;' : 'background: var(--accent-emerald);';
+
     container.innerHTML = `
       <header class="app-header">
         <div class="brand-wrapper">
@@ -38,31 +44,67 @@ export function renderHeader(container: HTMLElement) {
           </div>
         </div>
 
-        <button class="header-status-pill" id="btn-wallet-modal" title="Manage connection">
-          <span class="${dotClass}"></span>
-          <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
-          ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
-        </button>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <!-- Network Badge / Toggle -->
+          <button class="header-network-pill" id="btn-network-toggle" title="Switch Network (Mainnet / Testnet)" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: ${netBadgeColor};">
+            <span style="width: 7px; height: 7px; border-radius: 50%; ${netBadgeDot}"></span>
+            <span style="font-weight: 600;">${isTestnet ? 'Testnet' : 'Mainnet'}</span>
+          </button>
+
+          <!-- Wallet Status Pill -->
+          <button class="header-status-pill" id="btn-wallet-modal" title="Manage connection">
+            <span class="${dotClass}"></span>
+            <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
+            ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
+          </button>
+        </div>
       </header>
 
-      <!-- Wallet Connection Modal -->
+      <!-- Wallet & Network Modal -->
       <div id="wallet-modal-overlay" class="modal-overlay ${isModalOpen ? 'active' : ''}">
         <div class="modal-card">
           <div class="modal-header">
-            <h3 style="font-family: var(--font-display); font-size: 16px;">Wallet Connection</h3>
+            <h3 style="font-family: var(--font-display); font-size: 16px;">Network & Wallet</h3>
             <button class="btn-close-modal" id="btn-close-wallet-modal">✕</button>
           </div>
 
           <div class="modal-body">
+            <!-- Network Mode Switcher -->
+            <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+              <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-main); display: flex; justify-content: space-between; align-items: center;">
+                <span>Active Network:</span>
+                <span style="color: ${netBadgeColor};">${netBadgeLabel}</span>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+                <button type="button" class="btn-network-select ${!isTestnet ? 'active' : ''}" id="btn-select-mainnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${!isTestnet ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${!isTestnet ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${!isTestnet ? 'var(--accent-emerald)' : 'var(--text-muted)'}; cursor: pointer;">
+                  🟢 Celo Mainnet (42220)
+                </button>
+                <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer;">
+                  🟡 Alfajores Testnet (44787)
+                </button>
+              </div>
+
+              ${isLiveMiniPay ? `
+                <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                  ℹ️ Opera MiniPay runs natively on Celo Mainnet.
+                </div>
+              ` : `
+                <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
+                  Switching networks will prompt MetaMask to switch chains.
+                </div>
+              `}
+            </div>
+
             <!-- Connection Status -->
             <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
                 <span style="color: var(--text-muted);">Status:</span>
-                <strong style="color: ${pillColor};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask (Live Celo)' : 'Disconnected'}</strong>
+                <strong style="color: ${pillColor};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask Connected' : 'Disconnected'}</strong>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
-                <span style="color: var(--text-muted);">Network:</span>
-                <span style="color: var(--text-emerald); font-weight: 600;">${CELO_CONFIG.chainName} (${CELO_CONFIG.chainId})</span>
+                <span style="color: var(--text-muted);">RPC URL:</span>
+                <span style="color: var(--text-muted); font-size: 11px;">${activeNet.rpcUrl.replace('https://', '')}</span>
               </div>
               ${state.address ? `
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
@@ -74,8 +116,8 @@ export function renderHeader(container: HTMLElement) {
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
                   <span style="color: var(--text-muted);">Explorer:</span>
-                  <a href="https://celoscan.io/address/${state.address}" target="_blank" style="font-size: 11px; color: var(--accent-cyan); text-decoration: underline;">
-                    View on Celoscan ↗
+                  <a href="${activeNet.blockExplorerUrl}/address/${state.address}" target="_blank" style="font-size: 11px; color: var(--accent-cyan); text-decoration: underline;">
+                    View on Explorer ↗
                   </a>
                 </div>
               ` : ''}
@@ -85,7 +127,7 @@ export function renderHeader(container: HTMLElement) {
             <div style="display: flex; flex-direction: column; gap: 10px;">
               ${!isConnected ? `
                 <button class="btn-primary" id="btn-connect-metamask">
-                  <span>🦊 Connect MetaMask (Celo Mainnet)</span>
+                  <span>🦊 Connect MetaMask</span>
                 </button>
               ` : isMetaMask ? `
                 <button class="btn-secondary" id="btn-disconnect-wallet" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
@@ -104,13 +146,17 @@ export function renderHeader(container: HTMLElement) {
 
     // Event handlers
     const pillBtn = container.querySelector('#btn-wallet-modal');
+    const networkToggleBtn = container.querySelector('#btn-network-toggle');
     const closeBtn = container.querySelector('#btn-close-wallet-modal');
     const overlay = container.querySelector('#wallet-modal-overlay');
 
-    pillBtn?.addEventListener('click', () => {
+    const openModal = () => {
       isModalOpen = true;
       overlay?.classList.add('active');
-    });
+    };
+
+    pillBtn?.addEventListener('click', openModal);
+    networkToggleBtn?.addEventListener('click', openModal);
 
     closeBtn?.addEventListener('click', () => {
       isModalOpen = false;
@@ -124,25 +170,48 @@ export function renderHeader(container: HTMLElement) {
       }
     });
 
-    // Action buttons
-    container.querySelector('#btn-connect-metamask')?.addEventListener('click', async () => {
+    // Network select buttons
+    const btnSelectMainnet = container.querySelector('#btn-select-mainnet');
+    const btnSelectTestnet = container.querySelector('#btn-select-testnet');
+
+    btnSelectMainnet?.addEventListener('click', async () => {
+      await miniPayService.switchNetwork('mainnet');
+      window.location.reload();
+    });
+
+    btnSelectTestnet?.addEventListener('click', async () => {
+      await miniPayService.switchNetwork('testnet');
+      window.location.reload();
+    });
+
+    // Connect / Disconnect handlers
+    const connectBtn = container.querySelector('#btn-connect-metamask');
+    connectBtn?.addEventListener('click', async () => {
       const res = await miniPayService.connectMetaMask();
       if (!res.success) {
-        alert(res.error || 'Failed to connect MetaMask. Ensure MetaMask is installed and unlocked.');
+        alert(res.error || 'Failed to connect MetaMask');
       } else {
         isModalOpen = false;
+        overlay?.classList.remove('active');
       }
     });
 
-    container.querySelector('#btn-disconnect-wallet')?.addEventListener('click', () => {
+    const disconnectBtn = container.querySelector('#btn-disconnect-wallet');
+    disconnectBtn?.addEventListener('click', () => {
       miniPayService.disconnectWallet();
       isModalOpen = false;
+      overlay?.classList.remove('active');
     });
 
-    container.querySelector('#btn-copy-address')?.addEventListener('click', () => {
+    // Copy address handler
+    const copyBtn = container.querySelector('#btn-copy-address');
+    copyBtn?.addEventListener('click', () => {
       if (state.address) {
-        navigator.clipboard?.writeText(state.address);
-        alert(`Copied address: ${state.address}`);
+        void navigator.clipboard.writeText(state.address);
+        copyBtn.textContent = '✓';
+        setTimeout(() => {
+          copyBtn.textContent = '📋';
+        }, 1500);
       }
     });
   };
