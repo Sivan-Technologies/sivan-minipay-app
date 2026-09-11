@@ -1,4 +1,4 @@
-import { fxQuotesService, NIGERIAN_BANKS, CURRENT_USDC_NGN_RATE } from '../services/fx-quotes.service';
+import { fxQuotesService, NIGERIAN_BANKS } from '../services/fx-quotes.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import type { SupportedTokenSymbol } from '../config/celo.config';
@@ -74,7 +74,7 @@ export async function renderCashout(
       <div class="quote-box" id="quote-container">
         <div class="quote-row">
           <span>Live FX Rate:</span>
-          <span id="q-rate">1 USDT = ₦${CURRENT_USDC_NGN_RATE.toLocaleString()}</span>
+          <span id="q-rate" style="font-weight: 600; color: var(--accent-emerald);">Fetching live rate...</span>
         </div>
         <div class="quote-row">
           <span>Gross Payout:</span>
@@ -145,20 +145,39 @@ export async function renderCashout(
       : 'Wallet not connected';
   };
 
-  const updateQuote = () => {
+  let currentLiveRate: number = fxQuotesService.getLatestRate('USDT');
+  let currentRateSource: string = 'Textile RFQ';
+
+  const updateQuoteDisplay = () => {
     const amt = parseFloat(amountEl.value) || 0;
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const quote = fxQuotesService.getQuote(amt, token);
+    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate);
 
     if (token === 'cNGN') {
       rateEl.textContent = '1 cNGN = ₦1.00 (Parity)';
     } else {
-      rateEl.textContent = `1 ${token} = ₦${CURRENT_USDC_NGN_RATE.toLocaleString()}`;
+      rateEl.textContent = `1 ${token} = ₦${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
     }
 
     grossEl.textContent = `₦${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     feeEl.textContent = `-₦${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     netEl.textContent = `₦${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  };
+
+  const fetchAndRefreshRate = async () => {
+    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    if (token === 'cNGN') {
+      currentLiveRate = 1.0;
+      currentRateSource = 'Parity';
+      updateQuoteDisplay();
+      return;
+    }
+
+    rateEl.textContent = `Fetching live ${token} rate...`;
+    const res = await fxQuotesService.fetchLiveRate(token);
+    currentLiveRate = res.rate;
+    currentRateSource = res.source;
+    updateQuoteDisplay();
   };
 
   // Dropdown open/close event
@@ -192,7 +211,7 @@ export async function renderCashout(
       tokenTrigger.classList.remove('active');
 
       updateBalanceDisplay();
-      updateQuote();
+      void fetchAndRefreshRate();
     });
   });
 
@@ -203,9 +222,9 @@ export async function renderCashout(
   });
 
   updateBalanceDisplay();
-  updateQuote();
+  void fetchAndRefreshRate();
 
-  amountEl?.addEventListener('input', updateQuote);
+  amountEl?.addEventListener('input', updateQuoteDisplay);
 
   const checkAccount = async () => {
     const val = acctEl.value.trim();
