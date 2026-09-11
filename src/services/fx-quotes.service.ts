@@ -60,15 +60,15 @@ export class FXQuotesService {
 
     // Default dynamic standard NIBSS banks if network timeout occurs
     return [
-      { code: '058', name: 'Guaranty Trust Bank (GTBank)' },
-      { code: '044', name: 'Access Bank' },
-      { code: '057', name: 'Zenith Bank' },
-      { code: '033', name: 'United Bank for Africa (UBA)' },
-      { code: '011', name: 'First Bank of Nigeria' },
-      { code: '999992', name: 'OPay Digital Services' },
-      { code: '999991', name: 'PalmPay Limited' },
+      { code: '000014', name: 'Access Bank' },
+      { code: '000013', name: 'Guaranty Trust Bank (GTBank)' },
+      { code: '000015', name: 'Zenith Bank' },
+      { code: '000004', name: 'United Bank for Africa (UBA)' },
+      { code: '000016', name: 'First Bank of Nigeria' },
+      { code: '100004', name: 'OPay Digital Services' },
+      { code: '100033', name: 'PalmPay Limited' },
       { code: '090267', name: 'Kuda Microfinance Bank' },
-      { code: '035', name: 'Wema Bank / ALAT' },
+      { code: '000017', name: 'Wema Bank' },
     ];
   }
 
