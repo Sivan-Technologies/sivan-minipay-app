@@ -8,6 +8,10 @@
       "destination": "https://api.sivantech.online/api/v1/:path*"
     },
     {
+      "source": "/api/escrow/:path*",
+      "destination": "https://api.sivantech.online/api/escrow/:path*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

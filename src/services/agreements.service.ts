@@ -45,7 +45,7 @@ class AgreementsService {
     return this.agreements.find(a => a.id === id);
   }
 
-  public createAgreement(data: {
+  public async createAgreement(data: {
     title: string;
     description: string;
     contractorIdentifier: string;
@@ -54,10 +54,12 @@ class AgreementsService {
     currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     deadlineHours: number;
     fundingTxHash: string;
-  }): ServiceAgreement {
-    const feeCalculation = agreementFeeService.calculateFee(data.amount, data.currency);
-    const fee = feeCalculation.protocolFee;
-    const net = feeCalculation.netAmount;
+    protocolFee?: number;
+    netAmount?: number;
+  }): Promise<ServiceAgreement> {
+    const feeCalculation = await agreementFeeService.getDynamicFeeQuote(data.amount, data.currency);
+    const fee = data.protocolFee !== undefined ? data.protocolFee : feeCalculation.protocolFee;
+    const net = data.netAmount !== undefined ? data.netAmount : feeCalculation.netAmount;
 
     const newAgreement: ServiceAgreement = {
       id: `agr_${Date.now()}`,

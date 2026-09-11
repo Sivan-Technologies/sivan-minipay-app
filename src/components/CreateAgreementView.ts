@@ -154,10 +154,19 @@ export async function renderCreateAgreement(
       : 'Wallet not connected (Connect to fund deal)';
   };
 
-  const updateCalc = () => {
+  const updateCalc = async () => {
     const amt = parseFloat(amountInput.value) || 0;
     const curr = currencyHiddenInput.value;
-    const feeResult = agreementFeeService.calculateFee(amt, curr);
+
+    if (amt <= 0) {
+      grossEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
+      feeEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
+      netEl.textContent = curr === 'cNGN' ? '₦0.00 cNGN' : `0.00 ${curr}`;
+      feeLabel.textContent = 'Sivan Platform Fee:';
+      return;
+    }
+
+    const feeResult = await agreementFeeService.getDynamicFeeQuote(amt, curr);
 
     if (curr === 'cNGN') {
       grossEl.textContent = `₦${amt.toLocaleString()} cNGN`;
@@ -272,7 +281,7 @@ export async function renderCreateAgreement(
       }
 
       // Save genuine service agreement
-      agreementsService.createAgreement({
+      await agreementsService.createAgreement({
         title,
         description,
         contractorIdentifier: `${contractorAddress.slice(0, 6)}...${contractorAddress.slice(-4)}`,
