@@ -4,6 +4,7 @@ import { fetchTokenBalances } from '../services/celo-client';
 import { countryService } from '../config/countries.config';
 import { transactionsService } from '../services/transactions.service';
 import type { SupportedTokenSymbol } from '../config/celo.config';
+import { getTokenIconSvg } from '../utils/token-icons';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -60,22 +61,22 @@ export async function renderCashout(
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="token-select-wrap">
             <div class="custom-select-trigger" id="token-select-trigger">
-              <span id="selected-token-display">💵 USDC</span>
+              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="token-select-menu">
-              <div class="custom-select-item selected" data-value="USDC" data-label="💵 USDC">
-                <span>💵</span> <span>USDC (Celo)</span>
+              <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="USDT" data-label="🟢 USDT">
-                <span>🟢</span> <span>USDT (Celo)</span>
+              <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
-                <span>💲</span> <span>cUSD (Celo)</span>
+              <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
               </div>
               ${isNigeria ? `
-                <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
-                  <span>🇳🇬</span> <span>cNGN (Celo)</span>
+                <div class="custom-select-item" data-value="cNGN" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('cNGN', 16)} <span>cNGN (Celo)</span>
                 </div>
               ` : ''}
             </div>
@@ -357,10 +358,9 @@ export async function renderCashout(
       e.stopPropagation();
       const el = e.currentTarget as HTMLElement;
       const val = el.dataset.value!;
-      const label = el.dataset.label!;
 
       tokenHiddenEl.value = val;
-      tokenDisplay.textContent = label;
+      tokenDisplay.innerHTML = `${getTokenIconSvg(val, 16)} <span>${val}</span>`;
 
       tokenItems.forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');

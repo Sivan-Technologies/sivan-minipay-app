@@ -4,6 +4,7 @@ import { agreementsService } from '../services/agreements.service';
 import { CELO_CONFIG } from '../config/celo.config';
 import { countryService } from '../config/countries.config';
 import { fxQuotesService } from '../services/fx-quotes.service';
+import { getTokenIconSvg } from '../utils/token-icons';
 
 export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
   const state = miniPayService.getState();
@@ -63,7 +64,11 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       <div class="hero-primary-crypto">
         <span class="hero-crypto-symbol">${primaryTokenSymbol}</span>
         <span class="hero-crypto-amount">${primaryTokenBal}</span>
-        <span class="hero-refresh-icon" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
+        <span class="hero-refresh-icon" id="btn-refresh-bal" title="Refresh live balances">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+        </span>
       </div>
 
       <div class="hero-fiat-sub">
@@ -74,20 +79,20 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       <!-- Token Balances Strip -->
       <div class="hero-token-strip">
         <div class="mini-token-pill">
-          <span class="pill-dot">🟢</span>
+          <span class="pill-dot">${getTokenIconSvg('USDT', 14)}</span>
           <span class="pill-val">${usdtBal} USDT</span>
         </div>
         <div class="mini-token-pill">
-          <span class="pill-dot">💵</span>
+          <span class="pill-dot">${getTokenIconSvg('USDC', 14)}</span>
           <span class="pill-val">${usdcBal} USDC</span>
         </div>
         <div class="mini-token-pill">
-          <span class="pill-dot">💲</span>
+          <span class="pill-dot">${getTokenIconSvg('cUSD', 14)}</span>
           <span class="pill-val">${cusdBal} cUSD</span>
         </div>
         ${country.code === 'NG' ? `
           <div class="mini-token-pill">
-            <span class="pill-dot">🇳🇬</span>
+            <span class="pill-dot">${getTokenIconSvg('cNGN', 14)}</span>
             <span class="pill-val">₦${cngnBal} cNGN</span>
           </div>
         ` : ''}

@@ -3,6 +3,7 @@ import { agreementFeeService } from '../services/agreement-fee.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
+import { getTokenIconSvg } from '../utils/token-icons';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -50,18 +51,18 @@ export async function renderCreateAgreement(
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="deal-currency-wrap">
             <div class="custom-select-trigger" id="deal-currency-trigger">
-              <span id="deal-currency-display">💵 USDC</span>
+              <span id="deal-currency-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="deal-currency-menu">
-              <div class="custom-select-item selected" data-value="USDC" data-label="💵 USDC">
-                <span>💵</span> <span>USDC (Celo)</span>
+              <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="USDT" data-label="🟢 USDT">
-                <span>🟢</span> <span>USDT (Celo)</span>
+              <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
-                <span>💲</span> <span>cUSD (Celo)</span>
+              <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
+                ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
               </div>
             </div>
             <input type="hidden" id="deal-currency" value="USDC" />
@@ -190,10 +191,9 @@ export async function renderCreateAgreement(
       e.stopPropagation();
       const el = e.currentTarget as HTMLElement;
       const val = el.dataset.value!;
-      const label = el.dataset.label!;
 
       currencyHiddenInput.value = val;
-      currencyDisplay.textContent = label;
+      currencyDisplay.innerHTML = `${getTokenIconSvg(val, 16)} <span>${val}</span>`;
 
       currencyItems.forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');

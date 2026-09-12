@@ -1268,7 +1268,11 @@ body {
 }
 
 .pill-dot {
-  font-size: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  flex-shrink: 0;
 }
 
 .pill-val {
