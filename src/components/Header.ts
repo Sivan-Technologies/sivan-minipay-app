@@ -3,9 +3,11 @@ import type { MiniPayDetectionState } from '../types/minipay.types';
 import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 
-export function renderHeader(container: HTMLElement) {
+export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
   let isCountryModalOpen = false;
+  let isCopied = false;
+  let copyTimeout: any = null;
 
   const update = (state: MiniPayDetectionState) => {
     const activeNet = getActiveNetwork();
@@ -56,11 +58,19 @@ export function renderHeader(container: HTMLElement) {
             <span style="font-weight: 600;">${isTestnet ? 'Sepolia' : 'Mainnet'}</span>
           </button>
 
-          <!-- Wallet Status Pill -->
-          <button class="header-status-pill" id="btn-wallet-modal" title="Manage connection">
-            <span class="${dotClass}"></span>
-            <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
-            ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
+          <!-- Wallet Status Pill (Tap to Copy Address when connected) -->
+          <button class="header-status-pill ${isCopied ? 'copied' : ''}" id="btn-wallet-modal" title="${isConnected ? 'Tap to copy wallet address' : 'Connect wallet'}" style="user-select: none;">
+            ${isCopied ? `
+              <span style="color: var(--accent-emerald); font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px;">
+                <span>✓</span>
+                <span>Copied!</span>
+              </span>
+            ` : `
+              <span class="${dotClass}"></span>
+              <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
+              ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
+              ${isConnected ? `<span style="font-size: 10px; opacity: 0.6; margin-left: 2px;">📋</span>` : ''}
+            `}
           </button>
         </div>
       </header>
@@ -209,11 +219,67 @@ export function renderHeader(container: HTMLElement) {
       });
     });
 
-    // Attach Wallet Modal Listeners
-    container.querySelector('#btn-wallet-modal')?.addEventListener('click', () => {
-      isWalletModalOpen = true;
-      update(miniPayService.getState());
+    // Clipboard copy helper with mobile WebView fallback
+    const copyToClipboard = async (text: string): Promise<boolean> => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (err) {
+        console.warn('navigator.clipboard write failed, trying execCommand fallback:', err);
+      }
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        textarea.style.top = '-9999px';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        return successful;
+      } catch (err) {
+        console.warn('execCommand fallback failed:', err);
+        return false;
+      }
+    };
+
+    // Attach Wallet Pill & Modal Listeners
+    container.querySelector('#btn-wallet-modal')?.addEventListener('click', async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // If not connected, open wallet connection modal
+      if (!isConnected || !state.address) {
+        isWalletModalOpen = true;
+        update(miniPayService.getState());
+        return;
+      }
+
+      // Tap-to-copy wallet address
+      const ok = await copyToClipboard(state.address);
+      if (ok) {
+        isCopied = true;
+        update(miniPayService.getState());
+        if (onToast) {
+          onToast(`Wallet address copied: ${shortAddr}`);
+        }
+        if (copyTimeout) clearTimeout(copyTimeout);
+        copyTimeout = setTimeout(() => {
+          isCopied = false;
+          update(miniPayService.getState());
+        }, 2000);
+      } else {
+        if (onToast) {
+          onToast('Unable to copy address');
+        }
+      }
     });
+
     container.querySelector('#btn-network-toggle')?.addEventListener('click', () => {
       isWalletModalOpen = true;
       update(miniPayService.getState());
@@ -265,10 +331,12 @@ export function renderHeader(container: HTMLElement) {
       miniPayService.disconnectWallet();
     });
 
-    container.querySelector('#btn-copy-address')?.addEventListener('click', () => {
+    container.querySelector('#btn-copy-address')?.addEventListener('click', async () => {
       if (state.address) {
-        navigator.clipboard.writeText(state.address);
-        alert('Address copied to clipboard!');
+        const ok = await copyToClipboard(state.address);
+        if (ok && onToast) {
+          onToast(`Wallet address copied: ${shortAddr}`);
+        }
       }
     });
   };

@@ -161,6 +161,13 @@ body {
   border-color: var(--border-focus);
 }
 
+.header-status-pill.copied {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.25);
+  transform: scale(0.98);
+}
+
 .pulse-dot {
   width: 7px;
   height: 7px;

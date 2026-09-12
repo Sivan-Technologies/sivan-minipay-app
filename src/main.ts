@@ -68,7 +68,7 @@ class SivanMiniPayApp {
   }
 
   private render() {
-    renderHeader(this.headerContainer);
+    renderHeader(this.headerContainer, (msg) => this.showToast(msg));
     this.renderBottomNav();
     this.renderMainContent();
   }
