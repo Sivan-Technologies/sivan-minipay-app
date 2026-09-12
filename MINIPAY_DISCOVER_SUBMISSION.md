@@ -47,7 +47,7 @@ https://minipay.sivantech.online/minipay-icon-512.png
 https://t.me/Sivan_Ai
 
 ### Support Email
-sivantechnology@gmail.com
+support@sivantech.online
 
 ### Terms of Service URL
 https://sivantech.online/terms
@@ -138,6 +138,6 @@ MiniPay requires declaring all origins and APIs contacted by the Mini App:
 ## 6. Service Level Agreement (SLA) & Incident Response Policy
 
 In compliance with MiniPay Discover requirements:
-- Dedicated Support Channels: Telegram community (@Sivan_Ai) and Founder Direct Telegram (@airspexta).
+- Dedicated Support Channels: Telegram community (@Sivan_Ai) and Official Email (support@sivantech.online).
 - Critical Issue Resolution Guarantee: All critical bugs, payment delays, or settlement inquiries reported via in-app support or MiniPay team will be diagnosed and addressed within 24 hours.
 - Clear Ownership Disclaimer: Displayed visibly in-app and in documentation that Sivan Ai is operated independently by Sivan Technology (Abuja, Nigeria) and is not operated by or affiliated with Opera Software or MiniPay.

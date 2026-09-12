@@ -170,26 +170,15 @@ function getTabContent(tab: LegalTab): string {
             <span style="color: var(--accent-emerald);">Join ↗</span>
           </a>
 
-          <a href="mailto:sivantechnology@gmail.com" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text-primary);">
+          <a href="mailto:support@sivantech.online" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text-primary);">
             <div style="display: flex; align-items: center; gap: 8px;">
               <span style="font-size: 16px;">✉️</span>
               <div>
-                <div style="font-weight: 600; font-size: 12px;">Email Support</div>
-                <div style="font-size: 10px; color: var(--text-muted);">sivantechnology@gmail.com</div>
+                <div style="font-weight: 600; font-size: 12px;">Official Support Email</div>
+                <div style="font-size: 10px; color: var(--text-muted);">support@sivantech.online</div>
               </div>
             </div>
             <span style="color: var(--accent-cyan);">Email ↗</span>
-          </a>
-
-          <a href="https://t.me/airspexta" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text-primary);">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">🛡️</span>
-              <div>
-                <div style="font-weight: 600; font-size: 12px;">Founder Direct Telegram</div>
-                <div style="font-size: 10px; color: var(--text-muted);">@airspexta • Samson Micheal (Abuja)</div>
-              </div>
-            </div>
-            <span style="color: var(--accent-emerald);">Chat ↗</span>
           </a>
         </div>
 
