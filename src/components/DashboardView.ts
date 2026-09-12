@@ -30,14 +30,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     ? fiatTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })
     : fiatTotal.toFixed(2);
 
-  const modeLabel = state.mode === 'live_minipay'
-    ? 'MiniPay Mobile'
-    : state.mode === 'connected_wallet'
-      ? 'MetaMask'
-      : 'Disconnected';
-
-  const modeBadgeColor = isConnected ? 'var(--accent-emerald)' : 'var(--text-muted)';
-
   // Display total Digital Dollar balance in USD (USDC + USDT + cUSD)
   const usdStableTotal = balances
     .filter(b => b.symbol === 'USDC' || b.symbol === 'USDT' || b.symbol === 'cUSD')
@@ -49,16 +41,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   });
 
   container.innerHTML = `
-    <!-- Network Ribbon -->
-    <div class="network-ribbon">
-      <div class="network-details">
-        <span>⚡ Celo Mainnet</span>
-        <span style="color: var(--text-muted);">|</span>
-        <span style="font-family: monospace; font-size: 11px;">Tag: ${CELO_CONFIG.attributionTag}</span>
-      </div>
-      <span class="evaluator-tag" style="border-color: ${modeBadgeColor}; color: ${modeBadgeColor};">${modeLabel}</span>
-    </div>
-
     <!-- BitGifty-Inspired Available Balance Hero Card -->
     <div class="hero-balance-card">
       <div class="hero-top-row">
@@ -173,24 +155,32 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       `).join('')}
     </div>
 
-    <!-- Clean Minimalist Footer -->
-    <div class="app-clean-footer" style="margin-top: 36px; padding: 24px 12px 110px; text-align: center;">
-      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
-        Sivan Ai is an autonomous payment protocol powered by <strong style="color: var(--text-secondary);">Sivan Technologies</strong>.
-      </div>
-
-      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; font-size: 11px;">
-        <button type="button" class="btn-clean-footer-link" id="link-footer-support" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 4px 6px; transition: color 0.2s ease;">
+    <!-- Ultra-Slick Minimalist Footer (Fonbnk Style) -->
+    <div class="app-clean-footer" style="margin-top: 40px; padding: 24px 12px 110px; text-align: center;">
+      <!-- Links Row -->
+      <div style="display: flex; justify-content: center; align-items: center; gap: 12px; font-size: 12px; margin-bottom: 12px;">
+        <button type="button" class="btn-clean-footer-link" id="link-footer-support" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 4px 6px; transition: color 0.2s ease;">
           Support
         </button>
         <span style="color: var(--border-subtle); opacity: 0.6;">|</span>
-        <button type="button" class="btn-clean-footer-link" id="link-footer-terms" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 4px 6px; transition: color 0.2s ease;">
+        <button type="button" class="btn-clean-footer-link" id="link-footer-terms" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 4px 6px; transition: color 0.2s ease;">
           Terms
         </button>
         <span style="color: var(--border-subtle); opacity: 0.6;">|</span>
-        <button type="button" class="btn-clean-footer-link" id="link-footer-privacy" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; padding: 4px 6px; transition: color 0.2s ease;">
+        <button type="button" class="btn-clean-footer-link" id="link-footer-privacy" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 12px; padding: 4px 6px; transition: color 0.2s ease;">
           Privacy Policy
         </button>
+      </div>
+
+      <!-- Powered by Sivan Technologies -->
+      <div style="font-size: 12px; color: var(--text-muted); font-weight: 500; display: flex; justify-content: center; align-items: center; gap: 6px; margin-bottom: 8px;">
+        <span>Powered by</span>
+        <span style="color: var(--accent-emerald); font-weight: 700; letter-spacing: -0.01em;">Sivan Technologies</span>
+      </div>
+
+      <!-- Subtle Network & Attribution Tag Proof -->
+      <div style="font-size: 10px; color: var(--text-muted); opacity: 0.55; letter-spacing: 0.02em;">
+        ⚡ Celo Mainnet · Tag: ${CELO_CONFIG.attributionTag}
       </div>
     </div>
   `;
