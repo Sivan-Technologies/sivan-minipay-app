@@ -434,21 +434,25 @@ body {
 }
 
 .action-tile-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-full);
-  background: rgba(16, 185, 129, 0.12);
-  color: var(--accent-emerald);
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.action-tile-icon svg {
+  width: 32px;
+  height: 32px;
+  fill: #ffffff;
 }
 
 .action-tile-title {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
 /* ---------------------------------------------------------------------------
@@ -794,12 +798,23 @@ body {
 }
 
 .nav-icon {
-  font-size: 20px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: var(--transition-smooth);
 }
 
-.nav-item.active .nav-icon {
-  transform: scale(1.1);
+.nav-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.nav-item.active .nav-icon svg {
+  transform: scale(1.06);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1274,13 +1289,16 @@ body {
 }
 
 .action-tile-badge {
-  font-size: 9px;
-  font-weight: 700;
-  background: rgba(16, 185, 129, 0.15);
-  color: var(--accent-emerald);
-  padding: 2px 6px;
-  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 2px 8px;
+  border-radius: 12px;
   margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
 }
 
 /* ---------------------------------------------------------------------------
