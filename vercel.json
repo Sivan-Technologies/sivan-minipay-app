@@ -4,12 +4,16 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://api.sivantech.online/api/v1/:path*"
+      "source": "/api/v1/cashout/resolve-account",
+      "destination": "/api/resolve-account"
     },
     {
-      "source": "/api/escrow/:path*",
-      "destination": "https://api.sivantech.online/api/escrow/:path*"
+      "source": "/api/v1/cashout/banks",
+      "destination": "/api/banks"
+    },
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://api.sivantech.online/api/v1/:path*"
     },
     {
       "source": "/((?!api/).*)",
