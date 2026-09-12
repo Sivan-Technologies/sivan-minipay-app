@@ -89,7 +89,8 @@ body {
 .brand-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 7px;
+  margin-left: 8px;
 }
 
 .brand-icon {
