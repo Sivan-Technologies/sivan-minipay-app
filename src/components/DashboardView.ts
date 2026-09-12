@@ -5,6 +5,7 @@ import { CELO_CONFIG } from '../config/celo.config';
 import { countryService } from '../config/countries.config';
 import { fxQuotesService } from '../services/fx-quotes.service';
 import { getTokenIconSvg } from '../utils/token-icons';
+import { openLegalModal } from './LegalSupportModal';
 
 export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
   const state = miniPayService.getState();
@@ -165,6 +166,32 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         </div>
       `).join('')}
     </div>
+
+    <!-- Legal & Support Footer (MiniPay Listing Compliance) -->
+    <div class="app-legal-footer" style="margin-top: 36px; padding: 24px 10px 100px; border-top: 1px solid var(--border-subtle); text-align: center;">
+      <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
+        Sivan Ai is an autonomous payment protocol engineered by <strong>Sivan Technology</strong> (Abuja, Nigeria).<br/>
+        Not operated by or affiliated with Opera Software or MiniPay.
+      </div>
+
+      <div style="display: flex; justify-content: center; align-items: center; gap: 14px; font-size: 11px; margin-bottom: 8px;">
+        <button type="button" class="btn-legal-link" id="link-footer-terms" style="background: none; border: none; color: var(--accent-emerald); cursor: pointer; text-decoration: underline; font-weight: 500; padding: 6px;">
+          Terms of Service
+        </button>
+        <span style="color: var(--border-subtle);">•</span>
+        <button type="button" class="btn-legal-link" id="link-footer-privacy" style="background: none; border: none; color: var(--accent-emerald); cursor: pointer; text-decoration: underline; font-weight: 500; padding: 6px;">
+          Privacy Policy
+        </button>
+        <span style="color: var(--border-subtle);">•</span>
+        <button type="button" class="btn-legal-link" id="link-footer-support" style="background: none; border: none; color: var(--accent-cyan); cursor: pointer; text-decoration: underline; font-weight: 500; padding: 6px;">
+          24/7 Support
+        </button>
+      </div>
+
+      <div style="font-size: 10px; color: var(--text-muted); opacity: 0.7;">
+        Celo Mainnet ERC-8004 Agent #9827 • Attribution Tag: celo_bafcc2e56bd7
+      </div>
+    </div>
   `;
 
   // Attach event handlers
@@ -177,6 +204,11 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   container.querySelector('#tile-deals')?.addEventListener('click', () => onNavigate('deals'));
   container.querySelector('#link-view-all')?.addEventListener('click', () => onNavigate('deals'));
   container.querySelector('#btn-empty-create')?.addEventListener('click', () => onNavigate('create'));
+
+  // Legal & Support listeners
+  container.querySelector('#link-footer-terms')?.addEventListener('click', () => openLegalModal('terms'));
+  container.querySelector('#link-footer-privacy')?.addEventListener('click', () => openLegalModal('privacy'));
+  container.querySelector('#link-footer-support')?.addEventListener('click', () => openLegalModal('support'));
 
   container.querySelectorAll('.agreement-card').forEach(card => {
     card.addEventListener('click', () => onNavigate('deals'));

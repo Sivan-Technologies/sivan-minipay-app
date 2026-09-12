@@ -2,6 +2,7 @@ import { miniPayService } from '../services/minipay.service';
 import type { MiniPayDetectionState } from '../types/minipay.types';
 import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
+import { openLegalModal } from './LegalSupportModal';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -193,6 +194,11 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
                 Disconnect Wallet
               </button>
             `}
+
+            <button type="button" id="btn-modal-legal-support" style="width: 100%; margin-top: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; font-size: 11px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>🛡️</span>
+              <span>Terms of Service, Privacy & 24/7 Support</span>
+            </button>
           </div>
         </div>
       </div>
@@ -329,6 +335,12 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     container.querySelector('#btn-modal-disconnect')?.addEventListener('click', () => {
       isWalletModalOpen = false;
       miniPayService.disconnectWallet();
+    });
+
+    container.querySelector('#btn-modal-legal-support')?.addEventListener('click', () => {
+      isWalletModalOpen = false;
+      update(miniPayService.getState());
+      openLegalModal('support');
     });
 
     container.querySelector('#btn-copy-address')?.addEventListener('click', async () => {

@@ -1,7 +1,7 @@
 {
   "name": "sivan-minipay-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,11 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "typescript": "6.0.3",
+    "vite": "8.3.0"
   },
   "dependencies": {
-    "@celo/attribution-tags": "^0.3.0",
-    "viem": "^2.56.3"
+    "@celo/attribution-tags": "0.3.0",
+    "viem": "2.56.3"
   }
 }
