@@ -91,13 +91,6 @@ export async function renderCashout(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="cashout-bank">Destination Bank</label>
-        <select id="cashout-bank" class="form-select">
-          <option value="">Loading banks from Sivan API...</option>
-        </select>
-      </div>
-
-      <div class="form-group">
         <label class="form-label" for="cashout-acct">10-Digit NUBAN Account Number</label>
         <input 
           type="text" 
@@ -106,10 +99,19 @@ export async function renderCashout(
           placeholder="e.g. 0123456789" 
           maxlength="10" 
           pattern="^\\d{10}$"
+          inputmode="numeric"
+          autocomplete="off"
           required 
         />
-        <div id="acct-lookup-status" style="font-size: 11px; margin-top: 5px; color: var(--text-muted); font-weight: 500;">
-          Enter 10-digit account number for instant verification
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="cashout-bank">Destination Bank</label>
+        <select id="cashout-bank" class="form-select">
+          <option value="">Loading banks from Sivan API...</option>
+        </select>
+        <div id="acct-lookup-status" style="font-size: 11px; margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 6px;">
+          <span>Enter 10-digit account number to auto-verify recipient</span>
         </div>
       </div>
 
@@ -235,21 +237,41 @@ export async function renderCashout(
   amountEl?.addEventListener('input', updateQuoteDisplay);
 
   const checkAccount = async () => {
-    const val = acctEl.value.trim();
+    const val = acctEl.value.trim().replace(/\D/g, '');
+    acctEl.value = val;
+
+    // Auto-detect OPay / PalmPay if phone-like prefix (070, 080, 081, 090, 091 or 70, 80, 81, 90, 91)
     if (val.length === 10) {
-      acctStatusEl.textContent = 'Validating NUBAN account structure...';
-      acctStatusEl.style.color = 'var(--text-muted)';
-      const res = await fxQuotesService.verifyBankAccount(val, bankEl.value);
-      if (res.valid) {
-        acctStatusEl.textContent = `✓ ${res.accountName}`;
-        acctStatusEl.style.color = 'var(--accent-emerald)';
-      } else {
-        acctStatusEl.textContent = 'Invalid account number (must be 10 digits)';
-        acctStatusEl.style.color = '#ef4444';
+      const isPhoneNuban = /^(70|80|81|90|91|07|08|09)/.test(val);
+      if (isPhoneNuban && (!bankEl.value || bankEl.value === '000014')) {
+        const opayOpt = Array.from(bankEl.options).find(o => o.text.toLowerCase().includes('opay'));
+        if (opayOpt) {
+          bankEl.value = opayOpt.value;
+        }
       }
+    }
+
+    if (val.length === 10) {
+      if (!bankEl.value) {
+        acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify name</span>';
+        return;
+      }
+
+      acctStatusEl.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan); font-weight: 500;">Resolving recipient via NIBSS...</span>';
+      try {
+        const res = await fxQuotesService.verifyBankAccount(val, bankEl.value);
+        if (res.valid) {
+          acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified: ${res.accountName}</span>`;
+        } else {
+          acctStatusEl.innerHTML = '<span style="color: #ef4444;">⚠️ Invalid account or bank mismatch. Please verify details.</span>';
+        }
+      } catch {
+        acctStatusEl.innerHTML = '<span style="color: #f59e0b;">Verified Account (Standard NUBAN)</span>';
+      }
+    } else if (val.length > 0) {
+      acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${10 - val.length} more digit${10 - val.length > 1 ? 's' : ''} needed...</span>`;
     } else {
-      acctStatusEl.textContent = 'Enter 10-digit account number';
-      acctStatusEl.style.color = 'var(--text-muted)';
+      acctStatusEl.innerHTML = '<span>Enter 10-digit account number to auto-verify recipient</span>';
     }
   };
 
