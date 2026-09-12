@@ -41,11 +41,11 @@ export function renderAgreementsList(
       <!-- Agreements List -->
       <div class="agreements-container">
         ${filtered.length === 0 ? `
-          <div style="text-align: center; padding: 40px 20px; background: var(--bg-glass); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-muted);">
-            <div style="font-size: 32px; margin-bottom: 10px;">🤝</div>
-            <div style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No agreements found</div>
-            <div style="font-size: 12px; margin-bottom: 16px;">Create a new service agreement to lock milestone funds on Celo.</div>
-            <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 16px; font-size: 12px;" id="btn-empty-create-deal">
+          <div class="empty-agreements-box">
+            <div class="empty-agreements-icon">🤝</div>
+            <div class="empty-agreements-title">No agreements found</div>
+            <div class="empty-agreements-desc">Create a new service agreement to lock milestone funds on Celo.</div>
+            <button class="btn-empty-create" id="btn-empty-create-deal">
               + New Deal
             </button>
           </div>

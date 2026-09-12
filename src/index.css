@@ -570,6 +570,73 @@ body {
 }
 
 /* ---------------------------------------------------------------------------
+   Empty Agreements Box (Centered Card)
+--------------------------------------------------------------------------- */
+.empty-agreements-box {
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--bg-glass);
+  border: 1px dashed var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.empty-agreements-icon {
+  font-size: 32px;
+  margin-bottom: 12px;
+  line-height: 1;
+}
+
+.empty-agreements-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.empty-agreements-desc {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  max-width: 320px;
+  text-align: center;
+}
+
+.btn-empty-create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, var(--accent-emerald), #059669);
+  color: #ffffff;
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 9999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);
+  transition: var(--transition-smooth);
+}
+
+.btn-empty-create:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.38);
+}
+
+.btn-empty-create:active {
+  transform: translateY(0);
+}
+
+/* ---------------------------------------------------------------------------
    Form Elements & Modals
 --------------------------------------------------------------------------- */
 .form-group {

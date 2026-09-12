@@ -126,10 +126,10 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     <div class="agreements-list">
       ${agreements.length === 0 ? `
         <div class="empty-agreements-box">
-          <div style="font-size: 28px; margin-bottom: 8px;">🤝</div>
-          <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No active service agreements yet</div>
-          <div style="font-size: 12px; margin-bottom: 14px; color: var(--text-muted);">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
-          <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 16px; font-size: 12px;" id="btn-empty-create">
+          <div class="empty-agreements-icon">🤝</div>
+          <div class="empty-agreements-title">No active service agreements yet</div>
+          <div class="empty-agreements-desc">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
+          <button class="btn-empty-create" id="btn-empty-create">
             + Create First Deal
           </button>
         </div>
