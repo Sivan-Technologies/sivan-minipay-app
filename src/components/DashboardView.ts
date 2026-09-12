@@ -115,12 +115,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         </div>
         <span class="action-tile-title">Deals (${activeCount})</span>
       </div>
-      <div class="action-tile" id="tile-history">
-        <div class="action-tile-icon-wrap" style="background: rgba(99, 102, 241, 0.15); color: #818cf8);">
-          <span class="action-tile-icon">📜</span>
-        </div>
-        <span class="action-tile-title">History</span>
-      </div>
     </div>
 
     <!-- Active Deals Section -->
@@ -164,7 +158,6 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     renderDashboard(container, onNavigate);
   });
   container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
-  container.querySelector('#tile-history')?.addEventListener('click', () => onNavigate('history'));
   container.querySelector('#tile-create-agreement')?.addEventListener('click', () => onNavigate('create'));
   container.querySelector('#tile-cashout')?.addEventListener('click', () => onNavigate('cashout'));
   container.querySelector('#tile-deals')?.addEventListener('click', () => onNavigate('deals'));

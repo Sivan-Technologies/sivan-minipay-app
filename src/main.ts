@@ -124,10 +124,6 @@ class SivanMiniPayApp {
         <span class="nav-icon">➕</span>
         <span>New Deal</span>
       </button>
-      <button class="nav-item ${this.currentTab === 'history' ? 'active' : ''}" data-tab="history">
-        <span class="nav-icon">📜</span>
-        <span>History</span>
-      </button>
       <button class="nav-item ${this.currentTab === 'cashout' ? 'active' : ''}" data-tab="cashout">
         <span class="nav-icon">🏦</span>
         <span>Cash Out</span>
