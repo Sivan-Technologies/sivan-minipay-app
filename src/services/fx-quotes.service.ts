@@ -65,22 +65,29 @@ export class FXQuotesService {
       return items;
     }
 
-    // For Nigeria, query backend for live NIBSS banks with reliable fallback
+    // For Nigeria, query live NIBSS banks directory from Textile Credit with reliable fallback
     try {
-      let res = await fetch(`${API_BASE}/banks`, { signal: AbortSignal.timeout(3500) }).catch(() => null);
+      let res = await fetch('https://api.textilecredit.com/v2/ramp/banks?provider=busha', {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(4500),
+      }).catch(() => null);
+
+      if (!res || !res.ok) {
+        res = await fetch(`${API_BASE}/banks`, { signal: AbortSignal.timeout(3500) }).catch(() => null);
+      }
       if (!res || !res.ok) {
         res = await fetch(`${FALLBACK_API_BASE}/banks`, { signal: AbortSignal.timeout(3500) }).catch(() => null);
       }
 
       if (res && res.ok) {
         const json = await res.json();
-        const banksList: any[] = json.data || json.banks || [];
+        const banksList: any[] = Array.isArray(json) ? json : (json.data || json.banks || []);
         if (Array.isArray(banksList) && banksList.length > 0) {
           const mapped: BankItem[] = banksList.map((b: any) => ({
             code: String(b.code || b.id),
             name: String(b.name),
             id: String(b.id || b.code),
-            logoUrl: b.logoUrl || getBankLogoUrl(b.name),
+            logoUrl: getBankLogoUrl(b.name),
             category: (b.code === '100004' || b.code === '100033' || b.code === '090267') ? 'fintech_wallet' : 'commercial_bank',
           }));
           this.banksCacheByCountry[code] = mapped;
@@ -119,98 +126,84 @@ export class FXQuotesService {
       return { rate: 1.0, source: 'cNGN 1:1 Parity' };
     }
 
-    const cacheKey = `${sourceCurrency}_${country.currency}`;
+    const cacheKey = `${sourceCurrency}_${country.code}`;
     const cached = this.rateCache[cacheKey];
-    const now = Date.now();
-    if (cached && now - cached.fetchedAt < this.CACHE_TTL_MS) {
+    if (cached && Date.now() - cached.fetchedAt < this.CACHE_TTL_MS) {
       return { rate: cached.rate, source: cached.source };
     }
 
-    // Attempt live quote from backend
     try {
-      let res = await fetch(`${API_BASE}/quote?token=${sourceCurrency}&amount=${amount}&target=${country.currency}`, {
-        signal: AbortSignal.timeout(3500),
+      const res = await fetch(`${API_BASE}/rates?token=${sourceCurrency}&country=${country.code}&amount=${amount}`, {
+        signal: AbortSignal.timeout(3000),
       }).catch(() => null);
-
-      if (!res || !res.ok) {
-        res = await fetch(`${FALLBACK_API_BASE}/quote?token=${sourceCurrency}&amount=${amount}&target=${country.currency}`, {
-          signal: AbortSignal.timeout(3500),
-        }).catch(() => null);
-      }
 
       if (res && res.ok) {
         const data = await res.json();
-        if (data && typeof data.rate === 'number' && data.rate > 0) {
-          const result = {
-            rate: Math.round(data.rate * 100) / 100,
-            source: data.provider || 'Sivan Multi-Corridor Engine',
-            fetchedAt: now,
+        if (data.rate && typeof data.rate === 'number') {
+          this.rateCache[cacheKey] = {
+            rate: data.rate,
+            source: data.source || `${country.name} Liquidity`,
+            fetchedAt: Date.now(),
           };
-          this.rateCache[cacheKey] = result;
-          return result;
+          return { rate: data.rate, source: data.source || `${country.name} Liquidity` };
         }
       }
     } catch (err) {
-      console.warn('Sivan Payment live quote fetch error:', err);
+      console.warn('Failed to fetch live FX rate, using calibrated rates:', err);
     }
 
-    // Calibrated market rate by country
-    const result = {
-      rate: country.defaultUsdRate,
-      source: `${country.name} Liquidity Oracle`,
-      fetchedAt: now,
-    };
-    this.rateCache[cacheKey] = result;
-    return result;
+    // Calibrated rate per corridor
+    const rate = this.getLatestRate(sourceCurrency, country.code);
+    const source = `${country.name} On-Chain Orderbook`;
+    this.rateCache[cacheKey] = { rate, source, fetchedAt: Date.now() };
+    return { rate, source };
   }
 
-  public getLatestRate(
-    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC',
-    targetCountryCode?: string
-  ): number {
-    const country = targetCountryCode 
-      ? (SUPPORTED_COUNTRIES[targetCountryCode] || countryService.getActiveCountry())
-      : countryService.getActiveCountry();
-
-    if (sourceCurrency === 'cNGN' && country.code === 'NG') return 1.0;
-    const cacheKey = `${sourceCurrency}_${country.currency}`;
-    return this.rateCache[cacheKey]?.rate || country.defaultUsdRate;
-  }
-
+  /**
+   * Generates a transparent FX Quote with Sivan platform fee and gross/net calculations.
+   */
   public getQuote(
-    sourceAmount: number,
+    amount: number,
     sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC',
-    explicitRate?: number,
+    liveRate?: number,
     targetCountryCode?: string
   ): FXQuote {
     const country = targetCountryCode 
       ? (SUPPORTED_COUNTRIES[targetCountryCode] || countryService.getActiveCountry())
       : countryService.getActiveCountry();
 
-    const rate = (sourceCurrency === 'cNGN' && country.code === 'NG')
-      ? 1.0 
-      : (explicitRate ?? this.getLatestRate(sourceCurrency, country.code));
-
-    const gross = sourceAmount * rate;
-    const fee = gross * PROTOCOL_FEE_PERCENT;
-    const net = gross - fee;
+    const rate = liveRate !== undefined ? liveRate : this.getLatestRate(sourceCurrency, country.code);
+    const grossOutput = amount * rate;
+    const protocolFeeAmount = grossOutput * PROTOCOL_FEE_PERCENT;
+    const netOutput = Math.max(0, grossOutput - protocolFeeAmount);
 
     return {
-      sourceAmount,
+      sourceAmount: amount,
       sourceCurrency,
       targetCurrency: country.currency as any,
       targetCurrencySymbol: country.currencySymbol,
       exchangeRate: rate,
-      grossOutput: Math.round(gross * 100) / 100,
-      protocolFeeAmount: Math.round(fee * 100) / 100,
-      netOutput: Math.round(net * 100) / 100,
+      grossOutput: Math.round(grossOutput * 100) / 100,
+      protocolFeeAmount: Math.round(protocolFeeAmount * 100) / 100,
+      netOutput: Math.round(netOutput * 100) / 100,
       expiresInSeconds: 30,
       quoteId: `q_rfq_${country.code.toLowerCase()}_${Date.now()}`,
     };
   }
 
   /**
+   * Helper to get calibrated base rate for token in corridor.
+   */
+  public getLatestRate(sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD', countryCode: string = 'NG'): number {
+    const country = SUPPORTED_COUNTRIES[countryCode] || SUPPORTED_COUNTRIES.NG;
+    if (sourceCurrency === 'cNGN') return countryCode === 'NG' ? 1.0 : 1.0 / 1485.5;
+    if (sourceCurrency === 'cUSD') return country.defaultUsdRate * 0.998;
+    return country.defaultUsdRate;
+  }
+
+  /**
    * Validates account or phone number based on active corridor.
+   * Resolves authentic recipient name directly from Textile Credit / Busha NIBSS rails.
    */
   public async verifyBankAccount(
     accountNumber: string,
@@ -252,6 +245,32 @@ export class FXQuotesService {
     }
 
     try {
+      // 1. Direct Textile Credit / Busha NIBSS Resolution (Live Rail)
+      const textileRes = await fetch('https://api.textilecredit.com/v2/ramp/banks/resolve', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          provider: 'busha',
+          bankCode,
+          accountNumber,
+        }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => null);
+
+      if (textileRes && textileRes.ok) {
+        const json = await textileRes.json();
+        if (json && json.accountName) {
+          return {
+            valid: true,
+            accountName: json.accountName,
+          };
+        }
+      }
+
+      // 2. Gateway API Resolver fallback
       let res = await fetch(`${API_BASE}/resolve-account`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,13 +300,10 @@ export class FXQuotesService {
       console.warn('Sivan Payment account resolution error:', err);
     }
 
-    const banks = await this.fetchBanks('NG');
-    const bank = banks.find(b => b.code === bankCode);
-    const bankLabel = bank ? bank.name.split(' ')[0] : 'Bank';
-
+    // If Textile checked and returned non-ok (e.g. account not found), it is invalid
     return {
-      valid: true,
-      accountName: `Verified Account (${bankLabel} NUBAN)`,
+      valid: false,
+      accountName: '',
     };
   }
 }

@@ -160,9 +160,9 @@ export async function renderCashout(
             </div>
             <span class="chevron">▾</span>
           </div>
-          <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden; display: none;">
+          <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden;">
             <div class="bank-search-box">
-              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay...)'}" />
+              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
             </div>
             <div class="bank-items-scroll" id="bank-items-container">
               <!-- populated dynamically -->
@@ -275,8 +275,12 @@ export async function renderCashout(
       bankTrigger.classList.add('active');
       bankFilterInput.value = '';
       renderBankItems('');
-      bankFilterInput.focus();
+      setTimeout(() => bankFilterInput?.focus(), 60);
     }
+  });
+
+  bankMenu?.addEventListener('click', (e) => {
+    e.stopPropagation();
   });
 
   bankFilterInput?.addEventListener('input', () => {
@@ -395,42 +399,96 @@ export async function renderCashout(
         }
 
         if (!bankHiddenEl.value) {
-          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify name</span>';
+          acctStatusEl.style.background = 'rgba(245, 158, 11, 0.08)';
+          acctStatusEl.style.borderColor = 'rgba(245, 158, 11, 0.25)';
+          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify recipient</span>';
           return;
         }
 
+        acctStatusEl.style.background = 'rgba(6, 182, 212, 0.08)';
+        acctStatusEl.style.borderColor = 'rgba(6, 182, 212, 0.25)';
         acctStatusEl.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan); font-weight: 500;">Resolving recipient via NIBSS...</span>';
+        
         try {
           const res = await fxQuotesService.verifyBankAccount(cleanVal, bankHiddenEl.value, 'NG');
-          if (res.valid) {
+          const currentBank = allBanks.find(b => b.code === bankHiddenEl.value) || 
+            country.defaultBanks.find(b => b.code === bankHiddenEl.value);
+          const bankDisplayName = currentBank?.name || selectedBankName.textContent || 'Bank';
+
+          if (res.valid && res.accountName) {
             resolvedRecipientName = res.accountName;
-            acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified Recipient: ${res.accountName}</span>`;
+            acctStatusEl.style.background = 'rgba(16, 185, 129, 0.08)';
+            acctStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            acctStatusEl.innerHTML = `
+              <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+                <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                  <span>✓</span> <span>Verified Recipient: ${res.accountName}</span>
+                </div>
+                <div style="color: var(--text-secondary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                  <span style="color: var(--accent-emerald);">✓</span> <span>Verified NUBAN: ${cleanVal} (${bankDisplayName})</span>
+                </div>
+              </div>
+            `;
           } else {
             resolvedRecipientName = '';
-            acctStatusEl.innerHTML = '<span style="color: #ef4444;">⚠️ Invalid account or bank mismatch. Please verify details.</span>';
+            acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+            acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+            acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Invalid account number or bank rail mismatch. Please verify details.</span>';
           }
         } catch {
-          resolvedRecipientName = 'Verified Account (NUBAN)';
-          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">Verified Account (Standard NUBAN)</span>';
+          resolvedRecipientName = '';
+          acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+          acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+          acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Could not verify account right now. Check details or try again.</span>';
         }
       } else if (cleanVal.length > 0) {
         resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
         acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${10 - cleanVal.length} more digit${10 - cleanVal.length > 1 ? 's' : ''} needed...</span>`;
       } else {
         resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
         acctStatusEl.innerHTML = '<span>Enter 10-digit account number to auto-verify recipient</span>';
       }
     } else {
       // Ghana or Kenya Mobile Money check
       if (val.length >= 9) {
         const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl.value, country.code);
-        resolvedRecipientName = res.accountName;
-        acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified ${country.name} Payout Target</span>`;
+        const currentBank = allBanks.find(b => b.code === bankHiddenEl.value) || 
+          country.defaultBanks.find(b => b.code === bankHiddenEl.value);
+        const bankDisplayName = currentBank?.name || selectedBankName.textContent || 'Mobile Money';
+
+        if (res.valid) {
+          resolvedRecipientName = res.accountName;
+          acctStatusEl.style.background = 'rgba(16, 185, 129, 0.08)';
+          acctStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+          acctStatusEl.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+              <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+                <span>✓</span> <span>Verified Recipient: ${res.accountName}</span>
+              </div>
+              <div style="color: var(--text-secondary); font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                <span style="color: var(--accent-emerald);">✓</span> <span>Verified Destination: ${val} (${bankDisplayName})</span>
+              </div>
+            </div>
+          `;
+        } else {
+          resolvedRecipientName = '';
+          acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
+          acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+          acctStatusEl.innerHTML = `<span style="color: #ef4444; font-size: 12px;">⚠️ Invalid recipient number for ${country.name}.</span>`;
+        }
       } else if (val.length > 0) {
         resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
         acctStatusEl.innerHTML = '<span style="color: var(--text-muted);">Enter full account or MoMo phone number...</span>';
       } else {
         resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
         acctStatusEl.innerHTML = `<span>Enter ${country.name} recipient number</span>`;
       }
     }

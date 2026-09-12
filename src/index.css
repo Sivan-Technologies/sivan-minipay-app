@@ -896,7 +896,7 @@ body {
 }
 
 .custom-select-menu.open {
-  display: block;
+  display: block !important;
 }
 
 .custom-select-item {
