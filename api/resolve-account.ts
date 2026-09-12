@@ -242,7 +242,8 @@ export default async function handler(req: Request) {
 
   // 1. Attempt live server-to-server resolution via Textile Credit / Busha
   try {
-    const textileRes = await fetch('https://api.textilecredit.com/v2/ramp/banks/resolve', {
+    const textileBase = (process.env.TEXTILE_API_URL || process.env.VITE_TEXTILE_API_URL || 'https://api.textilecredit.com').replace(/\/+$/, '');
+    const textileRes = await fetch(`${textileBase}/v2/ramp/banks/resolve`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

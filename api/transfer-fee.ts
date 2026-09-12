@@ -2,55 +2,6 @@ export const config = {
   runtime: 'edge',
 };
 
-/**
- * Celo network transfer fee config.
- * 0.5% with $0.10 minimum floor and $0.75 maximum ceiling.
- */
-function calculateCeloTransferFee(amount: number) {
-  const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : 0;
-  const percent = 0.5;
-  const floor = 0.10;
-  const ceiling = 0.75;
-
-  const raw = safeAmount * (percent / 100);
-  let fee = raw;
-  let appliedRule: 'percent' | 'minimum' | 'maximum' = 'percent';
-
-  if (floor > 0 && fee < floor) {
-    fee = floor;
-    appliedRule = 'minimum';
-  }
-  if (ceiling > 0 && fee > ceiling) {
-    fee = ceiling;
-    appliedRule = 'maximum';
-  }
-  if (fee > safeAmount) {
-    fee = safeAmount;
-    appliedRule = 'maximum';
-  }
-
-  const netAmount = Math.max(0, safeAmount - fee);
-  const effectivePercent = safeAmount > 0 ? ((fee / safeAmount) * 100).toFixed(2) : '0.00';
-
-  const explanation = appliedRule === 'minimum'
-    ? 'Minimum fee of $0.10 applied'
-    : appliedRule === 'maximum'
-      ? 'Capped at maximum fee of $0.75'
-      : '0.5% of the amount sent';
-
-  return {
-    amount: safeAmount.toString(),
-    fee: fee.toFixed(2),
-    baseFee: fee.toFixed(2),
-    newRecipientFee: '0',
-    createsRecipientAccount: false,
-    netAmount: netAmount.toFixed(2),
-    effectivePercent,
-    appliedRule,
-    explanation,
-  };
-}
-
 export default async function handler(req: Request) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
@@ -84,9 +35,28 @@ export default async function handler(req: Request) {
 
   const parsedAmount = parseFloat(amountStr) || 0;
 
-  // 1. Try querying the live Sivan Payments backend
+  // Backend API URL dynamically sourced from environment variables
+  const apiBase = (
+    process.env.PAYMENT_API_URL ||
+    process.env.VITE_PAYMENT_API_URL ||
+    ''
+  ).replace(/\/+$/, '');
+
+  if (!apiBase) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: 'PAYMENT_API_URL environment variable is not configured',
+    }), {
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
+
   try {
-    const upstreamUrl = new URL('https://api.sivantech.online/api/balance/transfers/quote');
+    const upstreamUrl = new URL(`${apiBase}/api/balance/transfers/quote`);
     upstreamUrl.searchParams.set('amount', String(parsedAmount));
     upstreamUrl.searchParams.set('network', network);
     upstreamUrl.searchParams.set('asset', token.toLowerCase());
@@ -109,29 +79,41 @@ export default async function handler(req: Request) {
 
     if (liveRes.ok) {
       const liveData = await liveRes.json();
-      if (liveData?.data?.fee !== undefined) {
-        return new Response(JSON.stringify({ success: true, source: 'live_api', data: liveData.data }), {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Cache-Control': 'public, max-age=15',
-          },
-        });
-      }
+      return new Response(JSON.stringify({
+        success: true,
+        source: 'live_payment_api',
+        data: liveData.data,
+      }), {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=15',
+        },
+      });
     }
-  } catch {
-    // Upstream unreachable or timed out - fall through to canonical policy formula
-  }
 
-  // 2. Canonical Sivan transfer fee policy calculation
-  const calculated = calculateCeloTransferFee(parsedAmount);
-  return new Response(JSON.stringify({ success: true, source: 'canonical_policy', data: calculated }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=15',
-    },
-  });
+    const errText = await liveRes.text();
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Sivan Payment API returned status ${liveRes.status}: ${errText}`,
+    }), {
+      status: liveRes.status,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({
+      success: false,
+      error: `Failed to connect to Sivan Payment API: ${err?.message || 'Network error'}`,
+    }), {
+      status: 502,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
+  }
 }

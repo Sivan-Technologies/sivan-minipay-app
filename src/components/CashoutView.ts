@@ -361,6 +361,7 @@ export async function renderCashout(
       feeEl.textContent = `-${sym}${tfQuote.fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
       netEl.textContent = `${sym}${tfQuote.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     } else {
+      const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent();
       const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
       if (token === 'cNGN' && isNigeria) {
         rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
@@ -369,7 +370,8 @@ export async function renderCashout(
       }
 
       if (feeLabelEl) {
-        feeLabelEl.textContent = 'Sivan Protocol Fee (1%):';
+        const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
+        feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
       }
       grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
       feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;

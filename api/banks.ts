@@ -712,7 +712,8 @@ export default async function handler(req: Request) {
 
   // 1. Attempt live query to Textile Credit / Busha NIBSS API
   try {
-    const textileRes = await fetch("https://api.textilecredit.com/v2/ramp/banks?provider=busha", {
+    const textileBase = (process.env.TEXTILE_API_URL || process.env.VITE_TEXTILE_API_URL || 'https://api.textilecredit.com').replace(/\/+$/, '');
+    const textileRes = await fetch(`${textileBase}/v2/ramp/banks?provider=busha`, {
       headers: { "Accept": "application/json" },
       signal: AbortSignal.timeout(4000),
     });

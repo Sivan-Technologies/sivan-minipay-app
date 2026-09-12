@@ -11,6 +11,8 @@
  * - GET /api/escrow/settings/limits
  */
 
+import { getPaymentApiUrl } from '../config/api.config';
+
 export interface AgreementFeeQuote {
   amount: number;
   currency: string;
@@ -33,6 +35,9 @@ export interface DynamicAdminLimits {
   nairaFeeModel?: string;
   nairaFeeTiers?: Array<{ max: number | null; fee?: number; rate?: number }>;
   version?: number;
+  usdtFeePercent?: number;
+  cusdFeePercent?: number;
+  cngnFeePercent?: number;
 }
 
 class AgreementFeeService {
@@ -54,11 +59,12 @@ class AgreementFeeService {
       return this.adminLimits;
     }
 
+    const apiBase = getPaymentApiUrl();
     const endpoints = [
       '/api/escrow/settings/limits',
       '/api/v1/agreement/limits',
-      'https://api.sivantech.online/api/escrow/settings/limits',
-    ];
+      apiBase ? `${apiBase}/api/escrow/settings/limits` : null,
+    ].filter(Boolean) as string[];
 
     for (const ep of endpoints) {
       try {
@@ -103,11 +109,12 @@ class AgreementFeeService {
     }
 
     // 1. Query backend dynamic fee quote endpoints
+    const apiBase = getPaymentApiUrl();
     const quoteEndpoints = [
       `/api/escrow/fee-quote?currency=${encodeURIComponent(currency)}&amount=${amount}`,
       `/api/v1/agreement/fee?currency=${encodeURIComponent(currency)}&amount=${amount}`,
-      `https://api.sivantech.online/api/escrow/fee-quote?currency=${encodeURIComponent(currency)}&amount=${amount}`,
-    ];
+      apiBase ? `${apiBase}/api/escrow/fee-quote?currency=${encodeURIComponent(currency)}&amount=${amount}` : null,
+    ].filter(Boolean) as string[];
 
     for (const url of quoteEndpoints) {
       try {
