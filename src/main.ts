@@ -4,9 +4,11 @@ import { renderDashboard } from './components/DashboardView';
 import { renderCreateAgreement } from './components/CreateAgreementView';
 import { renderAgreementsList } from './components/AgreementsListView';
 import { renderCashout } from './components/CashoutView';
+import { renderTransactionHistory } from './components/TransactionHistoryView';
 import { miniPayService } from './services/minipay.service';
+import { countryService } from './config/countries.config';
 
-type Tab = 'dashboard' | 'deals' | 'create' | 'cashout';
+type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history';
 
 class SivanMiniPayApp {
   private currentTab: Tab = 'dashboard';
@@ -21,6 +23,11 @@ class SivanMiniPayApp {
 
     // Re-render views when wallet connects, disconnects, or switches accounts
     miniPayService.subscribe(() => {
+      this.renderMainContent();
+    });
+
+    // Re-render views when user switches country / corridor
+    countryService.subscribe(() => {
       this.renderMainContent();
     });
   }
@@ -94,6 +101,12 @@ class SivanMiniPayApp {
           (msg) => this.showToast(msg)
         );
         break;
+      case 'history':
+        renderTransactionHistory(
+          this.mainContentContainer,
+          (t) => this.navigateTo(t as Tab)
+        );
+        break;
     }
   }
 
@@ -110,6 +123,10 @@ class SivanMiniPayApp {
       <button class="nav-item ${this.currentTab === 'create' ? 'active' : ''}" data-tab="create">
         <span class="nav-icon">➕</span>
         <span>New Deal</span>
+      </button>
+      <button class="nav-item ${this.currentTab === 'history' ? 'active' : ''}" data-tab="history">
+        <span class="nav-icon">📜</span>
+        <span>History</span>
       </button>
       <button class="nav-item ${this.currentTab === 'cashout' ? 'active' : ''}" data-tab="cashout">
         <span class="nav-icon">🏦</span>

@@ -2,9 +2,12 @@ import { fetchTokenBalances } from '../services/celo-client';
 import { miniPayService } from '../services/minipay.service';
 import { agreementsService } from '../services/agreements.service';
 import { CELO_CONFIG } from '../config/celo.config';
+import { countryService } from '../config/countries.config';
+import { fxQuotesService } from '../services/fx-quotes.service';
 
 export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
   const state = miniPayService.getState();
+  const country = countryService.getActiveCountry();
   const isConnected = !!state.address;
   const balances = await fetchTokenBalances(state.address);
   const agreements = agreementsService.getAll();
@@ -17,6 +20,13 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   const cusdBal = balances.find(b => b.symbol === 'cUSD')?.balanceFormatted || '0.00';
   const cngnBal = balances.find(b => b.symbol === 'cNGN')?.balanceFormatted || '0.00';
 
+  // Live currency conversion calculation based on selected country
+  const liveRate = fxQuotesService.getLatestRate('USDC', country.code);
+  const fiatTotal = totalUsd * liveRate;
+  const formattedFiat = fiatTotal >= 1 
+    ? fiatTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })
+    : fiatTotal.toFixed(2);
+
   const modeLabel = state.mode === 'live_minipay'
     ? 'MiniPay Mobile'
     : state.mode === 'connected_wallet'
@@ -24,6 +34,10 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       : 'Disconnected';
 
   const modeBadgeColor = isConnected ? 'var(--accent-emerald)' : 'var(--text-muted)';
+
+  // Determine top displayed stablecoin
+  const primaryTokenSymbol = Number(usdtBal) > 0 ? 'USDT' : 'USDC';
+  const primaryTokenBal = primaryTokenSymbol === 'USDT' ? usdtBal : usdcBal;
 
   container.innerHTML = `
     <!-- Network Ribbon -->
@@ -36,60 +50,76 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       <span class="evaluator-tag" style="border-color: ${modeBadgeColor}; color: ${modeBadgeColor};">${modeLabel}</span>
     </div>
 
-    <!-- Hero Balance Card -->
-    <div class="hero-card">
-      <div style="display: flex; justify-content: flex-end; margin-bottom: 2px;">
-        <span style="cursor: pointer; font-size: 13px; color: var(--text-muted); opacity: 0.75;" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
-      </div>
-      <div class="hero-balance">
-        $${totalUsd.toFixed(2)} <span>USD</span>
+    <!-- BitGifty-Inspired Available Balance Hero Card -->
+    <div class="hero-balance-card">
+      <div class="hero-top-row">
+        <span class="hero-avail-label">Available Balance</span>
+        <button type="button" class="hero-history-btn" id="btn-hero-history">
+          <span>Transaction History</span>
+          <span class="hero-arrow">→</span>
+        </button>
       </div>
 
-      <div class="token-pill-row">
-        <div class="token-pill">
-          <span class="token-pill-icon">🟢</span>
-          <div class="token-pill-info">
-            <span class="token-pill-val">${usdtBal} USDT</span>
-            <span class="token-pill-lbl">Tether USD</span>
-          </div>
+      <div class="hero-primary-crypto">
+        <span class="hero-crypto-symbol">${primaryTokenSymbol}</span>
+        <span class="hero-crypto-amount">${primaryTokenBal}</span>
+        <span class="hero-refresh-icon" id="btn-refresh-bal" title="Refresh live balances">🔄</span>
+      </div>
+
+      <div class="hero-fiat-sub">
+        <span class="hero-fiat-symbol">${country.currencySymbol}</span>${formattedFiat}
+        <span class="hero-fiat-tag">${country.currency} · ${country.flag}</span>
+      </div>
+
+      <!-- Token Balances Strip -->
+      <div class="hero-token-strip">
+        <div class="mini-token-pill">
+          <span class="pill-dot">🟢</span>
+          <span class="pill-val">${usdtBal} USDT</span>
         </div>
-        <div class="token-pill">
-          <span class="token-pill-icon">💵</span>
-          <div class="token-pill-info">
-            <span class="token-pill-val">${usdcBal} USDC</span>
-            <span class="token-pill-lbl">Circle Native</span>
-          </div>
+        <div class="mini-token-pill">
+          <span class="pill-dot">💵</span>
+          <span class="pill-val">${usdcBal} USDC</span>
         </div>
-        <div class="token-pill">
-          <span class="token-pill-icon">💲</span>
-          <div class="token-pill-info">
-            <span class="token-pill-val">${cusdBal} cUSD</span>
-            <span class="token-pill-lbl">Celo Dollar</span>
-          </div>
+        <div class="mini-token-pill">
+          <span class="pill-dot">💲</span>
+          <span class="pill-val">${cusdBal} cUSD</span>
         </div>
-        <div class="token-pill">
-          <span class="token-pill-icon">🇳🇬</span>
-          <div class="token-pill-info">
-            <span class="token-pill-val">₦${cngnBal}</span>
-            <span class="token-pill-lbl">Compliant Naira</span>
+        ${country.code === 'NG' ? `
+          <div class="mini-token-pill">
+            <span class="pill-dot">🇳🇬</span>
+            <span class="pill-val">₦${cngnBal} cNGN</span>
           </div>
-        </div>
+        ` : ''}
       </div>
     </div>
 
     <!-- Quick Action Grid -->
     <div class="actions-grid">
+      <div class="action-tile" id="tile-cashout">
+        <div class="action-tile-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">
+          <span class="action-tile-icon">🏦</span>
+        </div>
+        <span class="action-tile-title">Cash Out</span>
+        <span class="action-tile-badge">${country.flag} ${country.currency}</span>
+      </div>
       <div class="action-tile" id="tile-create-agreement">
-        <div class="action-tile-icon">📝</div>
+        <div class="action-tile-icon-wrap" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">
+          <span class="action-tile-icon">📝</span>
+        </div>
         <span class="action-tile-title">New Deal</span>
       </div>
-      <div class="action-tile" id="tile-cashout">
-        <div class="action-tile-icon">🏦</div>
-        <span class="action-tile-title">Cash Out</span>
-      </div>
       <div class="action-tile" id="tile-deals">
-        <div class="action-tile-icon">🤝</div>
+        <div class="action-tile-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: #f59e0b);">
+          <span class="action-tile-icon">🤝</span>
+        </div>
         <span class="action-tile-title">Deals (${activeCount})</span>
+      </div>
+      <div class="action-tile" id="tile-history">
+        <div class="action-tile-icon-wrap" style="background: rgba(99, 102, 241, 0.15); color: #818cf8);">
+          <span class="action-tile-icon">📜</span>
+        </div>
+        <span class="action-tile-title">History</span>
       </div>
     </div>
 
@@ -101,10 +131,10 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
 
     <div class="agreements-list">
       ${agreements.length === 0 ? `
-        <div style="text-align: center; padding: 32px 16px; background: var(--bg-glass); border: 1px dashed var(--border-subtle); border-radius: var(--radius-md); color: var(--text-muted);">
+        <div class="empty-agreements-box">
           <div style="font-size: 28px; margin-bottom: 8px;">🤝</div>
           <div style="font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No active service agreements yet</div>
-          <div style="font-size: 12px; margin-bottom: 14px;">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
+          <div style="font-size: 12px; margin-bottom: 14px; color: var(--text-muted);">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
           <button class="btn-primary" style="display: inline-flex; width: auto; padding: 8px 16px; font-size: 12px;" id="btn-empty-create">
             + Create First Deal
           </button>
@@ -133,6 +163,8 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   container.querySelector('#btn-refresh-bal')?.addEventListener('click', () => {
     renderDashboard(container, onNavigate);
   });
+  container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
+  container.querySelector('#tile-history')?.addEventListener('click', () => onNavigate('history'));
   container.querySelector('#tile-create-agreement')?.addEventListener('click', () => onNavigate('create'));
   container.querySelector('#tile-cashout')?.addEventListener('click', () => onNavigate('cashout'));
   container.querySelector('#tile-deals')?.addEventListener('click', () => onNavigate('deals'));

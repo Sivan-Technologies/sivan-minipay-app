@@ -1,12 +1,15 @@
 import { miniPayService } from '../services/minipay.service';
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { getActiveNetwork } from '../config/celo.config';
+import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
+import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 
 export function renderHeader(container: HTMLElement) {
-  let isModalOpen = false;
+  let isWalletModalOpen = false;
+  let isCountryModalOpen = false;
 
   const update = (state: MiniPayDetectionState) => {
     const activeNet = getActiveNetwork();
+    const activeCountry = countryService.getActiveCountry();
     const isLiveMiniPay = state.mode === 'live_minipay';
     const isMetaMask = state.mode === 'connected_wallet';
     const isConnected = !!state.address;
@@ -14,7 +17,7 @@ export function renderHeader(container: HTMLElement) {
 
     const shortAddr = state.address 
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
-      : 'Connect Wallet';
+      : 'Connect';
 
     let pillLabel = 'Connect';
     let pillColor = 'var(--text-muted)';
@@ -38,17 +41,19 @@ export function renderHeader(container: HTMLElement) {
       <header class="app-header">
         <div class="brand-wrapper">
           <img src="/sivan-logo.png" alt="Sivan Ai" class="brand-icon-img" />
-          <div class="brand-text">
-            <h1>Sivan Ai</h1>
-            <div class="brand-tagline">Autonomous Service Agreements</div>
-          </div>
+          <!-- Country / Corridor Selector Pill -->
+          <button type="button" class="header-country-pill" id="btn-country-modal" title="Switch Country Corridor">
+            <span class="country-flag">${activeCountry.flag}</span>
+            <span class="country-name">${activeCountry.name}</span>
+            <span class="country-chevron">▾</span>
+          </button>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px;">
           <!-- Network Badge / Toggle -->
           <button class="header-network-pill" id="btn-network-toggle" title="Switch Network (Mainnet / Testnet)" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: ${netBadgeColor};">
             <span style="width: 7px; height: 7px; border-radius: 50%; ${netBadgeDot}"></span>
-            <span style="font-weight: 600;">${isTestnet ? 'Sepolia Testnet' : 'Mainnet'}</span>
+            <span style="font-weight: 600;">${isTestnet ? 'Sepolia' : 'Mainnet'}</span>
           </button>
 
           <!-- Wallet Status Pill -->
@@ -60,8 +65,38 @@ export function renderHeader(container: HTMLElement) {
         </div>
       </header>
 
+      <!-- Country / Corridor Selection Modal -->
+      <div id="country-modal-overlay" class="modal-overlay ${isCountryModalOpen ? 'active' : ''}">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3 style="font-family: var(--font-display); font-size: 16px;">Select Country & Payout Rail</h3>
+            <button class="btn-close-modal" id="btn-close-country-modal">✕</button>
+          </div>
+          <div class="modal-body">
+            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">
+              Payout rails, local bank networks, and currency conversion will automatically adapt to your selection.
+            </p>
+            <div class="country-options-list">
+              ${Object.values(SUPPORTED_COUNTRIES).map(c => {
+                const isCurrent = c.code === activeCountry.code;
+                return `
+                  <button type="button" class="country-option-item ${isCurrent ? 'selected' : ''}" data-country-code="${c.code}">
+                    <span class="country-opt-flag">${c.flag}</span>
+                    <div class="country-opt-details">
+                      <div class="country-opt-title">${c.name} (${c.currency})</div>
+                      <div class="country-opt-sub">${c.railType === 'nibss_bank' ? 'Commercial Banks & Fintech (NIBSS)' : 'Mobile Money & Commercial Banks'}</div>
+                    </div>
+                    ${isCurrent ? '<span class="country-opt-check">✓</span>' : ''}
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Wallet & Network Modal -->
-      <div id="wallet-modal-overlay" class="modal-overlay ${isModalOpen ? 'active' : ''}">
+      <div id="wallet-modal-overlay" class="modal-overlay ${isWalletModalOpen ? 'active' : ''}">
         <div class="modal-card">
           <div class="modal-header">
             <h3 style="font-family: var(--font-display); font-size: 16px;">Network & Wallet</h3>
@@ -110,15 +145,6 @@ export function renderHeader(container: HTMLElement) {
                   <span>🦊 Import USDC to MetaMask</span>
                 </button>
               ` : ''}
-              ${isTestnet ? `
-                <div style="margin-top: 10px; padding: 10px; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px;">
-                  <div style="font-weight: 600; color: #f59e0b; margin-bottom: 2px;">Need Testnet CELO for Gas?</div>
-                  <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 6px;">MetaMask requires a tiny fraction of CELO (&lt; $0.001) for network fee.</div>
-                  <a href="https://faucet.celo.org/celo-sepolia" target="_blank" rel="noreferrer" style="color: #f59e0b; font-weight: 600; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
-                    🚰 Get Free Testnet CELO ↗
-                  </a>
-                </div>
-              ` : ''}
             </div>
 
             <!-- Connection Status -->
@@ -148,108 +174,106 @@ export function renderHeader(container: HTMLElement) {
               ` : ''}
             </div>
 
-            <!-- Actions -->
-            <div style="display: flex; flex-direction: column; gap: 10px;">
-              ${!isConnected ? `
-                <button class="btn-primary" id="btn-connect-metamask">
-                  <span>🦊 Connect MetaMask</span>
-                </button>
-              ` : isMetaMask ? `
-                <button class="btn-secondary" id="btn-disconnect-wallet" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);">
-                  <span>Disconnect Wallet</span>
-                </button>
-              ` : `
-                <div style="font-size: 12px; color: var(--text-muted); text-align: center;">
-                  Connected via Opera MiniPay browser provider.
-                </div>
-              `}
-            </div>
+            ${!isConnected ? `
+              <button class="btn-primary" id="btn-modal-connect" style="width: 100%;">
+                Connect Wallet
+              </button>
+            ` : `
+              <button class="btn-secondary" id="btn-modal-disconnect" style="width: 100%; color: var(--accent-rose); border-color: rgba(244, 63, 94, 0.3);">
+                Disconnect Wallet
+              </button>
+            `}
           </div>
         </div>
       </div>
     `;
 
-    // Event handlers
-    const pillBtn = container.querySelector('#btn-wallet-modal');
-    const networkToggleBtn = container.querySelector('#btn-network-toggle');
-    const closeBtn = container.querySelector('#btn-close-wallet-modal');
-    const overlay = container.querySelector('#wallet-modal-overlay');
-
-    const openModal = () => {
-      isModalOpen = true;
-      overlay?.classList.add('active');
-    };
-
-    pillBtn?.addEventListener('click', openModal);
-    networkToggleBtn?.addEventListener('click', openModal);
-
-    closeBtn?.addEventListener('click', () => {
-      isModalOpen = false;
-      overlay?.classList.remove('active');
+    // Attach Country Modal Listeners
+    container.querySelector('#btn-country-modal')?.addEventListener('click', () => {
+      isCountryModalOpen = true;
+      update(miniPayService.getState());
+    });
+    container.querySelector('#btn-close-country-modal')?.addEventListener('click', () => {
+      isCountryModalOpen = false;
+      update(miniPayService.getState());
     });
 
-    overlay?.addEventListener('click', (e) => {
-      if (e.target === overlay) {
-        isModalOpen = false;
-        overlay.classList.remove('active');
+    container.querySelectorAll('.country-option-item').forEach(el => {
+      el.addEventListener('click', (e) => {
+        const code = (e.currentTarget as HTMLElement).dataset.countryCode;
+        if (code) {
+          countryService.setCountry(code);
+          isCountryModalOpen = false;
+          update(miniPayService.getState());
+        }
+      });
+    });
+
+    // Attach Wallet Modal Listeners
+    container.querySelector('#btn-wallet-modal')?.addEventListener('click', () => {
+      isWalletModalOpen = true;
+      update(miniPayService.getState());
+    });
+    container.querySelector('#btn-network-toggle')?.addEventListener('click', () => {
+      isWalletModalOpen = true;
+      update(miniPayService.getState());
+    });
+    container.querySelector('#btn-close-wallet-modal')?.addEventListener('click', () => {
+      isWalletModalOpen = false;
+      update(miniPayService.getState());
+    });
+
+    container.querySelector('#btn-select-mainnet')?.addEventListener('click', async () => {
+      setActiveNetworkMode('mainnet');
+      const eth = (window as any).ethereum;
+      if (eth) {
+        try {
+          await eth.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xa4ec' }], // 42220
+          });
+        } catch (e) {
+          console.warn('Network switch prompt:', e);
+        }
       }
+      update(miniPayService.getState());
     });
 
-    // Network select buttons
-    const btnSelectMainnet = container.querySelector('#btn-select-mainnet');
-    const btnSelectTestnet = container.querySelector('#btn-select-testnet');
-
-    btnSelectMainnet?.addEventListener('click', async () => {
-      await miniPayService.switchNetwork('mainnet');
-      window.location.reload();
-    });
-
-    btnSelectTestnet?.addEventListener('click', async () => {
-      await miniPayService.switchNetwork('testnet');
-      window.location.reload();
-    });
-
-    // Connect / Disconnect handlers
-    const connectBtn = container.querySelector('#btn-connect-metamask');
-    connectBtn?.addEventListener('click', async () => {
-      const res = await miniPayService.connectMetaMask();
-      if (!res.success) {
-        alert(res.error || 'Failed to connect MetaMask');
-      } else {
-        isModalOpen = false;
-        overlay?.classList.remove('active');
+    container.querySelector('#btn-select-testnet')?.addEventListener('click', async () => {
+      setActiveNetworkMode('testnet');
+      const eth = (window as any).ethereum;
+      if (eth) {
+        try {
+          await eth.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0xaa36a7' }], // 11142220
+          });
+        } catch (e) {
+          console.warn('Network switch prompt:', e);
+        }
       }
+      update(miniPayService.getState());
     });
 
-    const disconnectBtn = container.querySelector('#btn-disconnect-wallet');
-    disconnectBtn?.addEventListener('click', () => {
+    container.querySelector('#btn-modal-connect')?.addEventListener('click', async () => {
+      isWalletModalOpen = false;
+      await miniPayService.connectMetaMask();
+    });
+
+    container.querySelector('#btn-modal-disconnect')?.addEventListener('click', () => {
+      isWalletModalOpen = false;
       miniPayService.disconnectWallet();
-      isModalOpen = false;
-      overlay?.classList.remove('active');
     });
 
-    const importUsdcBtn = container.querySelector('#btn-import-usdc');
-    importUsdcBtn?.addEventListener('click', async () => {
-      const res = await miniPayService.addTokenToWallet('USDC');
-      if (res.success) {
-        alert('USDC token added to MetaMask successfully!');
-      } else {
-        alert(res.error || 'Failed to add USDC token to MetaMask');
-      }
-    });
-
-    // Copy address handler
-    const copyBtn = container.querySelector('#btn-copy-address');
-    copyBtn?.addEventListener('click', () => {
+    container.querySelector('#btn-copy-address')?.addEventListener('click', () => {
       if (state.address) {
-        void navigator.clipboard.writeText(state.address);
-        copyBtn.textContent = '✓';
-        setTimeout(() => {
-          copyBtn.textContent = '📋';
-        }, 1500);
+        navigator.clipboard.writeText(state.address);
+        alert('Address copied to clipboard!');
       }
     });
   };
 
   miniPayService.subscribe(update);
+  countryService.subscribe(() => update(miniPayService.getState()));
+  update(miniPayService.getState());
 }

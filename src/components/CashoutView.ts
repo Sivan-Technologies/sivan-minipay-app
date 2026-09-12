@@ -1,6 +1,8 @@
 import { fxQuotesService, type BankItem, getBankLogoUrl } from '../services/fx-quotes.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
+import { countryService } from '../config/countries.config';
+import { transactionsService } from '../services/transactions.service';
 import type { SupportedTokenSymbol } from '../config/celo.config';
 
 export async function renderCashout(
@@ -10,21 +12,44 @@ export async function renderCashout(
 ) {
   const state = miniPayService.getState();
   const balances = await fetchTokenBalances(state.address);
+  const country = countryService.getActiveCountry();
+
+  const isGhana = country.code === 'GH';
+  const isKenya = country.code === 'KE';
+  const isNigeria = country.code === 'NG';
+
+  const corridorTitle = isNigeria
+    ? '⚡ Celo to NIBSS Off-Ramp'
+    : isGhana
+      ? '⚡ Celo to GhIPSS & MoMo Off-Ramp'
+      : isKenya
+        ? '⚡ Celo to M-PESA & Pesalink'
+        : '⚡ Celo to PayShap & EFT';
+
+  const corridorProvider = isNigeria
+    ? 'Textile Credit RFQ'
+    : isGhana
+      ? 'Kotani Pay / Busha GHS'
+      : 'Sivan Multi-Corridor';
+
+  // Bank pills dynamically rendered from active country
+  const quickBanks = country.defaultBanks.slice(0, 6);
+  const defaultBank = quickBanks[0];
 
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 16px;">
-      <h2 class="section-title">Cash Out to Nigerian Bank</h2>
+      <h2 class="section-title">Cash Out to ${country.name} (${country.currency})</h2>
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
     <!-- Live Corridor Status -->
     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span style="font-weight: 700; color: var(--text-emerald);">⚡ Celo to NIBSS Off-Ramp</span>
-        <span style="font-size: 11px; color: var(--text-muted);">Textile Credit RFQ</span>
+        <span style="font-weight: 700; color: var(--text-emerald);">${corridorTitle}</span>
+        <span style="font-size: 11px; color: var(--text-muted);">${corridorProvider}</span>
       </div>
       <div style="color: var(--text-secondary); line-height: 1.4;">
-        Direct payout to Nigerian commercial & digital banks. Bank credit typically in under 1 to 2 minutes via NIBSS/NIP rails; internal ledger settled in 0.15s.
+        ${country.settlementDescription}
       </div>
     </div>
 
@@ -48,9 +73,11 @@ export async function renderCashout(
               <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
                 <span>💲</span> <span>cUSD (Celo)</span>
               </div>
-              <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
-                <span>🇳🇬</span> <span>cNGN (Celo)</span>
-              </div>
+              ${isNigeria ? `
+                <div class="custom-select-item" data-value="cNGN" data-label="🇳🇬 cNGN">
+                  <span>🇳🇬</span> <span>cNGN (Celo)</span>
+                </div>
+              ` : ''}
             </div>
             <input type="hidden" id="cashout-token" value="USDC" />
           </div>
@@ -78,27 +105,26 @@ export async function renderCashout(
         </div>
         <div class="quote-row">
           <span>Gross Payout:</span>
-          <span id="q-gross">₦0.00</span>
+          <span id="q-gross">${country.currencySymbol}0.00</span>
         </div>
         <div class="quote-row">
           <span>Sivan Protocol Fee (1%):</span>
-          <span id="q-fee">-₦0.00</span>
+          <span id="q-fee">-${country.currencySymbol}0.00</span>
         </div>
         <div class="quote-row">
-          <span>Net Credit to Bank:</span>
-          <span id="q-net">₦0.00</span>
+          <span>Net Credit to Destination:</span>
+          <span id="q-net">${country.currencySymbol}0.00</span>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="cashout-acct">10-Digit NUBAN Account Number</label>
+        <label class="form-label" for="cashout-acct">${isNigeria ? '10-Digit NUBAN Account Number' : country.accountLabel}</label>
         <input 
           type="text" 
           id="cashout-acct" 
           class="form-input" 
-          placeholder="e.g. 0123456789" 
-          maxlength="10" 
-          pattern="^\\d{10}$"
+          placeholder="${country.accountPlaceholder}" 
+          ${isNigeria ? 'maxlength="10" pattern="^\\d{10}$"' : 'maxlength="15"'}
           inputmode="numeric"
           autocomplete="off"
           required 
@@ -107,54 +133,46 @@ export async function renderCashout(
 
       <div class="form-group">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <label class="form-label" style="margin-bottom: 0;">Destination Bank</label>
-          <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live NIBSS Lookup</span>
+          <label class="form-label" style="margin-bottom: 0;">${isNigeria ? 'Destination Bank' : `${country.name} Destination Bank / MoMo`}</label>
+          <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live Rail Lookup</span>
         </div>
 
-        <!-- Quick Bank Suggestion Pills with official logos -->
+        <!-- Quick Bank / Rail Suggestion Pills -->
         <div class="bank-suggestions-row" id="bank-quick-pills">
-          <button type="button" class="bank-pill-btn active" data-code="100004" data-name="OPay Digital Services" data-logo="/banks/opay.png">
-            <img src="/banks/opay.png" alt="OPay" class="bank-logo-img" /> <span>OPay</span>
-          </button>
-          <button type="button" class="bank-pill-btn" data-code="100033" data-name="PalmPay Limited" data-logo="/banks/palmpay.png">
-            <img src="/banks/palmpay.png" alt="PalmPay" class="bank-logo-img" /> <span>PalmPay</span>
-          </button>
-          <button type="button" class="bank-pill-btn" data-code="090267" data-name="Kuda Microfinance Bank" data-logo="/banks/kuda.png">
-            <img src="/banks/kuda.png" alt="Kuda" class="bank-logo-img" /> <span>Kuda</span>
-          </button>
-          <button type="button" class="bank-pill-btn" data-code="000013" data-name="Guaranty Trust Bank (GTBank)" data-logo="/banks/gtbank.png">
-            <img src="/banks/gtbank.png" alt="GTBank" class="bank-logo-img" /> <span>GTBank</span>
-          </button>
-          <button type="button" class="bank-pill-btn" data-code="000014" data-name="Access Bank" data-logo="/banks/access.png">
-            <img src="/banks/access.png" alt="Access" class="bank-logo-img" /> <span>Access</span>
-          </button>
-          <button type="button" class="bank-pill-btn" data-code="000015" data-name="Zenith Bank" data-logo="/banks/zenith.png">
-            <img src="/banks/zenith.png" alt="Zenith" class="bank-logo-img" /> <span>Zenith</span>
-          </button>
+          ${quickBanks.map((b, idx) => {
+            const logo = b.logoUrl || (isNigeria ? getBankLogoUrl(b.name) : '');
+            const pillClass = idx === 0 ? 'class="bank-pill-btn active"' : 'class="bank-pill-btn"';
+            return `
+              <button type="button" ${pillClass} data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
+                ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px;">📱</span>'}
+                <span>${b.name.replace(' Digital Services', '').replace(' Limited', '').replace(' Bank', '')}</span>
+              </button>
+            `;
+          }).join('')}
         </div>
 
         <!-- Custom Searchable Bank Selector -->
         <div class="custom-select-wrap" id="bank-select-wrap" style="position: relative;">
           <div class="custom-select-trigger" id="bank-select-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <img src="/banks/opay.png" class="bank-logo-img" id="selected-bank-img" />
-              <span id="selected-bank-name" style="font-weight: 500;">OPay Digital Services</span>
+              ${defaultBank?.logoUrl ? `<img src="${defaultBank.logoUrl}" class="bank-logo-img" id="selected-bank-img" />` : '<span id="selected-bank-icon" style="font-size: 16px;">📱</span>'}
+              <span id="selected-bank-name" style="font-weight: 500;">${defaultBank?.name || 'Select Rail'}</span>
             </div>
             <span class="chevron">▾</span>
           </div>
           <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden; display: none;">
             <div class="bank-search-box">
-              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search bank (e.g. GTB, Zenith, Kuda...)" />
+              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay...)'}" />
             </div>
             <div class="bank-items-scroll" id="bank-items-container">
-              <!-- populated dynamically with real logo icons -->
+              <!-- populated dynamically -->
             </div>
           </div>
-          <input type="hidden" id="cashout-bank" value="100004" />
+          <input type="hidden" id="cashout-bank" value="${defaultBank?.code || ''}" />
         </div>
 
         <div id="acct-lookup-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
-          <span>Enter 10-digit account number to auto-verify recipient</span>
+          <span>${isNigeria ? 'Enter 10-digit account number to auto-verify recipient' : 'Enter mobile money phone number or bank account'}</span>
         </div>
       </div>
 
@@ -182,40 +200,39 @@ export async function renderCashout(
   const bankMenu = container.querySelector('#bank-select-menu') as HTMLElement;
   const bankFilterInput = container.querySelector('#bank-filter-input') as HTMLInputElement;
   const bankItemsContainer = container.querySelector('#bank-items-container') as HTMLElement;
-  const selectedBankImg = container.querySelector('#selected-bank-img') as HTMLImageElement;
+  const selectedBankImg = container.querySelector('#selected-bank-img') as HTMLImageElement | null;
   const selectedBankName = container.querySelector('#selected-bank-name') as HTMLElement;
   const quickPills = container.querySelectorAll('.bank-pill-btn');
   const acctEl = container.querySelector('#cashout-acct') as HTMLInputElement;
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
 
+  let resolvedRecipientName = '';
+
   const renderBankItems = (filterText = '') => {
     const q = filterText.toLowerCase().trim();
     const filtered = allBanks.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
     if (filtered.length === 0) {
-      bankItemsContainer.innerHTML = '<div style="padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center;">No banks found</div>';
+      bankItemsContainer.innerHTML = '<div style="padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center;">No rails found</div>';
       return;
     }
     bankItemsContainer.innerHTML = filtered.map(b => {
-      const logo = b.logoUrl || getBankLogoUrl(b.name);
+      const logo = b.logoUrl || (isNigeria ? getBankLogoUrl(b.name) : '');
       return `
-        <div class="custom-select-item ${b.code === bankHiddenEl.value ? 'selected' : ''}" data-code="${b.code}" data-name="${b.name}" data-logo="${logo}" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px;">
-          <img src="${logo}" class="bank-logo-img" alt="" />
+        <div class="custom-select-item bank-item-row" data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
+          ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px; margin-right: 6px;">📱</span>'}
           <span style="font-size: 13px; font-weight: 500;">${b.name}</span>
         </div>
       `;
     }).join('');
 
-    bankItemsContainer.querySelectorAll('.custom-select-item').forEach(item => {
-      item.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const target = e.currentTarget as HTMLElement;
-        const code = target.dataset.code!;
-        const name = target.dataset.name!;
-        const logo = target.dataset.logo!;
-        selectBank(code, name, logo);
+    bankItemsContainer.querySelectorAll('.bank-item-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const el = row as HTMLElement;
+        selectBank(el.dataset.code!, el.dataset.name!, el.dataset.logo || '');
         bankMenu.classList.remove('open');
         bankTrigger.classList.remove('active');
+        void checkAccount();
       });
     });
   };
@@ -223,31 +240,30 @@ export async function renderCashout(
   const selectBank = (code: string, name: string, logo: string) => {
     bankHiddenEl.value = code;
     selectedBankName.textContent = name;
-    selectedBankImg.src = logo;
+    if (selectedBankImg) {
+      if (logo) {
+        selectedBankImg.src = logo;
+        selectedBankImg.style.display = 'inline-block';
+      } else {
+        selectedBankImg.style.display = 'none';
+      }
+    }
 
     quickPills.forEach(p => {
-      if ((p as HTMLElement).dataset.code === code) {
-        p.classList.add('active');
-      } else {
-        p.classList.remove('active');
-      }
+      const el = p as HTMLElement;
+      if (el.dataset.code === code) el.classList.add('active');
+      else el.classList.remove('active');
     });
-
-    renderBankItems(bankFilterInput?.value || '');
-    if (acctEl.value.trim().length === 10) {
-      void checkAccount();
-    }
   };
 
-  // Quick pill clicks
   quickPills.forEach(p => {
     p.addEventListener('click', () => {
       const el = p as HTMLElement;
-      selectBank(el.dataset.code!, el.dataset.name!, el.dataset.logo!);
+      selectBank(el.dataset.code!, el.dataset.name!, el.dataset.logo || '');
+      void checkAccount();
     });
   });
 
-  // Open/Close bank menu
   bankTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = bankMenu.classList.contains('open');
@@ -267,13 +283,10 @@ export async function renderCashout(
     renderBankItems(bankFilterInput.value);
   });
 
-  // Dynamically load banks from Sivan Payment backend API
-  void fxQuotesService.fetchBanks().then(banks => {
+  // Load banks/rails for active country
+  void fxQuotesService.fetchBanks(country.code).then(banks => {
     allBanks = banks;
     renderBankItems('');
-    if (acctEl.value.trim().length === 10) {
-      void checkAccount();
-    }
   });
 
   const updateBalanceDisplay = () => {
@@ -285,28 +298,30 @@ export async function renderCashout(
       : 'Wallet not connected';
   };
 
-  let currentLiveRate: number = fxQuotesService.getLatestRate('USDC');
-  let currentRateSource: string = 'Textile RFQ';
+  let currentLiveRate: number = fxQuotesService.getLatestRate('USDC', country.code);
+  let currentRateSource: string = `${country.name} Liquidity`;
 
   const updateQuoteDisplay = () => {
     const amt = parseFloat(amountEl.value) || 0;
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate);
+    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
 
-    if (token === 'cNGN') {
-      rateEl.textContent = '1 cNGN = ₦1.00 (Parity)';
+    const sym = country.currencySymbol;
+
+    if (token === 'cNGN' && isNigeria) {
+      rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
     } else {
-      rateEl.textContent = `1 ${token} = ₦${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
+      rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
     }
 
-    grossEl.textContent = `₦${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    feeEl.textContent = `-₦${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    netEl.textContent = `₦${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   const fetchAndRefreshRate = async () => {
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    if (token === 'cNGN') {
+    if (token === 'cNGN' && isNigeria) {
       currentLiveRate = 1.0;
       currentRateSource = 'Parity';
       updateQuoteDisplay();
@@ -314,7 +329,7 @@ export async function renderCashout(
     }
 
     rateEl.textContent = `Fetching live ${token} rate...`;
-    const res = await fxQuotesService.fetchLiveRate(token);
+    const res = await fxQuotesService.fetchLiveRate(token, 10, country.code);
     currentLiveRate = res.rate;
     currentRateSource = res.source;
     updateQuoteDisplay();
@@ -333,7 +348,6 @@ export async function renderCashout(
     }
   });
 
-  // Select item event
   tokenItems.forEach(item => {
     item.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -355,7 +369,6 @@ export async function renderCashout(
     });
   });
 
-  // Close dropdowns on outside click
   document.addEventListener('click', () => {
     tokenMenu?.classList.remove('open');
     tokenTrigger?.classList.remove('active');
@@ -369,43 +382,61 @@ export async function renderCashout(
   amountEl?.addEventListener('input', updateQuoteDisplay);
 
   const checkAccount = async () => {
-    const val = acctEl.value.trim().replace(/\D/g, '');
-    acctEl.value = val;
+    const val = acctEl.value.trim();
 
-    // Auto-detect OPay / PalmPay if phone-like prefix (070, 080, 081, 090, 091 or 70, 80, 81, 90, 91)
-    if (val.length === 10) {
-      const isPhoneNuban = /^(70|80|81|90|91|07|08|09)/.test(val);
-      if (isPhoneNuban && (!bankHiddenEl.value || bankHiddenEl.value === '000014')) {
-        selectBank('100004', 'OPay Digital Services', '/banks/opay.png');
-      }
-    }
+    if (isNigeria) {
+      const cleanVal = val.replace(/\D/g, '');
+      acctEl.value = cleanVal;
 
-    if (val.length === 10) {
-      if (!bankHiddenEl.value) {
-        acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify name</span>';
-        return;
-      }
-
-      acctStatusEl.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan); font-weight: 500;">Resolving recipient via NIBSS...</span>';
-      try {
-        const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl.value);
-        if (res.valid) {
-          acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified Recipient: ${res.accountName}</span>`;
-        } else {
-          acctStatusEl.innerHTML = '<span style="color: #ef4444;">⚠️ Invalid account or bank mismatch. Please verify details.</span>';
+      if (cleanVal.length === 10) {
+        const isPhoneNuban = /^(70|80|81|90|91|07|08|09)/.test(cleanVal);
+        if (isPhoneNuban && (!bankHiddenEl.value || bankHiddenEl.value === '000014')) {
+          selectBank('100004', 'OPay Digital Services', '/banks/opay.png');
         }
-      } catch {
-        acctStatusEl.innerHTML = '<span style="color: #f59e0b;">Verified Account (Standard NUBAN)</span>';
+
+        if (!bankHiddenEl.value) {
+          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify name</span>';
+          return;
+        }
+
+        acctStatusEl.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan); font-weight: 500;">Resolving recipient via NIBSS...</span>';
+        try {
+          const res = await fxQuotesService.verifyBankAccount(cleanVal, bankHiddenEl.value, 'NG');
+          if (res.valid) {
+            resolvedRecipientName = res.accountName;
+            acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified Recipient: ${res.accountName}</span>`;
+          } else {
+            resolvedRecipientName = '';
+            acctStatusEl.innerHTML = '<span style="color: #ef4444;">⚠️ Invalid account or bank mismatch. Please verify details.</span>';
+          }
+        } catch {
+          resolvedRecipientName = 'Verified Account (NUBAN)';
+          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">Verified Account (Standard NUBAN)</span>';
+        }
+      } else if (cleanVal.length > 0) {
+        resolvedRecipientName = '';
+        acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${10 - cleanVal.length} more digit${10 - cleanVal.length > 1 ? 's' : ''} needed...</span>`;
+      } else {
+        resolvedRecipientName = '';
+        acctStatusEl.innerHTML = '<span>Enter 10-digit account number to auto-verify recipient</span>';
       }
-    } else if (val.length > 0) {
-      acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${10 - val.length} more digit${10 - val.length > 1 ? 's' : ''} needed...</span>`;
     } else {
-      acctStatusEl.innerHTML = '<span>Enter 10-digit account number to auto-verify recipient</span>';
+      // Ghana or Kenya Mobile Money check
+      if (val.length >= 9) {
+        const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl.value, country.code);
+        resolvedRecipientName = res.accountName;
+        acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified ${country.name} Payout Target</span>`;
+      } else if (val.length > 0) {
+        resolvedRecipientName = '';
+        acctStatusEl.innerHTML = '<span style="color: var(--text-muted);">Enter full account or MoMo phone number...</span>';
+      } else {
+        resolvedRecipientName = '';
+        acctStatusEl.innerHTML = `<span>Enter ${country.name} recipient number</span>`;
+      }
     }
   };
 
   acctEl?.addEventListener('input', checkAccount);
-
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
 
   const form = container.querySelector('#form-cashout') as HTMLFormElement;
@@ -434,17 +465,24 @@ export async function renderCashout(
     }
 
     const acctNum = acctEl.value.trim();
-    if (acctNum.length !== 10) {
+    if (isNigeria && acctNum.length !== 10) {
       showToast('⚠️ Please enter a valid 10-digit NUBAN account number.');
       return;
     }
 
-    const bankName = selectedBankName.textContent || 'Bank';
+    if (!isNigeria && acctNum.length < 9) {
+      showToast(`⚠️ Please enter a valid ${country.name} account or phone number.`);
+      return;
+    }
+
+    const bankName = selectedBankName.textContent || 'Destination Rail';
+    const quote = fxQuotesService.getQuote(amt, tok as any, currentLiveRate, country.code);
+
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 
     try {
-      // Execute on-chain transfer on Celo Mainnet to Sivan / Textile settlement address
+      // Execute on-chain transfer on Celo Mainnet to registered Agent wallet
       const txRes = await miniPayService.sendAttributedTransfer({
         to: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
         amount: amt,
@@ -458,12 +496,26 @@ export async function renderCashout(
         return;
       }
 
+      // Record transaction into user's persistent Transaction History ledger
+      transactionsService.recordCashout({
+        sourceAmount: amt,
+        sourceToken: tok,
+        targetAmount: quote.netOutput,
+        targetCurrency: country.currency,
+        targetCurrencySymbol: country.currencySymbol,
+        recipientAccount: acctNum,
+        recipientName: resolvedRecipientName || bankName,
+        bankOrRailName: bankName,
+        countryCode: country.code,
+        txHash: txRes.txHash,
+      });
+
       submitBtn.innerHTML = '<span>🚀 Off-Ramp Dispatched...</span>';
-      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Dispatched to ${bankName}. NIBSS credit in 1-2 mins!`);
+      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`);
 
       setTimeout(() => {
-        onNavigate('dashboard');
-      }, 2500);
+        onNavigate('history');
+      }, 2000);
     } catch (err: any) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
