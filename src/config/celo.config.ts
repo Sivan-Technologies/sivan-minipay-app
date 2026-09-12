@@ -102,9 +102,9 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
         icon: '🟢',
       },
       cNGN: {
-        address: '0xF6829D7393dAe24509eb1E52eE8e572e2E271a4f',
+        address: '0xa188439ccCEe9A6aa0E842f9c17C1b00C7B4dd4D',
         symbol: 'cNGN',
-        name: 'cNGN',
+        name: 'cNGN (Celo Sepolia)',
         decimals: 6,
         icon: '🇳🇬',
       },
