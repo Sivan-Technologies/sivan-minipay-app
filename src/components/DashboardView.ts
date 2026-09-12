@@ -20,6 +20,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   const usdcBal = balances.find(b => b.symbol === 'USDC')?.balanceFormatted || '0.00';
   const cusdBal = balances.find(b => b.symbol === 'cUSD')?.balanceFormatted || '0.00';
   const cngnBal = balances.find(b => b.symbol === 'cNGN')?.balanceFormatted || '0.00';
+  const hasCusd = parseFloat(cusdBal) > 0;
 
   // Live currency conversion calculation based on selected country
   const liveRate = fxQuotesService.getLatestRate('USDC', country.code);
@@ -86,10 +87,12 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
           <span class="pill-dot">${getTokenIconSvg('USDC', 14)}</span>
           <span class="pill-val">${usdcBal} USDC</span>
         </div>
-        <div class="mini-token-pill">
-          <span class="pill-dot">${getTokenIconSvg('cUSD', 14)}</span>
-          <span class="pill-val">${cusdBal} cUSD</span>
-        </div>
+        ${hasCusd ? `
+          <div class="mini-token-pill">
+            <span class="pill-dot">${getTokenIconSvg('cUSD', 14)}</span>
+            <span class="pill-val">${cusdBal} cUSD</span>
+          </div>
+        ` : ''}
         ${country.code === 'NG' ? `
           <div class="mini-token-pill">
             <span class="pill-dot">${getTokenIconSvg('cNGN', 14)}</span>
