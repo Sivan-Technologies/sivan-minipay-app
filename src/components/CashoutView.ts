@@ -143,10 +143,10 @@ export async function renderCashout(
       </div>
 
       ${isGlobal ? `
-        <!-- Direct Transfer Dynamic Rail Indicator for Global -->
+        <!-- Global Destination Rail Indicator -->
         <div class="form-group" style="margin-top: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0;">Transfer Network & Rail</label>
+            <label class="form-label" style="margin-bottom: 0;">Global Destination</label>
             <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Sub-Second Finality</span>
           </div>
           <div id="global-rail-badge" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md);">
@@ -162,7 +162,7 @@ export async function renderCashout(
         <!-- Destination Bank / Rail for Fiat Corridors (NG, GH, KE) -->
         <div class="form-group">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0;">${isNigeria ? 'Destination Bank' : `${country.name} Destination Bank / MoMo`}</label>
+            <label class="form-label" style="margin-bottom: 0;">${isNigeria ? 'Destination Bank' : `${country.name} Destination`}</label>
             <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live Rail Lookup</span>
           </div>
 

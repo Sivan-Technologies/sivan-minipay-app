@@ -30,7 +30,7 @@ export const SUPPORTED_COUNTRIES: Record<string, SupportedCountry> = {
     accountPlaceholder: 'Enter 0x Celo wallet address',
     settlementDescription: 'Global direct settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.',
     defaultBanks: [
-      { code: 'GLOBAL_DIRECT', name: 'Direct On-Chain Transfer (Celo)', category: 'fintech_wallet' },
+      { code: 'GLOBAL_DIRECT', name: 'USDC Direct Transfer (Celo)', category: 'fintech_wallet' },
     ],
   },
   NG: {
