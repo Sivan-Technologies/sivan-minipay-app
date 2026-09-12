@@ -42,7 +42,7 @@ export interface ServiceAgreement {
 export interface FXQuote {
   sourceAmount: number;
   sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-  targetCurrency: 'NGN' | 'GHS' | 'KES' | 'ZAR' | 'USDC';
+  targetCurrency: 'NGN' | 'GHS' | 'KES' | 'ZAR' | 'USDC' | 'USD';
   targetCurrencySymbol?: string;
   exchangeRate: number; // e.g. 1 USDC = 1,485 NGN or 15.65 GHS
   grossOutput: number;

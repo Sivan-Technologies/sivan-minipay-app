@@ -84,7 +84,7 @@ export function renderHeader(container: HTMLElement) {
                     <span class="country-opt-flag">${c.flag}</span>
                     <div class="country-opt-details">
                       <div class="country-opt-title">${c.name} (${c.currency})</div>
-                      <div class="country-opt-sub">${c.railType === 'nibss_bank' ? 'Commercial Banks & Fintech (NIBSS)' : 'Mobile Money & Commercial Banks'}</div>
+                      <div class="country-opt-sub">${c.code === 'GLOBAL' ? 'Global Cross-Border Service Agreements (USD)' : c.railType === 'nibss_bank' ? 'Commercial Banks & Fintech (NIBSS)' : 'Mobile Money & Commercial Banks'}</div>
                     </div>
                     ${isCurrent ? '<span class="country-opt-check">✓</span>' : ''}
                   </button>

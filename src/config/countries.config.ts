@@ -18,6 +18,22 @@ export interface SupportedCountry {
 }
 
 export const SUPPORTED_COUNTRIES: Record<string, SupportedCountry> = {
+  GLOBAL: {
+    code: 'GLOBAL',
+    name: 'Global',
+    flag: '🌐',
+    currency: 'USD',
+    currencySymbol: '$',
+    defaultUsdRate: 1.0,
+    railType: 'mobile_money_and_bank',
+    accountLabel: 'Beneficiary Wallet Address or Account',
+    accountPlaceholder: 'Enter 0x address or IBAN / Wire',
+    settlementDescription: 'Global USDC settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.',
+    defaultBanks: [
+      { code: 'GLOBAL_USDC', name: 'USDC Direct Transfer (Celo)', category: 'fintech_wallet' },
+      { code: 'GLOBAL_WIRE', name: 'International Wire / Cross-Border', category: 'commercial_bank' },
+    ],
+  },
   NG: {
     code: 'NG',
     name: 'Nigeria',
@@ -107,6 +123,7 @@ const ACTIVE_COUNTRY_KEY = 'sivan_active_country';
 
 /**
  * Intelligent country detection based on user's timezone/locale with smooth fallback.
+ * African regional timezones map to their local corridors; non-African international users default to Global (USD).
  */
 export function detectDefaultCountry(): SupportedCountry {
   try {
@@ -118,6 +135,7 @@ export function detectDefaultCountry(): SupportedCountry {
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     const tzLower = timeZone.toLowerCase();
 
+    // Specific African regional corridors
     if (tzLower.includes('accra') || tzLower.includes('ghana')) {
       return SUPPORTED_COUNTRIES.GH;
     }
@@ -127,13 +145,24 @@ export function detectDefaultCountry(): SupportedCountry {
     if (tzLower.includes('johannesburg') || tzLower.includes('south_africa')) {
       return SUPPORTED_COUNTRIES.ZA;
     }
-    if (tzLower.includes('lagos') || tzLower.includes('nigeria') || tzLower.includes('west_africa')) {
+    if (
+      tzLower.includes('lagos') ||
+      tzLower.includes('nigeria') ||
+      tzLower.includes('west_africa') ||
+      tzLower.includes('wat')
+    ) {
       return SUPPORTED_COUNTRIES.NG;
     }
+    // Generic African timezone prefix
+    if (tzLower.startsWith('africa/')) {
+      return SUPPORTED_COUNTRIES.NG;
+    }
+
+    // Default for international / global users is Global (USD)
+    return SUPPORTED_COUNTRIES.GLOBAL;
   } catch {
-    // Default to Nigeria
+    return SUPPORTED_COUNTRIES.GLOBAL;
   }
-  return SUPPORTED_COUNTRIES.NG;
 }
 
 class CountryStateService {

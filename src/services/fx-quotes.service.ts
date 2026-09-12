@@ -126,6 +126,11 @@ export class FXQuotesService {
       return { rate: 1.0, source: 'cNGN 1:1 Parity' };
     }
 
+    if (country.code === 'GLOBAL') {
+      if (sourceCurrency === 'cNGN') return { rate: 1.0 / 1485.5, source: 'cNGN Market' };
+      return { rate: 1.0, source: '1:1 USD Parity' };
+    }
+
     const cacheKey = `${sourceCurrency}_${country.code}`;
     const cached = this.rateCache[cacheKey];
     if (cached && Date.now() - cached.fetchedAt < this.CACHE_TTL_MS) {
@@ -195,7 +200,11 @@ export class FXQuotesService {
    * Helper to get calibrated base rate for token in corridor.
    */
   public getLatestRate(sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD', countryCode: string = 'NG'): number {
-    const country = SUPPORTED_COUNTRIES[countryCode] || SUPPORTED_COUNTRIES.NG;
+    const country = SUPPORTED_COUNTRIES[countryCode] || SUPPORTED_COUNTRIES.GLOBAL;
+    if (country.code === 'GLOBAL') {
+      if (sourceCurrency === 'cNGN') return 1.0 / 1485.5;
+      return 1.0;
+    }
     if (sourceCurrency === 'cNGN') return countryCode === 'NG' ? 1.0 : 1.0 / 1485.5;
     if (sourceCurrency === 'cUSD') return country.defaultUsdRate * 0.998;
     return country.defaultUsdRate;
@@ -213,6 +222,18 @@ export class FXQuotesService {
     const country = countryCode 
       ? (SUPPORTED_COUNTRIES[countryCode] || countryService.getActiveCountry())
       : countryService.getActiveCountry();
+
+    // Global corridor validation
+    if (country.code === 'GLOBAL') {
+      const clean = accountNumber.trim();
+      if (/^0x[a-fA-F0-9]{40}$/.test(clean) || clean.length >= 8) {
+        return {
+          valid: true,
+          accountName: clean.startsWith('0x') ? `Beneficiary (${clean.slice(0, 6)}...${clean.slice(-4)})` : 'Verified Global Recipient',
+        };
+      }
+      return { valid: false, accountName: '' };
+    }
 
     // Ghana or Kenya Mobile Money validation
     if (country.code === 'GH') {
