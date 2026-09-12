@@ -76,7 +76,7 @@ export class FXQuotesService {
    * Fetches live rate from Sivan Payment backend API (which integrates Textile Credit live RFQ).
    */
   public async fetchLiveRate(
-    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDT',
+    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC',
     amount: number = 10
   ): Promise<{ rate: number; source: string }> {
     if (sourceCurrency === 'cNGN') {
@@ -147,7 +147,7 @@ export class FXQuotesService {
   /**
    * Synchronously retrieves the latest known rate from memory.
    */
-  public getLatestRate(sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDT'): number {
+  public getLatestRate(sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC'): number {
     if (sourceCurrency === 'cNGN') return 1.0;
     return this.rateCache[sourceCurrency]?.rate || 1326.4;
   }
@@ -157,7 +157,7 @@ export class FXQuotesService {
    */
   public getQuote(
     sourceAmount: number, 
-    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDT',
+    sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD' = 'USDC',
     explicitRate?: number
   ): FXQuote {
     const rate = sourceCurrency === 'cNGN' 

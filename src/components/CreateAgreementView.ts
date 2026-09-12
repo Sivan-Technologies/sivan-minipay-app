@@ -50,18 +50,21 @@ export async function renderCreateAgreement(
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="deal-currency-wrap">
             <div class="custom-select-trigger" id="deal-currency-trigger">
-              <span id="deal-currency-display">🟢 USDT</span>
+              <span id="deal-currency-display">💵 USDC</span>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="deal-currency-menu">
-              <div class="custom-select-item selected" data-value="USDT" data-label="🟢 USDT">
-                <span>🟢</span> <span>USDT (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="USDC" data-label="💵 USDC">
+              <div class="custom-select-item selected" data-value="USDC" data-label="💵 USDC">
                 <span>💵</span> <span>USDC (Celo)</span>
               </div>
+              <div class="custom-select-item" data-value="USDT" data-label="🟢 USDT">
+                <span>🟢</span> <span>USDT (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
+                <span>💲</span> <span>cUSD (Celo)</span>
+              </div>
             </div>
-            <input type="hidden" id="deal-currency" value="USDT" />
+            <input type="hidden" id="deal-currency" value="USDC" />
           </div>
 
           <input 
@@ -103,15 +106,15 @@ export async function renderCreateAgreement(
       <div class="quote-box" id="calc-box">
         <div class="quote-row">
           <span>Gross Agreement Value:</span>
-          <span id="calc-gross">0.00 USDT</span>
+          <span id="calc-gross">0.00 USDC</span>
         </div>
         <div class="quote-row">
           <span id="calc-fee-label">Sivan Platform Fee:</span>
-          <span id="calc-fee">0.00 USDT</span>
+          <span id="calc-fee">0.00 USDC</span>
         </div>
         <div class="quote-row">
           <span>Net Contractor Payout:</span>
-          <span id="calc-net">0.00 USDT</span>
+          <span id="calc-net">0.00 USDC</span>
         </div>
         <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
           <span>🏷️ Official Attribution:</span>

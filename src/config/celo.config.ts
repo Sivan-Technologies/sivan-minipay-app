@@ -52,19 +52,19 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
         decimals: 6,
         icon: '🟢',
       },
-      cNGN: {
-        address: '0xF6829D7393dAe24509eb1E52eE8e572e2E271a4f',
-        symbol: 'cNGN',
-        name: 'Compliant Nigerian Naira',
-        decimals: 6,
-        icon: '🇳🇬',
-      },
       cUSD: {
         address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
         symbol: 'cUSD',
         name: 'Celo Dollar',
         decimals: 18,
         icon: '💲',
+      },
+      cNGN: {
+        address: '0xF6829D7393dAe24509eb1E52eE8e572e2E271a4f',
+        symbol: 'cNGN',
+        name: 'Compliant Nigerian Naira',
+        decimals: 6,
+        icon: '🇳🇬',
       },
       CELO: {
         address: '0x471EcE3750Da237f93B8E339c536989b8978a438',
@@ -101,19 +101,19 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
         decimals: 6,
         icon: '🟢',
       },
-      cNGN: {
-        address: '0xa188439ccCEe9A6aa0E842f9c17C1b00C7B4dd4D',
-        symbol: 'cNGN',
-        name: 'cNGN (Celo Sepolia)',
-        decimals: 6,
-        icon: '🇳🇬',
-      },
       cUSD: {
         address: '0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80',
         symbol: 'cUSD',
         name: 'Celo Dollar (Celo Sepolia)',
         decimals: 18,
         icon: '💲',
+      },
+      cNGN: {
+        address: '0xa188439ccCEe9A6aa0E842f9c17C1b00C7B4dd4D',
+        symbol: 'cNGN',
+        name: 'cNGN (Celo Sepolia)',
+        decimals: 6,
+        icon: '🇳🇬',
       },
       CELO: {
         address: '0x471EcE3750Da237f93B8E339c536989b8978a438',

@@ -35,15 +35,15 @@ export async function renderCashout(
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="token-select-wrap">
             <div class="custom-select-trigger" id="token-select-trigger">
-              <span id="selected-token-display">🟢 USDT</span>
+              <span id="selected-token-display">💵 USDC</span>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="token-select-menu">
-              <div class="custom-select-item selected" data-value="USDT" data-label="🟢 USDT">
-                <span>🟢</span> <span>USDT (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="USDC" data-label="💵 USDC">
+              <div class="custom-select-item selected" data-value="USDC" data-label="💵 USDC">
                 <span>💵</span> <span>USDC (Celo)</span>
+              </div>
+              <div class="custom-select-item" data-value="USDT" data-label="🟢 USDT">
+                <span>🟢</span> <span>USDT (Celo)</span>
               </div>
               <div class="custom-select-item" data-value="cUSD" data-label="💲 cUSD">
                 <span>💲</span> <span>cUSD (Celo)</span>
@@ -52,7 +52,7 @@ export async function renderCashout(
                 <span>🇳🇬</span> <span>cNGN (Celo)</span>
               </div>
             </div>
-            <input type="hidden" id="cashout-token" value="USDT" />
+            <input type="hidden" id="cashout-token" value="USDC" />
           </div>
 
           <input 
@@ -153,7 +153,7 @@ export async function renderCashout(
       : 'Wallet not connected';
   };
 
-  let currentLiveRate: number = fxQuotesService.getLatestRate('USDT');
+  let currentLiveRate: number = fxQuotesService.getLatestRate('USDC');
   let currentRateSource: string = 'Textile RFQ';
 
   const updateQuoteDisplay = () => {

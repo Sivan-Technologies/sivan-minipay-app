@@ -110,6 +110,15 @@ export function renderHeader(container: HTMLElement) {
                   <span>🦊 Import USDC to MetaMask</span>
                 </button>
               ` : ''}
+              ${isTestnet ? `
+                <div style="margin-top: 10px; padding: 10px; background: rgba(245, 158, 11, 0.1); border: 1px dashed rgba(245, 158, 11, 0.3); border-radius: 6px; font-size: 11px;">
+                  <div style="font-weight: 600; color: #f59e0b; margin-bottom: 2px;">Need Testnet CELO for Gas?</div>
+                  <div style="color: var(--text-muted); font-size: 10px; margin-bottom: 6px;">MetaMask requires a tiny fraction of CELO (&lt; $0.001) for network fee.</div>
+                  <a href="https://faucet.celo.org/celo-sepolia" target="_blank" rel="noreferrer" style="color: #f59e0b; font-weight: 600; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                    🚰 Get Free Testnet CELO ↗
+                  </a>
+                </div>
+              ` : ''}
             </div>
 
             <!-- Connection Status -->
