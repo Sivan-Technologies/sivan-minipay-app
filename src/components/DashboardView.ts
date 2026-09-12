@@ -38,9 +38,15 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
 
   const modeBadgeColor = isConnected ? 'var(--accent-emerald)' : 'var(--text-muted)';
 
-  // Determine top displayed stablecoin
-  const primaryTokenSymbol = Number(usdtBal) > 0 ? 'USDT' : 'USDC';
-  const primaryTokenBal = primaryTokenSymbol === 'USDT' ? usdtBal : usdcBal;
+  // Display total Digital Dollar balance in USD (USDC + USDT + cUSD)
+  const usdStableTotal = balances
+    .filter(b => b.symbol === 'USDC' || b.symbol === 'USDT' || b.symbol === 'cUSD')
+    .reduce((sum, b) => sum + (parseFloat(b.balanceFormatted.replace(/,/g, '')) || 0), 0);
+
+  const primaryTokenBal = usdStableTotal.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 
   container.innerHTML = `
     <!-- Network Ribbon -->
@@ -64,7 +70,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       </div>
 
       <div class="hero-primary-crypto">
-        <span class="hero-crypto-symbol">${primaryTokenSymbol}</span>
+        <span class="hero-crypto-symbol">USD</span>
         <span class="hero-crypto-amount">${primaryTokenBal}</span>
         <span class="hero-refresh-icon" id="btn-refresh-bal" title="Refresh live balances">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
