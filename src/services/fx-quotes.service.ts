@@ -31,7 +31,7 @@ export function getBankLogoUrl(bankName: string): string {
   if (n.includes('united bank') || n.includes('uba')) return '/banks/uba.png';
   if (n.includes('first bank')) return '/banks/firstbank.png';
   if (n.includes('wema')) return '/banks/wema.png';
-  return '/banks/opay.png';
+  return '';
 }
 
 export class FXQuotesService {

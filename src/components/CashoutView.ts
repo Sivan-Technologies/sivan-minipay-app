@@ -221,7 +221,9 @@ export async function renderCashout(
       const logo = b.logoUrl || (isNigeria ? getBankLogoUrl(b.name) : '');
       return `
         <div class="custom-select-item bank-item-row" data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
-          ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px; margin-right: 6px;">📱</span>'}
+          ${logo 
+            ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` 
+            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 6px; opacity: 0.8; flex-shrink: 0;"><path d="M12 1.75L2 6.5v2.25h20V6.5L12 1.75zM4.5 11v6.5h2.8V11H4.5zm5.1 0v6.5h2.8V11H9.6zm5.1 0v6.5h2.8V11h-2.8zM2 19.5v2.25h20V19.5H2z"/></svg>`}
           <span style="font-size: 13px; font-weight: 500;">${b.name}</span>
         </div>
       `;
