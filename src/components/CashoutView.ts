@@ -1,4 +1,4 @@
-import { fxQuotesService } from '../services/fx-quotes.service';
+import { fxQuotesService, type BankItem, getBankLogoUrl } from '../services/fx-quotes.service';
 import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import type { SupportedTokenSymbol } from '../config/celo.config';
@@ -106,11 +106,54 @@ export async function renderCashout(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="cashout-bank">Destination Bank</label>
-        <select id="cashout-bank" class="form-select">
-          <option value="">Loading banks from Sivan API...</option>
-        </select>
-        <div id="acct-lookup-status" style="font-size: 11px; margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">Destination Bank</label>
+          <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live NIBSS Lookup</span>
+        </div>
+
+        <!-- Quick Bank Suggestion Pills with official logos -->
+        <div class="bank-suggestions-row" id="bank-quick-pills">
+          <button type="button" class="bank-pill-btn active" data-code="100004" data-name="OPay Digital Services" data-logo="/banks/opay.png">
+            <img src="/banks/opay.png" alt="OPay" class="bank-logo-img" /> <span>OPay</span>
+          </button>
+          <button type="button" class="bank-pill-btn" data-code="100033" data-name="PalmPay Limited" data-logo="/banks/palmpay.png">
+            <img src="/banks/palmpay.png" alt="PalmPay" class="bank-logo-img" /> <span>PalmPay</span>
+          </button>
+          <button type="button" class="bank-pill-btn" data-code="090267" data-name="Kuda Microfinance Bank" data-logo="/banks/kuda.png">
+            <img src="/banks/kuda.png" alt="Kuda" class="bank-logo-img" /> <span>Kuda</span>
+          </button>
+          <button type="button" class="bank-pill-btn" data-code="000013" data-name="Guaranty Trust Bank (GTBank)" data-logo="/banks/gtbank.png">
+            <img src="/banks/gtbank.png" alt="GTBank" class="bank-logo-img" /> <span>GTBank</span>
+          </button>
+          <button type="button" class="bank-pill-btn" data-code="000014" data-name="Access Bank" data-logo="/banks/access.png">
+            <img src="/banks/access.png" alt="Access" class="bank-logo-img" /> <span>Access</span>
+          </button>
+          <button type="button" class="bank-pill-btn" data-code="000015" data-name="Zenith Bank" data-logo="/banks/zenith.png">
+            <img src="/banks/zenith.png" alt="Zenith" class="bank-logo-img" /> <span>Zenith</span>
+          </button>
+        </div>
+
+        <!-- Custom Searchable Bank Selector -->
+        <div class="custom-select-wrap" id="bank-select-wrap" style="position: relative;">
+          <div class="custom-select-trigger" id="bank-select-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <img src="/banks/opay.png" class="bank-logo-img" id="selected-bank-img" />
+              <span id="selected-bank-name" style="font-weight: 500;">OPay Digital Services</span>
+            </div>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden; display: none;">
+            <div class="bank-search-box">
+              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search bank (e.g. GTB, Zenith, Kuda...)" />
+            </div>
+            <div class="bank-items-scroll" id="bank-items-container">
+              <!-- populated dynamically with real logo icons -->
+            </div>
+          </div>
+          <input type="hidden" id="cashout-bank" value="100004" />
+        </div>
+
+        <div id="acct-lookup-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
           <span>Enter 10-digit account number to auto-verify recipient</span>
         </div>
       </div>
@@ -133,14 +176,101 @@ export async function renderCashout(
   const grossEl = container.querySelector('#q-gross') as HTMLElement;
   const feeEl = container.querySelector('#q-fee') as HTMLElement;
   const netEl = container.querySelector('#q-net') as HTMLElement;
-  const bankEl = container.querySelector('#cashout-bank') as HTMLSelectElement;
+  let allBanks: BankItem[] = [];
+  const bankHiddenEl = container.querySelector('#cashout-bank') as HTMLInputElement;
+  const bankTrigger = container.querySelector('#bank-select-trigger') as HTMLElement;
+  const bankMenu = container.querySelector('#bank-select-menu') as HTMLElement;
+  const bankFilterInput = container.querySelector('#bank-filter-input') as HTMLInputElement;
+  const bankItemsContainer = container.querySelector('#bank-items-container') as HTMLElement;
+  const selectedBankImg = container.querySelector('#selected-bank-img') as HTMLImageElement;
+  const selectedBankName = container.querySelector('#selected-bank-name') as HTMLElement;
+  const quickPills = container.querySelectorAll('.bank-pill-btn');
   const acctEl = container.querySelector('#cashout-acct') as HTMLInputElement;
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
 
+  const renderBankItems = (filterText = '') => {
+    const q = filterText.toLowerCase().trim();
+    const filtered = allBanks.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
+    if (filtered.length === 0) {
+      bankItemsContainer.innerHTML = '<div style="padding: 12px; font-size: 12px; color: var(--text-muted); text-align: center;">No banks found</div>';
+      return;
+    }
+    bankItemsContainer.innerHTML = filtered.map(b => {
+      const logo = b.logoUrl || getBankLogoUrl(b.name);
+      return `
+        <div class="custom-select-item ${b.code === bankHiddenEl.value ? 'selected' : ''}" data-code="${b.code}" data-name="${b.name}" data-logo="${logo}" style="display: flex; align-items: center; gap: 8px; padding: 10px 12px;">
+          <img src="${logo}" class="bank-logo-img" alt="" />
+          <span style="font-size: 13px; font-weight: 500;">${b.name}</span>
+        </div>
+      `;
+    }).join('');
+
+    bankItemsContainer.querySelectorAll('.custom-select-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const code = target.dataset.code!;
+        const name = target.dataset.name!;
+        const logo = target.dataset.logo!;
+        selectBank(code, name, logo);
+        bankMenu.classList.remove('open');
+        bankTrigger.classList.remove('active');
+      });
+    });
+  };
+
+  const selectBank = (code: string, name: string, logo: string) => {
+    bankHiddenEl.value = code;
+    selectedBankName.textContent = name;
+    selectedBankImg.src = logo;
+
+    quickPills.forEach(p => {
+      if ((p as HTMLElement).dataset.code === code) {
+        p.classList.add('active');
+      } else {
+        p.classList.remove('active');
+      }
+    });
+
+    renderBankItems(bankFilterInput?.value || '');
+    if (acctEl.value.trim().length === 10) {
+      void checkAccount();
+    }
+  };
+
+  // Quick pill clicks
+  quickPills.forEach(p => {
+    p.addEventListener('click', () => {
+      const el = p as HTMLElement;
+      selectBank(el.dataset.code!, el.dataset.name!, el.dataset.logo!);
+    });
+  });
+
+  // Open/Close bank menu
+  bankTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = bankMenu.classList.contains('open');
+    if (isOpen) {
+      bankMenu.classList.remove('open');
+      bankTrigger.classList.remove('active');
+    } else {
+      bankMenu.classList.add('open');
+      bankTrigger.classList.add('active');
+      bankFilterInput.value = '';
+      renderBankItems('');
+      bankFilterInput.focus();
+    }
+  });
+
+  bankFilterInput?.addEventListener('input', () => {
+    renderBankItems(bankFilterInput.value);
+  });
+
   // Dynamically load banks from Sivan Payment backend API
   void fxQuotesService.fetchBanks().then(banks => {
-    bankEl.innerHTML = banks.map(b => `<option value="${b.code}">${b.name}</option>`).join('');
+    allBanks = banks;
+    renderBankItems('');
     if (acctEl.value.trim().length === 10) {
       void checkAccount();
     }
@@ -225,10 +355,12 @@ export async function renderCashout(
     });
   });
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   document.addEventListener('click', () => {
     tokenMenu?.classList.remove('open');
     tokenTrigger?.classList.remove('active');
+    bankMenu?.classList.remove('open');
+    bankTrigger?.classList.remove('active');
   });
 
   updateBalanceDisplay();
@@ -243,25 +375,22 @@ export async function renderCashout(
     // Auto-detect OPay / PalmPay if phone-like prefix (070, 080, 081, 090, 091 or 70, 80, 81, 90, 91)
     if (val.length === 10) {
       const isPhoneNuban = /^(70|80|81|90|91|07|08|09)/.test(val);
-      if (isPhoneNuban && (!bankEl.value || bankEl.value === '000014')) {
-        const opayOpt = Array.from(bankEl.options).find(o => o.text.toLowerCase().includes('opay'));
-        if (opayOpt) {
-          bankEl.value = opayOpt.value;
-        }
+      if (isPhoneNuban && (!bankHiddenEl.value || bankHiddenEl.value === '000014')) {
+        selectBank('100004', 'OPay Digital Services', '/banks/opay.png');
       }
     }
 
     if (val.length === 10) {
-      if (!bankEl.value) {
+      if (!bankHiddenEl.value) {
         acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify name</span>';
         return;
       }
 
       acctStatusEl.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan); font-weight: 500;">Resolving recipient via NIBSS...</span>';
       try {
-        const res = await fxQuotesService.verifyBankAccount(val, bankEl.value);
+        const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl.value);
         if (res.valid) {
-          acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified: ${res.accountName}</span>`;
+          acctStatusEl.innerHTML = `<span style="color: var(--accent-emerald); font-weight: 600;">✓ Verified Recipient: ${res.accountName}</span>`;
         } else {
           acctStatusEl.innerHTML = '<span style="color: #ef4444;">⚠️ Invalid account or bank mismatch. Please verify details.</span>';
         }
@@ -276,7 +405,6 @@ export async function renderCashout(
   };
 
   acctEl?.addEventListener('input', checkAccount);
-  bankEl?.addEventListener('change', checkAccount);
 
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
 
@@ -311,7 +439,7 @@ export async function renderCashout(
       return;
     }
 
-    const bankName = bankEl.options[bankEl.selectedIndex].text;
+    const bankName = selectedBankName.textContent || 'Bank';
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 

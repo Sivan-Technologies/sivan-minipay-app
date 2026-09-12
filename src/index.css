@@ -865,3 +865,77 @@ body {
   }
 }
 
+/* ---------------------------------------------------------------------------
+   Bank Suggestion Pills & Searchable Selector
+--------------------------------------------------------------------------- */
+.bank-suggestions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: none;
+}
+.bank-suggestions-row::-webkit-scrollbar {
+  display: none;
+}
+.bank-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: var(--transition-smooth);
+}
+.bank-pill-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-emerald);
+}
+.bank-pill-btn.active {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: var(--accent-emerald);
+  color: var(--accent-emerald);
+}
+.bank-logo-img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #fff;
+  padding: 1px;
+  flex-shrink: 0;
+}
+.bank-search-box {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 2;
+}
+.bank-search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  outline: none;
+}
+.bank-search-input:focus {
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 2px var(--accent-emerald-glow);
+}
+.bank-items-scroll {
+  max-height: 190px;
+  overflow-y: auto;
+}
+

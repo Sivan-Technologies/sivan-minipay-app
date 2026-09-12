@@ -18,6 +18,20 @@ interface CachedRate {
 const API_BASE = '/api/v1/cashout';
 const FALLBACK_API_BASE = 'https://api.sivantech.online/api/v1/cashout';
 
+export function getBankLogoUrl(bankName: string): string {
+  const n = bankName.toLowerCase();
+  if (n.includes('opay') || n.includes('paycom')) return '/banks/opay.png';
+  if (n.includes('palmpay')) return '/banks/palmpay.png';
+  if (n.includes('kuda')) return '/banks/kuda.png';
+  if (n.includes('guaranty') || n.includes('gtbank') || n.includes('gtb')) return '/banks/gtbank.png';
+  if (n.includes('access')) return '/banks/access.png';
+  if (n.includes('zenith')) return '/banks/zenith.png';
+  if (n.includes('united bank') || n.includes('uba')) return '/banks/uba.png';
+  if (n.includes('first bank')) return '/banks/firstbank.png';
+  if (n.includes('wema')) return '/banks/wema.png';
+  return '/banks/opay.png';
+}
+
 export class FXQuotesService {
   private rateCache: Record<string, CachedRate> = {};
   private banksCache: BankItem[] | null = null;
@@ -49,7 +63,7 @@ export class FXQuotesService {
             code: String(b.code || b.id),
             name: String(b.name),
             id: String(b.id || b.code),
-            logoUrl: b.logoUrl,
+            logoUrl: b.logoUrl || getBankLogoUrl(b.name),
           }));
           return this.banksCache;
         }
@@ -60,15 +74,15 @@ export class FXQuotesService {
 
     // Default dynamic standard NIBSS banks if network timeout occurs
     return [
-      { code: '000014', name: 'Access Bank' },
-      { code: '000013', name: 'Guaranty Trust Bank (GTBank)' },
-      { code: '000015', name: 'Zenith Bank' },
-      { code: '000004', name: 'United Bank for Africa (UBA)' },
-      { code: '000016', name: 'First Bank of Nigeria' },
-      { code: '100004', name: 'OPay Digital Services' },
-      { code: '100033', name: 'PalmPay Limited' },
-      { code: '090267', name: 'Kuda Microfinance Bank' },
-      { code: '000017', name: 'Wema Bank' },
+      { code: '100004', name: 'OPay Digital Services', logoUrl: '/banks/opay.png' },
+      { code: '100033', name: 'PalmPay Limited', logoUrl: '/banks/palmpay.png' },
+      { code: '090267', name: 'Kuda Microfinance Bank', logoUrl: '/banks/kuda.png' },
+      { code: '000013', name: 'Guaranty Trust Bank (GTBank)', logoUrl: '/banks/gtbank.png' },
+      { code: '000014', name: 'Access Bank', logoUrl: '/banks/access.png' },
+      { code: '000015', name: 'Zenith Bank', logoUrl: '/banks/zenith.png' },
+      { code: '000004', name: 'United Bank for Africa (UBA)', logoUrl: '/banks/uba.png' },
+      { code: '000016', name: 'First Bank of Nigeria', logoUrl: '/banks/firstbank.png' },
+      { code: '000017', name: 'Wema Bank', logoUrl: '/banks/wema.png' },
     ];
   }
 
