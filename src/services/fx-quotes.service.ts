@@ -37,6 +37,7 @@ export function getBankLogoUrl(bankName: string): string {
 export class FXQuotesService {
   private rateCache: Record<string, CachedRate> = {};
   private banksCacheByCountry: Record<string, BankItem[]> = {};
+  private transferFeeCache: Map<string, { data: any; timestamp: number }> = new Map();
   private readonly CACHE_TTL_MS = 30_000; // 30 seconds
 
   /**
@@ -176,7 +177,22 @@ export class FXQuotesService {
 
     const rate = liveRate !== undefined ? liveRate : this.getLatestRate(sourceCurrency, country.code);
     const grossOutput = amount * rate;
-    const protocolFeeAmount = grossOutput * PROTOCOL_FEE_PERCENT;
+    
+    // In Global corridor, apply Sivan Transfer Fee (0.5% with $0.10 floor and $0.75 cap on Celo)
+    let protocolFeeAmount: number;
+    if (country.code === 'GLOBAL') {
+      const percent = 0.5;
+      const floor = 0.10;
+      const ceiling = 0.75;
+      let f = amount * (percent / 100);
+      if (floor > 0 && f < floor) f = floor;
+      if (ceiling > 0 && f > ceiling) f = ceiling;
+      if (f > amount) f = amount;
+      protocolFeeAmount = f;
+    } else {
+      protocolFeeAmount = grossOutput * PROTOCOL_FEE_PERCENT;
+    }
+
     const netOutput = Math.max(0, grossOutput - protocolFeeAmount);
 
     return {
@@ -191,6 +207,100 @@ export class FXQuotesService {
       expiresInSeconds: 30,
       quoteId: `q_rfq_${country.code.toLowerCase()}_${Date.now()}`,
     };
+  }
+
+  /**
+   * Dynamically fetches live transfer fee quote from Sivan payment backend (/api/transfer-fee).
+   */
+  public async fetchTransferFeeQuote(
+    amount: number,
+    token: string = 'USDC',
+    destinationAddress?: string
+  ): Promise<{
+    amount: number;
+    fee: number;
+    netAmount: number;
+    effectivePercent: string;
+    appliedRule: string;
+    explanation: string;
+    source: string;
+  }> {
+    const safeAmount = Number.isFinite(amount) && amount > 0 ? amount : 0;
+    const cleanAddr = (destinationAddress || '').trim();
+    const cacheKey = `tf_${safeAmount}_${token.toLowerCase()}_${cleanAddr}`;
+
+    const cached = this.transferFeeCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 5000) {
+      return cached.data;
+    }
+
+    const queryParams = new URLSearchParams({
+      amount: String(safeAmount),
+      network: 'celo',
+      asset: token.toLowerCase(),
+    });
+    if (cleanAddr) {
+      queryParams.set('destinationAddress', cleanAddr);
+    }
+
+    const endpoints = [
+      `/api/transfer-fee?${queryParams.toString()}`,
+      `/api/v1/cashout/transfer-fee?${queryParams.toString()}`,
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+          const json = await res.json();
+          if (json?.data?.fee !== undefined) {
+            const feeNum = parseFloat(json.data.fee) || 0;
+            const netNum = parseFloat(json.data.netAmount) || Math.max(0, safeAmount - feeNum);
+            const result = {
+              amount: safeAmount,
+              fee: Math.round(feeNum * 100) / 100,
+              netAmount: Math.round(netNum * 100) / 100,
+              effectivePercent: json.data.effectivePercent || (safeAmount > 0 ? ((feeNum / safeAmount) * 100).toFixed(2) : '0.00'),
+              appliedRule: json.data.appliedRule || 'percent',
+              explanation: json.data.explanation || '0.5% transfer fee',
+              source: json.source || 'live_api',
+            };
+            this.transferFeeCache.set(cacheKey, { data: result, timestamp: Date.now() });
+            return result;
+          }
+        }
+      } catch {
+        // Try next endpoint
+      }
+    }
+
+    // Direct Celo canonical calculation fallback
+    const percent = 0.5;
+    const floor = 0.10;
+    const ceiling = 0.75;
+    let fee = safeAmount * (percent / 100);
+    let rule = 'percent';
+    if (floor > 0 && fee < floor) { fee = floor; rule = 'minimum'; }
+    if (ceiling > 0 && fee > ceiling) { fee = ceiling; rule = 'maximum'; }
+    if (fee > safeAmount) { fee = safeAmount; rule = 'maximum'; }
+
+    const net = Math.max(0, safeAmount - fee);
+    const eff = safeAmount > 0 ? ((fee / safeAmount) * 100).toFixed(2) : '0.00';
+    const fallbackResult = {
+      amount: safeAmount,
+      fee: Math.round(fee * 100) / 100,
+      netAmount: Math.round(net * 100) / 100,
+      effectivePercent: eff,
+      appliedRule: rule,
+      explanation: rule === 'minimum' ? 'Minimum fee of $0.10 applied' : rule === 'maximum' ? 'Capped at maximum fee of $0.75' : '0.5% transfer fee',
+      source: 'canonical_policy',
+    };
+    this.transferFeeCache.set(cacheKey, { data: fallbackResult, timestamp: Date.now() });
+    return fallbackResult;
   }
 
   /**

@@ -18,6 +18,7 @@ export async function renderCashout(
   const isGhana = country.code === 'GH';
   const isKenya = country.code === 'KE';
   const isNigeria = country.code === 'NG';
+  const isGlobal = country.code === 'GLOBAL';
 
   const corridorTitle = isNigeria
     ? '⚡ Celo to NIBSS Off-Ramp'
@@ -25,21 +26,25 @@ export async function renderCashout(
       ? '⚡ Celo to GhIPSS & MoMo Off-Ramp'
       : isKenya
         ? '⚡ Celo to M-PESA & Pesalink'
-        : '⚡ Celo to PayShap & EFT';
+        : isGlobal
+          ? '⚡ Celo Native Direct Transfer'
+          : '⚡ Celo to PayShap & EFT';
 
   const corridorProvider = isNigeria
     ? 'Textile Credit RFQ'
     : isGhana
       ? 'Kotani Pay / Busha GHS'
-      : 'Sivan Multi-Corridor';
+      : isGlobal
+        ? 'Celo Mainnet Native Rail'
+        : 'Sivan Multi-Corridor';
 
-  // Bank pills dynamically rendered from active country
-  const quickBanks = country.defaultBanks.slice(0, 6);
+  // Bank pills dynamically rendered from active country (only for fiat corridors)
+  const quickBanks = isGlobal ? [] : country.defaultBanks.slice(0, 6);
   const defaultBank = quickBanks[0];
 
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 16px;">
-      <h2 class="section-title">Cash Out to ${country.name} (${country.currency})</h2>
+      <h2 class="section-title">${isGlobal ? 'Direct Transfer' : 'Cash Out'} to ${country.name} (${country.currency})</h2>
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
@@ -49,8 +54,10 @@ export async function renderCashout(
         <span style="font-weight: 700; color: var(--text-emerald);">${corridorTitle}</span>
         <span style="font-size: 11px; color: var(--text-muted);">${corridorProvider}</span>
       </div>
-      <div style="color: var(--text-secondary); line-height: 1.4;">
-        ${country.settlementDescription}
+      <div id="corridor-desc" style="color: var(--text-secondary); line-height: 1.4;">
+        ${isGlobal
+          ? 'Global USDC direct transfers for cross-border settlements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.'
+          : country.settlementDescription}
       </div>
     </div>
 
@@ -101,84 +108,102 @@ export async function renderCashout(
       <!-- Live FX Quote Summary -->
       <div class="quote-box" id="quote-container">
         <div class="quote-row">
-          <span>Live FX Rate:</span>
+          <span id="q-rate-label">Live FX Rate:</span>
           <span id="q-rate" style="font-weight: 600; color: var(--accent-emerald);">Fetching live rate...</span>
         </div>
         <div class="quote-row">
-          <span>Gross Payout:</span>
+          <span id="q-gross-label">${isGlobal ? 'Gross Amount:' : 'Gross Payout:'}</span>
           <span id="q-gross">${country.currencySymbol}0.00</span>
         </div>
         <div class="quote-row">
-          <span>Sivan Protocol Fee (1%):</span>
+          <span id="q-fee-label">${isGlobal ? 'Sivan Transfer Fee:' : 'Sivan Protocol Fee (1%):'}</span>
           <span id="q-fee">-${country.currencySymbol}0.00</span>
         </div>
         <div class="quote-row">
-          <span>Net Credit to Destination:</span>
+          <span id="q-net-label">${isGlobal ? 'Net Credit to Beneficiary:' : 'Net Credit to Destination:'}</span>
           <span id="q-net">${country.currencySymbol}0.00</span>
         </div>
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="cashout-acct">${isNigeria ? '10-Digit NUBAN Account Number' : country.accountLabel}</label>
+        <label class="form-label" for="cashout-acct">${isNigeria ? '10-Digit NUBAN Account Number' : isGlobal ? 'Beneficiary Wallet Address' : country.accountLabel}</label>
         <input 
           type="text" 
           id="cashout-acct" 
           class="form-input" 
-          placeholder="${country.accountPlaceholder}" 
-          ${isNigeria ? 'maxlength="10" pattern="^\\d{10}$"' : 'maxlength="15"'}
-          inputmode="numeric"
+          placeholder="${isGlobal ? 'Enter 0x Celo wallet address' : country.accountPlaceholder}" 
+          ${isNigeria ? 'maxlength="10" pattern="^\\d{10}$"' : isGlobal ? 'maxlength="42"' : 'maxlength="20"'}
+          ${isNigeria ? 'inputmode="numeric"' : ''}
           autocomplete="off"
           required 
         />
-      </div>
-
-      <div class="form-group">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <label class="form-label" style="margin-bottom: 0;">${isNigeria ? 'Destination Bank' : `${country.name} Destination Bank / MoMo`}</label>
-          <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live Rail Lookup</span>
-        </div>
-
-        <!-- Quick Bank / Rail Suggestion Pills -->
-        <div class="bank-suggestions-row" id="bank-quick-pills">
-          ${quickBanks.map((b, idx) => {
-            const logo = b.logoUrl || (isNigeria ? getBankLogoUrl(b.name) : '');
-            const pillClass = idx === 0 ? 'class="bank-pill-btn active"' : 'class="bank-pill-btn"';
-            return `
-              <button type="button" ${pillClass} data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
-                ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px;">📱</span>'}
-                <span>${b.name.replace(' Digital Services', '').replace(' Limited', '').replace(' Bank', '')}</span>
-              </button>
-            `;
-          }).join('')}
-        </div>
-
-        <!-- Custom Searchable Bank Selector -->
-        <div class="custom-select-wrap" id="bank-select-wrap" style="position: relative;">
-          <div class="custom-select-trigger" id="bank-select-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              ${defaultBank?.logoUrl ? `<img src="${defaultBank.logoUrl}" class="bank-logo-img" id="selected-bank-img" />` : '<span id="selected-bank-icon" style="font-size: 16px;">📱</span>'}
-              <span id="selected-bank-name" style="font-weight: 500;">${defaultBank?.name || 'Select Rail'}</span>
-            </div>
-            <span class="chevron">▾</span>
-          </div>
-          <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden;">
-            <div class="bank-search-box">
-              <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
-            </div>
-            <div class="bank-items-scroll" id="bank-items-container">
-              <!-- populated dynamically -->
-            </div>
-          </div>
-          <input type="hidden" id="cashout-bank" value="${defaultBank?.code || ''}" />
-        </div>
-
         <div id="acct-lookup-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
-          <span>${isNigeria ? 'Enter 10-digit account number to auto-verify recipient' : 'Enter mobile money phone number or bank account'}</span>
+          <span>${isNigeria ? 'Enter 10-digit account number to auto-verify recipient' : isGlobal ? 'Enter 0x Celo address to verify beneficiary' : 'Enter mobile money phone number or bank account'}</span>
         </div>
       </div>
+
+      ${isGlobal ? `
+        <!-- Direct Transfer Dynamic Rail Indicator for Global -->
+        <div class="form-group" style="margin-top: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">Transfer Network & Rail</label>
+            <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Sub-Second Finality</span>
+          </div>
+          <div id="global-rail-badge" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md);">
+            <div id="global-rail-icon" style="display: flex; align-items: center;">${getTokenIconSvg('USDC', 20)}</div>
+            <div style="flex: 1;">
+              <div id="global-rail-title" style="font-weight: 600; font-size: 13px; color: var(--text-primary);">USDC Direct Transfer (Celo)</div>
+              <div style="font-size: 11px; color: var(--text-muted);">Direct on-chain wallet settlement on Celo Mainnet</div>
+            </div>
+          </div>
+          <input type="hidden" id="cashout-bank" value="GLOBAL_DIRECT" />
+        </div>
+      ` : `
+        <!-- Destination Bank / Rail for Fiat Corridors (NG, GH, KE) -->
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0;">${isNigeria ? 'Destination Bank' : `${country.name} Destination Bank / MoMo`}</label>
+            <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Live Rail Lookup</span>
+          </div>
+
+          <!-- Quick Bank / Rail Suggestion Pills -->
+          <div class="bank-suggestions-row" id="bank-quick-pills">
+            ${quickBanks.map((b, idx) => {
+              const logo = b.logoUrl || (isNigeria ? getBankLogoUrl(b.name) : '');
+              const pillClass = idx === 0 ? 'class="bank-pill-btn active"' : 'class="bank-pill-btn"';
+              return `
+                <button type="button" ${pillClass} data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
+                  ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px;">📱</span>'}
+                  <span>${b.name.replace(' Digital Services', '').replace(' Limited', '').replace(' Bank', '')}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
+
+          <!-- Custom Searchable Bank Selector -->
+          <div class="custom-select-wrap" id="bank-select-wrap" style="position: relative;">
+            <div class="custom-select-trigger" id="bank-select-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${defaultBank?.logoUrl ? `<img src="${defaultBank.logoUrl}" class="bank-logo-img" id="selected-bank-img" />` : '<span id="selected-bank-icon" style="font-size: 16px;">📱</span>'}
+                <span id="selected-bank-name" style="font-weight: 500;">${defaultBank?.name || 'Select Rail'}</span>
+              </div>
+              <span class="chevron">▾</span>
+            </div>
+            <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden;">
+              <div class="bank-search-box">
+                <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
+              </div>
+              <div class="bank-items-scroll" id="bank-items-container">
+                <!-- populated dynamically -->
+              </div>
+            </div>
+            <input type="hidden" id="cashout-bank" value="${defaultBank?.code || ''}" />
+          </div>
+        </div>
+      `}
 
       <button type="submit" class="btn-primary" id="btn-submit-cashout" style="margin-top: 8px;">
-        <span>💸 Confirm Cash Out (Under 1-2 Mins)</span>
+        <span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>
       </button>
     </form>
   `;
@@ -194,15 +219,20 @@ export async function renderCashout(
   const rateEl = container.querySelector('#q-rate') as HTMLElement;
   const grossEl = container.querySelector('#q-gross') as HTMLElement;
   const feeEl = container.querySelector('#q-fee') as HTMLElement;
+  const feeLabelEl = container.querySelector('#q-fee-label') as HTMLElement | null;
   const netEl = container.querySelector('#q-net') as HTMLElement;
+  const corridorDescEl = container.querySelector('#corridor-desc') as HTMLElement | null;
+  const globalRailTitleEl = container.querySelector('#global-rail-title') as HTMLElement | null;
+  const globalRailIconEl = container.querySelector('#global-rail-icon') as HTMLElement | null;
+
   let allBanks: BankItem[] = [];
   const bankHiddenEl = container.querySelector('#cashout-bank') as HTMLInputElement;
-  const bankTrigger = container.querySelector('#bank-select-trigger') as HTMLElement;
-  const bankMenu = container.querySelector('#bank-select-menu') as HTMLElement;
-  const bankFilterInput = container.querySelector('#bank-filter-input') as HTMLInputElement;
-  const bankItemsContainer = container.querySelector('#bank-items-container') as HTMLElement;
+  const bankTrigger = container.querySelector('#bank-select-trigger') as HTMLElement | null;
+  const bankMenu = container.querySelector('#bank-select-menu') as HTMLElement | null;
+  const bankFilterInput = container.querySelector('#bank-filter-input') as HTMLInputElement | null;
+  const bankItemsContainer = container.querySelector('#bank-items-container') as HTMLElement | null;
   const selectedBankImg = container.querySelector('#selected-bank-img') as HTMLImageElement | null;
-  const selectedBankName = container.querySelector('#selected-bank-name') as HTMLElement;
+  const selectedBankName = container.querySelector('#selected-bank-name') as HTMLElement | null;
   const quickPills = container.querySelectorAll('.bank-pill-btn');
   const acctEl = container.querySelector('#cashout-acct') as HTMLInputElement;
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
@@ -211,6 +241,7 @@ export async function renderCashout(
   let resolvedRecipientName = '';
 
   const renderBankItems = (filterText = '') => {
+    if (!bankItemsContainer) return;
     const q = filterText.toLowerCase().trim();
     const filtered = allBanks.filter(b => b.name.toLowerCase().includes(q) || b.code.includes(q));
     if (filtered.length === 0) {
@@ -233,16 +264,16 @@ export async function renderCashout(
       row.addEventListener('click', () => {
         const el = row as HTMLElement;
         selectBank(el.dataset.code!, el.dataset.name!, el.dataset.logo || '');
-        bankMenu.classList.remove('open');
-        bankTrigger.classList.remove('active');
+        bankMenu?.classList.remove('open');
+        bankTrigger?.classList.remove('active');
         void checkAccount();
       });
     });
   };
 
   const selectBank = (code: string, name: string, logo: string) => {
-    bankHiddenEl.value = code;
-    selectedBankName.textContent = name;
+    if (bankHiddenEl) bankHiddenEl.value = code;
+    if (selectedBankName) selectedBankName.textContent = name;
     if (selectedBankImg) {
       if (logo) {
         selectedBankImg.src = logo;
@@ -269,6 +300,7 @@ export async function renderCashout(
 
   bankTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (!bankMenu) return;
     const isOpen = bankMenu.classList.contains('open');
     if (isOpen) {
       bankMenu.classList.remove('open');
@@ -276,9 +308,11 @@ export async function renderCashout(
     } else {
       bankMenu.classList.add('open');
       bankTrigger.classList.add('active');
-      bankFilterInput.value = '';
-      renderBankItems('');
-      setTimeout(() => bankFilterInput?.focus(), 60);
+      if (bankFilterInput) {
+        bankFilterInput.value = '';
+        renderBankItems('');
+        setTimeout(() => bankFilterInput.focus(), 60);
+      }
     }
   });
 
@@ -290,11 +324,13 @@ export async function renderCashout(
     renderBankItems(bankFilterInput.value);
   });
 
-  // Load banks/rails for active country
-  void fxQuotesService.fetchBanks(country.code).then(banks => {
-    allBanks = banks;
-    renderBankItems('');
-  });
+  // Only load bank directory for fiat corridors (Nigeria, Ghana, Kenya)
+  if (!isGlobal) {
+    void fxQuotesService.fetchBanks(country.code).then(banks => {
+      allBanks = banks;
+      renderBankItems('');
+    });
+  }
 
   const updateBalanceDisplay = () => {
     const tok = tokenHiddenEl.value;
@@ -306,32 +342,54 @@ export async function renderCashout(
   };
 
   let currentLiveRate: number = fxQuotesService.getLatestRate('USDC', country.code);
-  let currentRateSource: string = `${country.name} Liquidity`;
+  let currentRateSource: string = isGlobal ? '1:1 USD Parity' : `${country.name} Liquidity`;
 
-  const updateQuoteDisplay = () => {
+  const updateQuoteDisplay = async () => {
     const amt = parseFloat(amountEl.value) || 0;
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
-
     const sym = country.currencySymbol;
 
-    if (token === 'cNGN' && isNigeria) {
-      rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
-    } else {
-      rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
-    }
+    if (isGlobal) {
+      rateEl.textContent = `1 ${token} = $1.00 (1:1 USD Parity)`;
+      grossEl.textContent = `${sym}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-    grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      // Dynamically fetch live Sivan Transfer Fee from payments API
+      const tfQuote = await fxQuotesService.fetchTransferFeeQuote(amt, token, acctEl.value.trim());
+      if (feeLabelEl) {
+        feeLabelEl.textContent = `Sivan Transfer Fee (${tfQuote.effectivePercent}%):`;
+      }
+      feeEl.textContent = `-${sym}${tfQuote.fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      netEl.textContent = `${sym}${tfQuote.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    } else {
+      const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
+      if (token === 'cNGN' && isNigeria) {
+        rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
+      } else {
+        rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
+      }
+
+      if (feeLabelEl) {
+        feeLabelEl.textContent = 'Sivan Protocol Fee (1%):';
+      }
+      grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    }
   };
 
   const fetchAndRefreshRate = async () => {
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    if (isGlobal) {
+      currentLiveRate = 1.0;
+      currentRateSource = '1:1 USD Parity';
+      void updateQuoteDisplay();
+      return;
+    }
+
     if (token === 'cNGN' && isNigeria) {
       currentLiveRate = 1.0;
       currentRateSource = 'Parity';
-      updateQuoteDisplay();
+      void updateQuoteDisplay();
       return;
     }
 
@@ -339,7 +397,7 @@ export async function renderCashout(
     const res = await fxQuotesService.fetchLiveRate(token, 10, country.code);
     currentLiveRate = res.rate;
     currentRateSource = res.source;
-    updateQuoteDisplay();
+    void updateQuoteDisplay();
   };
 
   // Dropdown open/close event
@@ -370,6 +428,19 @@ export async function renderCashout(
       tokenMenu.classList.remove('open');
       tokenTrigger.classList.remove('active');
 
+      // Update Global direct transfer description and rail indicator dynamically
+      if (isGlobal) {
+        if (corridorDescEl) {
+          corridorDescEl.textContent = `Global ${val} direct transfers for cross-border settlements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.`;
+        }
+        if (globalRailTitleEl) {
+          globalRailTitleEl.textContent = `${val} Direct Transfer (Celo)`;
+        }
+        if (globalRailIconEl) {
+          globalRailIconEl.innerHTML = getTokenIconSvg(val, 20);
+        }
+      }
+
       updateBalanceDisplay();
       void fetchAndRefreshRate();
     });
@@ -385,10 +456,42 @@ export async function renderCashout(
   updateBalanceDisplay();
   void fetchAndRefreshRate();
 
-  amountEl?.addEventListener('input', updateQuoteDisplay);
+  let debounceTimer: any = null;
+  amountEl?.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      void updateQuoteDisplay();
+    }, 150);
+  });
 
   const checkAccount = async () => {
     const val = acctEl.value.trim();
+
+    // Global Corridor: Beneficiary 0x Celo wallet address validation
+    if (isGlobal) {
+      if (/^0x[a-fA-F0-9]{40}$/.test(val)) {
+        resolvedRecipientName = `Beneficiary (${val.slice(0, 6)}...${val.slice(-4)})`;
+        acctStatusEl.style.background = 'rgba(16, 185, 129, 0.08)';
+        acctStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+        acctStatusEl.innerHTML = `
+          <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+            <span>✓</span> <span>Valid Celo Beneficiary: ${val.slice(0, 6)}...${val.slice(-4)}</span>
+          </div>
+        `;
+        void updateQuoteDisplay();
+      } else if (val.length > 0) {
+        resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
+        acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${val.startsWith('0x') ? `Enter 42-char 0x address (${val.length}/42)...` : 'Address must start with 0x...'}</span>`;
+      } else {
+        resolvedRecipientName = '';
+        acctStatusEl.style.background = 'var(--bg-glass)';
+        acctStatusEl.style.borderColor = 'var(--border-subtle)';
+        acctStatusEl.innerHTML = '<span>Enter 0x Celo address to verify beneficiary</span>';
+      }
+      return;
+    }
 
     if (isNigeria) {
       const cleanVal = val.replace(/\D/g, '');
@@ -415,7 +518,7 @@ export async function renderCashout(
           const res = await fxQuotesService.verifyBankAccount(cleanVal, bankHiddenEl.value, 'NG');
           const currentBank = allBanks.find(b => b.code === bankHiddenEl.value) || 
             country.defaultBanks.find(b => b.code === bankHiddenEl.value);
-          const bankDisplayName = currentBank?.name || selectedBankName.textContent || 'Bank';
+          const bankDisplayName = currentBank?.name || selectedBankName?.textContent || 'Bank';
 
           if (res.valid && res.accountName) {
             resolvedRecipientName = res.accountName;
@@ -457,10 +560,10 @@ export async function renderCashout(
     } else {
       // Ghana or Kenya Mobile Money check
       if (val.length >= 9) {
-        const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl.value, country.code);
-        const currentBank = allBanks.find(b => b.code === bankHiddenEl.value) || 
-          country.defaultBanks.find(b => b.code === bankHiddenEl.value);
-        const bankDisplayName = currentBank?.name || selectedBankName.textContent || 'Mobile Money';
+        const res = await fxQuotesService.verifyBankAccount(val, bankHiddenEl?.value || '', country.code);
+        const currentBank = allBanks.find(b => b.code === bankHiddenEl?.value) || 
+          country.defaultBanks.find(b => b.code === bankHiddenEl?.value);
+        const bankDisplayName = currentBank?.name || selectedBankName?.textContent || 'Mobile Money';
 
         if (res.valid) {
           resolvedRecipientName = res.accountName;
@@ -512,7 +615,7 @@ export async function renderCashout(
     const tok = tokenHiddenEl.value;
 
     if (!amt || amt <= 0) {
-      showToast('⚠️ Please enter a valid cashout amount.');
+      showToast('⚠️ Please enter a valid transfer amount.');
       return;
     }
 
@@ -525,33 +628,42 @@ export async function renderCashout(
     }
 
     const acctNum = acctEl.value.trim();
-    if (isNigeria && acctNum.length !== 10) {
+    if (isGlobal) {
+      if (!/^0x[a-fA-F0-9]{40}$/.test(acctNum)) {
+        showToast('⚠️ Please enter a valid 42-character 0x Celo wallet address.');
+        return;
+      }
+    } else if (isNigeria && acctNum.length !== 10) {
       showToast('⚠️ Please enter a valid 10-digit NUBAN account number.');
       return;
-    }
-
-    if (!isNigeria && acctNum.length < 9) {
+    } else if (!isNigeria && !isGlobal && acctNum.length < 9) {
       showToast(`⚠️ Please enter a valid ${country.name} account or phone number.`);
       return;
     }
 
-    const bankName = selectedBankName.textContent || 'Destination Rail';
-    const quote = fxQuotesService.getQuote(amt, tok as any, currentLiveRate, country.code);
+    const bankName = isGlobal 
+      ? `${tok} Direct Transfer (Celo)` 
+      : (selectedBankName?.textContent || 'Destination Rail');
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 
     try {
-      // Execute on-chain transfer on Celo Mainnet to registered Agent wallet
+      // In Global mode, send directly to the beneficiary Celo address.
+      // In Fiat Off-ramp mode, send to Sivan's registered agent wallet for NIBSS/MoMo disbursement.
+      const destinationAddress = isGlobal 
+        ? (acctNum as `0x${string}`) 
+        : '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc';
+
       const txRes = await miniPayService.sendAttributedTransfer({
-        to: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+        to: destinationAddress,
         amount: amt,
         currency: tok as SupportedTokenSymbol,
       });
 
       if (!txRes.success || !txRes.txHash) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
+        submitBtn.innerHTML = `<span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>`;
         showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
         return;
       }
@@ -560,26 +672,29 @@ export async function renderCashout(
       transactionsService.recordCashout({
         sourceAmount: amt,
         sourceToken: tok,
-        targetAmount: quote.netOutput,
+        targetAmount: amt,
         targetCurrency: country.currency,
         targetCurrencySymbol: country.currencySymbol,
         recipientAccount: acctNum,
-        recipientName: resolvedRecipientName || bankName,
+        recipientName: resolvedRecipientName || (isGlobal ? `Beneficiary (${acctNum.slice(0, 6)}...${acctNum.slice(-4)})` : bankName),
         bankOrRailName: bankName,
         countryCode: country.code,
         txHash: txRes.txHash,
       });
 
-      submitBtn.innerHTML = '<span>🚀 Off-Ramp Dispatched...</span>';
-      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`);
+      submitBtn.innerHTML = `<span>${isGlobal ? '🚀 Transfer Dispatched...' : '🚀 Off-Ramp Dispatched...'}</span>`;
+      showToast(isGlobal
+        ? `✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Direct transfer dispatched to ${acctNum.slice(0, 6)}...${acctNum.slice(-4)}!`
+        : `✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`
+      );
 
       setTimeout(() => {
         onNavigate('history');
       }, 2000);
     } catch (err: any) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
-      showToast(`❌ Off-ramp error: ${err.message || 'Execution failed'}`);
+      submitBtn.innerHTML = `<span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>`;
+      showToast(`❌ Transfer error: ${err.message || 'Execution failed'}`);
     }
   });
 }

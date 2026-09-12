@@ -12,6 +12,14 @@
       "destination": "/api/banks"
     },
     {
+      "source": "/api/v1/cashout/transfer-fee",
+      "destination": "/api/transfer-fee"
+    },
+    {
+      "source": "/api/transfer-fee",
+      "destination": "/api/transfer-fee"
+    },
+    {
       "source": "/api/v1/:path*",
       "destination": "https://api.sivantech.online/api/v1/:path*"
     },

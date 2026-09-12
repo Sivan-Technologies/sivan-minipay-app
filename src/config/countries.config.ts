@@ -26,12 +26,11 @@ export const SUPPORTED_COUNTRIES: Record<string, SupportedCountry> = {
     currencySymbol: '$',
     defaultUsdRate: 1.0,
     railType: 'mobile_money_and_bank',
-    accountLabel: 'Beneficiary Wallet Address or Account',
-    accountPlaceholder: 'Enter 0x address or IBAN / Wire',
-    settlementDescription: 'Global USDC settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.',
+    accountLabel: 'Beneficiary Wallet Address',
+    accountPlaceholder: 'Enter 0x Celo wallet address',
+    settlementDescription: 'Global direct settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.',
     defaultBanks: [
-      { code: 'GLOBAL_USDC', name: 'USDC Direct Transfer (Celo)', category: 'fintech_wallet' },
-      { code: 'GLOBAL_WIRE', name: 'International Wire / Cross-Border', category: 'commercial_bank' },
+      { code: 'GLOBAL_DIRECT', name: 'Direct On-Chain Transfer (Celo)', category: 'fintech_wallet' },
     ],
   },
   NG: {
