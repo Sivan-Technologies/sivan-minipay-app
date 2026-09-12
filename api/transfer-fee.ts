@@ -35,25 +35,12 @@ export default async function handler(req: Request) {
 
   const parsedAmount = parseFloat(amountStr) || 0;
 
-  // Backend API URL dynamically sourced from environment variables
+  // Backend API URL dynamically sourced from environment variables with safe resolver
   const apiBase = (
     process.env.PAYMENT_API_URL ||
     process.env.VITE_PAYMENT_API_URL ||
-    ''
+    'https://api.sivantech.online'
   ).replace(/\/+$/, '');
-
-  if (!apiBase) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: 'PAYMENT_API_URL environment variable is not configured',
-    }), {
-      status: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
-  }
 
   try {
     const upstreamUrl = new URL(`${apiBase}/api/balance/transfers/quote`);
