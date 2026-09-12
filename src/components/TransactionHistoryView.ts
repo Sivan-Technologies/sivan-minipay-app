@@ -67,14 +67,35 @@ export function renderTransactionHistory(
       <div class="tx-history-list">
         ${filtered.length === 0 ? `
           <div class="tx-empty-state">
-            <div style="font-size: 32px; margin-bottom: 8px;">📜</div>
-            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">No transactions recorded yet</div>
-            <div style="font-size: 12px; color: var(--text-muted); max-width: 280px; margin: 0 auto 16px;">
-              Cash out to your local bank or create your first service agreement to view settled records here.
+            <div style="font-size: 32px; margin-bottom: 8px;">${activeFilter === 'deals' ? '🤝' : activeFilter === 'cashouts' ? '🏦' : '📜'}</div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
+              ${activeFilter === 'deals' ? 'No deals recorded yet' : activeFilter === 'cashouts' ? 'No cash out records yet' : 'No transactions recorded yet'}
             </div>
-            <button class="btn-primary" id="btn-history-cashout" style="width: auto; padding: 8px 18px; font-size: 12px;">
-              Cash Out Now
-            </button>
+            <div style="font-size: 12px; color: var(--text-muted); max-width: 280px; margin: 0 auto 16px;">
+              ${activeFilter === 'deals' 
+                ? 'Create an autonomous service agreement with milestone deliverables and escrow protection on Celo.' 
+                : activeFilter === 'cashouts'
+                  ? 'Cash out your digital dollars directly to your local bank account.'
+                  : 'Cash out to your local bank or create your first service agreement to view settled records here.'}
+            </div>
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              ${activeFilter === 'deals' ? `
+                <button class="btn-primary" id="btn-history-create-deal" style="width: auto; padding: 8px 18px; font-size: 12px;">
+                  + New Deal
+                </button>
+              ` : activeFilter === 'cashouts' ? `
+                <button class="btn-primary" id="btn-history-cashout" style="width: auto; padding: 8px 18px; font-size: 12px;">
+                  Cash Out Now
+                </button>
+              ` : `
+                <button class="btn-primary" id="btn-history-create-deal" style="width: auto; padding: 8px 16px; font-size: 12px;">
+                  + New Deal
+                </button>
+                <button class="btn-secondary" id="btn-history-cashout" style="width: auto; padding: 8px 16px; font-size: 12px;">
+                  Cash Out
+                </button>
+              `}
+            </div>
           </div>
         ` : filtered.map(item => {
           const dateStr = new Date(item.timestamp).toLocaleDateString(undefined, {
@@ -130,6 +151,7 @@ export function renderTransactionHistory(
     // Event handlers
     container.querySelector('#btn-back-history')?.addEventListener('click', () => onNavigate('dashboard'));
     container.querySelector('#btn-history-cashout')?.addEventListener('click', () => onNavigate('cashout'));
+    container.querySelector('#btn-history-create-deal')?.addEventListener('click', () => onNavigate('create'));
 
     container.querySelectorAll('.history-filter-pill').forEach(btn => {
       btn.addEventListener('click', (e) => {
