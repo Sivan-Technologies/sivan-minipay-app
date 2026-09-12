@@ -21,7 +21,7 @@ Autonomous Web3 Service Agreements, stablecoin transfers, and instant Nigerian b
 finance
 
 ### Publisher / Organization
-Sivan Technology (Abuja, Nigeria)
+Sivan Technologies
 
 ### Founder & Engineering Lead
 - Samson Micheal (Founder, CEO & Product Engineer, Abuja, Nigeria)

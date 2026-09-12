@@ -176,7 +176,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     <!-- Legal & Support Footer (MiniPay Listing Compliance) -->
     <div class="app-legal-footer" style="margin-top: 36px; padding: 24px 10px 100px; border-top: 1px solid var(--border-subtle); text-align: center;">
       <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height: 1.5;">
-        Sivan Ai is an autonomous payment protocol engineered by <strong>Sivan Technology</strong> (Abuja, Nigeria).<br/>
+        Sivan Ai is an autonomous payment protocol engineered by <strong>Sivan Technologies</strong>.<br/>
         Not operated by or affiliated with Opera Software or MiniPay.
       </div>
 

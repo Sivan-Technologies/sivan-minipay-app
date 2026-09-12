@@ -73,7 +73,7 @@ function renderModal() {
 
         <!-- Publisher Disclosure Footer -->
         <div style="flex-shrink: 0; padding: 12px 16px; border-top: 1px solid var(--border-subtle); background: var(--bg-glass); font-size: 10px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
-          <span>Published by <strong>Sivan Technology</strong> • Abuja, Nigeria</span>
+          <span>Published by <strong>Sivan Technologies</strong></span>
           <span>Celo Mainnet #9827</span>
         </div>
       </div>
@@ -115,7 +115,7 @@ function getTabContent(tab: LegalTab): string {
         </div>
         <div style="margin-bottom: 12px;">
           <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">2. MiniPay & Opera Non-Affiliation Disclosure</strong>
-          Sivan Ai is developed and operated independently by Sivan Technology (Abuja, Nigeria). Sivan Ai is not operated by, affiliated with, sponsored by, or an agent of Opera Software, Opera Mini, or MiniPay. MiniPay provides the in-app Web3 runtime browser environment.
+          Sivan Ai is developed and operated independently by Sivan Technologies. Sivan Ai is not operated by, affiliated with, sponsored by, or an agent of Opera Software, Opera Mini, or MiniPay. MiniPay provides the in-app Web3 runtime browser environment.
         </div>
         <div style="margin-bottom: 12px;">
           <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">3. Protocol Fees & Transparent Settlement</strong>
@@ -131,7 +131,7 @@ function getTabContent(tab: LegalTab): string {
       return `
         <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 8px; font-size: 13px;">Privacy Policy</h4>
         <p style="margin-bottom: 10px;">
-          Sivan Technology is committed to strict privacy preservation and minimal data collection principles.
+          Sivan Technologies is committed to strict privacy preservation and minimal data collection principles.
         </p>
         <div style="margin-bottom: 12px;">
           <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">1. Non-Custodial Architecture</strong>
