@@ -3,6 +3,7 @@ import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import { countryService } from '../config/countries.config';
 import { transactionsService } from '../services/transactions.service';
+import { identityService } from '../services/identity.service';
 import type { SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
 
@@ -20,48 +21,66 @@ export async function renderCashout(
   const isNigeria = country.code === 'NG';
   const isGlobal = country.code === 'GLOBAL';
 
+  let activeTab: 'bank' | 'wallet' = 'bank';
+
   const corridorTitle = isNigeria
     ? '⚡ Celo to NIBSS Off-Ramp'
     : isGhana
       ? '⚡ Celo to GhIPSS & MoMo Off-Ramp'
       : isKenya
         ? '⚡ Celo to M-PESA & Pesalink'
-        : isGlobal
-          ? '⚡ Celo Native Direct Transfer'
-          : '⚡ Celo to PayShap & EFT';
+        : '⚡ Celo to PayShap & EFT';
 
   const corridorProvider = isNigeria
     ? 'Textile Credit RFQ'
     : isGhana
       ? 'Kotani Pay / Busha GHS'
-      : isGlobal
-        ? 'Celo Mainnet Native Rail'
-        : 'Sivan Multi-Corridor';
+      : 'Sivan Multi-Corridor';
 
-  // Bank pills dynamically rendered from active country (only for fiat corridors)
+  // Bank pills dynamically rendered from active country
   const quickBanks = isGlobal ? [] : country.defaultBanks.slice(0, 6);
   const defaultBank = quickBanks[0];
 
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 16px;">
-      <h2 class="section-title">${isGlobal ? 'Direct Transfer' : 'Cash Out'} to ${country.name} (${country.currency})</h2>
+      <h2 class="section-title">Send & Cash Out</h2>
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
-    <!-- Live Corridor Status -->
-    <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
+    <!-- 2-Way Segmented Switcher (Bank vs Sivan User/Wallet) -->
+    <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs">
+      <button type="button" class="segmented-tab active" id="tab-btn-bank">
+        <span>🏦</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : `${country.name} Bank (${country.currency})`}</span>
+      </button>
+      <button type="button" class="segmented-tab" id="tab-btn-wallet">
+        <span>⚡</span> <span>To Sivan User / Wallet</span>
+      </button>
+    </div>
+
+    <!-- Live Corridor Status: Bank Mode -->
+    <div id="corridor-banner-bank" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 700; color: var(--text-emerald);">${corridorTitle}</span>
         <span style="font-size: 11px; color: var(--text-muted);">${corridorProvider}</span>
       </div>
       <div id="corridor-desc" style="color: var(--text-secondary); line-height: 1.4;">
-        ${isGlobal
-          ? 'Global USDC direct transfers for cross-border settlements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.'
-          : country.settlementDescription}
+        ${country.settlementDescription}
+      </div>
+    </div>
+
+    <!-- Live Corridor Status: Wallet Mode -->
+    <div id="corridor-banner-wallet" style="display: none; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span style="font-weight: 700; color: var(--accent-cyan);">⚡ Instant Peer-to-Peer Transfer on Celo</span>
+        <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">✓ Sub-Second Finality</span>
+      </div>
+      <div style="color: var(--text-secondary); line-height: 1.4;">
+        Zero-gas direct settlement. Send directly to any Sivan handle (@username) or verified Celo address.
       </div>
     </div>
 
     <form id="form-cashout">
+      <!-- Shared Asset & Amount Section -->
       <div class="form-group">
         <label class="form-label">Source Asset & Amount</label>
         <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
@@ -105,60 +124,44 @@ export async function renderCashout(
         </div>
       </div>
 
-      <!-- Live FX Quote Summary -->
-      <div class="quote-box" id="quote-container">
-        <div class="quote-row">
-          <span id="q-rate-label">Live FX Rate:</span>
-          <span id="q-rate" style="font-weight: 600; color: var(--accent-emerald);">Fetching live rate...</span>
-        </div>
-        <div class="quote-row">
-          <span id="q-gross-label">${isGlobal ? 'Gross Amount:' : 'Gross Payout:'}</span>
-          <span id="q-gross">${country.currencySymbol}0.00</span>
-        </div>
-        <div class="quote-row">
-          <span id="q-fee-label">${isGlobal ? 'Sivan Transfer Fee:' : 'Sivan Protocol Fee (1%):'}</span>
-          <span id="q-fee">-${country.currencySymbol}0.00</span>
-        </div>
-        <div class="quote-row">
-          <span id="q-net-label">${isGlobal ? 'Net Credit to Beneficiary:' : 'Net Credit to Destination:'}</span>
-          <span id="q-net">${country.currencySymbol}0.00</span>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="cashout-acct">${isNigeria ? '10-Digit NUBAN Account Number' : isGlobal ? 'Beneficiary Wallet Address' : country.accountLabel}</label>
-        <input 
-          type="text" 
-          id="cashout-acct" 
-          class="form-input" 
-          placeholder="${isGlobal ? 'Enter 0x Celo wallet address' : country.accountPlaceholder}" 
-          ${isNigeria ? 'maxlength="10" pattern="^\\d{10}$"' : isGlobal ? 'maxlength="42"' : 'maxlength="20"'}
-          ${isNigeria ? 'inputmode="numeric"' : ''}
-          autocomplete="off"
-          required 
-        />
-        <div id="acct-lookup-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
-          <span>${isNigeria ? 'Enter 10-digit account number to auto-verify recipient' : isGlobal ? 'Enter 0x Celo address to verify beneficiary' : 'Enter mobile money phone number or bank account'}</span>
-        </div>
-      </div>
-
-      ${isGlobal ? `
-        <!-- Global Destination Rail Indicator -->
-        <div class="form-group" style="margin-top: 14px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0;">Global Destination</label>
-            <span style="font-size: 10px; color: var(--accent-emerald); font-weight: 500;">✓ Sub-Second Finality</span>
+      <!-- Bank Mode Fields -->
+      <div id="section-bank-fields">
+        <!-- Live FX Quote Summary -->
+        <div class="quote-box" id="quote-container">
+          <div class="quote-row">
+            <span id="q-rate-label">Live FX Rate:</span>
+            <span id="q-rate" style="font-weight: 600; color: var(--accent-emerald);">Fetching live rate...</span>
           </div>
-          <div id="global-rail-badge" style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: var(--radius-md);">
-            <div id="global-rail-icon" style="display: flex; align-items: center;">${getTokenIconSvg('USDC', 20)}</div>
-            <div style="flex: 1;">
-              <div id="global-rail-title" style="font-weight: 600; font-size: 13px; color: var(--text-primary);">USDC Direct Transfer (Celo)</div>
-              <div style="font-size: 11px; color: var(--text-muted);">Direct on-chain wallet settlement on Celo Mainnet</div>
-            </div>
+          <div class="quote-row">
+            <span id="q-gross-label">Gross Payout:</span>
+            <span id="q-gross">${country.currencySymbol}0.00</span>
           </div>
-          <input type="hidden" id="cashout-bank" value="GLOBAL_DIRECT" />
+          <div class="quote-row">
+            <span id="q-fee-label">Sivan Protocol Fee (1%):</span>
+            <span id="q-fee">-${country.currencySymbol}0.00</span>
+          </div>
+          <div class="quote-row">
+            <span id="q-net-label">Net Credit to Destination:</span>
+            <span id="q-net">${country.currencySymbol}0.00</span>
+          </div>
         </div>
-      ` : `
+
+        <div class="form-group">
+          <label class="form-label" for="cashout-acct">${isNigeria ? '10-Digit NUBAN Account Number' : country.accountLabel}</label>
+          <input 
+            type="text" 
+            id="cashout-acct" 
+            class="form-input" 
+            placeholder="${country.accountPlaceholder}" 
+            ${isNigeria ? 'maxlength="10" pattern="^\\d{10}$"' : 'maxlength="20"'}
+            ${isNigeria ? 'inputmode="numeric"' : ''}
+            autocomplete="off"
+          />
+          <div id="acct-lookup-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
+            <span>${isNigeria ? 'Enter 10-digit account number to auto-verify recipient' : 'Enter mobile money phone number or bank account'}</span>
+          </div>
+        </div>
+
         <!-- Destination Bank / Rail for Fiat Corridors (NG, GH, KE) -->
         <div class="form-group">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
@@ -200,13 +203,55 @@ export async function renderCashout(
             <input type="hidden" id="cashout-bank" value="${defaultBank?.code || ''}" />
           </div>
         </div>
-      `}
+      </div>
+
+      <!-- Sivan User / Wallet Mode Fields -->
+      <div id="section-wallet-fields" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="wallet-recipient-input">Recipient (@handle or Celo 0x Address)</label>
+          <input 
+            type="text" 
+            id="wallet-recipient-input" 
+            class="form-input" 
+            placeholder="e.g. @soliame or 0x4a1A..." 
+            autocomplete="off"
+          />
+          <div id="wallet-recipient-status" style="font-size: 11px; margin-top: 8px; padding: 8px 12px; border-radius: 6px; background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 8px;">
+            <span>Enter @handle or 0x address to auto-verify recipient</span>
+          </div>
+        </div>
+
+        <!-- Transfer Summary Box -->
+        <div class="quote-box" id="p2p-summary-box" style="margin-bottom: 16px;">
+          <div class="quote-row">
+            <span>Settlement Network:</span>
+            <span style="font-weight: 600; color: var(--accent-cyan);">Celo Mainnet (Attributed)</span>
+          </div>
+          <div class="quote-row">
+            <span>Sivan Transfer Fee:</span>
+            <span style="font-weight: 600; color: var(--accent-emerald);">0.00 (Gas-Sponsored)</span>
+          </div>
+          <div class="quote-row">
+            <span>Settlement Speed:</span>
+            <span style="font-weight: 500; color: var(--text-secondary);">Sub-second (0.15s internal ledger)</span>
+          </div>
+        </div>
+      </div>
 
       <button type="submit" class="btn-primary" id="btn-submit-cashout" style="margin-top: 8px;">
-        <span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>
+        <span id="submit-btn-text">💸 Confirm Cash Out (Under 1-2 Mins)</span>
       </button>
     </form>
   `;
+
+  // Elements
+  const tabBankBtn = container.querySelector('#tab-btn-bank') as HTMLButtonElement;
+  const tabWalletBtn = container.querySelector('#tab-btn-wallet') as HTMLButtonElement;
+  const bannerBank = container.querySelector('#corridor-banner-bank') as HTMLElement;
+  const bannerWallet = container.querySelector('#corridor-banner-wallet') as HTMLElement;
+  const sectionBankFields = container.querySelector('#section-bank-fields') as HTMLElement;
+  const sectionWalletFields = container.querySelector('#section-wallet-fields') as HTMLElement;
+  const submitBtnText = container.querySelector('#submit-btn-text') as HTMLElement;
 
   const amountEl = container.querySelector('#cashout-amount') as HTMLInputElement;
   const tokenHiddenEl = container.querySelector('#cashout-token') as HTMLInputElement;
@@ -221,9 +266,6 @@ export async function renderCashout(
   const feeEl = container.querySelector('#q-fee') as HTMLElement;
   const feeLabelEl = container.querySelector('#q-fee-label') as HTMLElement | null;
   const netEl = container.querySelector('#q-net') as HTMLElement;
-  const corridorDescEl = container.querySelector('#corridor-desc') as HTMLElement | null;
-  const globalRailTitleEl = container.querySelector('#global-rail-title') as HTMLElement | null;
-  const globalRailIconEl = container.querySelector('#global-rail-icon') as HTMLElement | null;
 
   let allBanks: BankItem[] = [];
   const bankHiddenEl = container.querySelector('#cashout-bank') as HTMLInputElement;
@@ -238,7 +280,107 @@ export async function renderCashout(
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
 
+  // P2P Recipient Elements
+  const walletRecipientInput = container.querySelector('#wallet-recipient-input') as HTMLInputElement;
+  const walletRecipientStatus = container.querySelector('#wallet-recipient-status') as HTMLElement;
+  let resolvedP2PAddress: string | null = null;
+  let resolvedP2PDisplayName: string | null = null;
+  let p2pLookupTimeout: any = null;
+
   let resolvedRecipientName = '';
+
+  // Tab Switching Logic
+  const switchTab = (tab: 'bank' | 'wallet') => {
+    activeTab = tab;
+    if (tab === 'bank') {
+      tabBankBtn.classList.add('active');
+      tabWalletBtn.classList.remove('active');
+      bannerBank.style.display = 'block';
+      bannerWallet.style.display = 'none';
+      sectionBankFields.style.display = 'block';
+      sectionWalletFields.style.display = 'none';
+      submitBtnText.textContent = '💸 Confirm Cash Out (Under 1-2 Mins)';
+      acctEl.required = true;
+      walletRecipientInput.required = false;
+      void updateQuoteDisplay();
+    } else {
+      tabWalletBtn.classList.add('active');
+      tabBankBtn.classList.remove('active');
+      bannerBank.style.display = 'none';
+      bannerWallet.style.display = 'block';
+      sectionBankFields.style.display = 'none';
+      sectionWalletFields.style.display = 'block';
+      submitBtnText.textContent = '⚡ Send Instantly on Celo (Attributed)';
+      acctEl.required = false;
+      walletRecipientInput.required = true;
+    }
+  };
+
+  tabBankBtn.addEventListener('click', () => switchTab('bank'));
+  tabWalletBtn.addEventListener('click', () => switchTab('wallet'));
+
+  // P2P Recipient Live Resolution
+  walletRecipientInput?.addEventListener('input', () => {
+    const rawVal = walletRecipientInput.value.trim();
+    resolvedP2PAddress = null;
+    resolvedP2PDisplayName = null;
+
+    if (p2pLookupTimeout) clearTimeout(p2pLookupTimeout);
+
+    if (!rawVal) {
+      walletRecipientStatus.style.background = 'var(--bg-glass)';
+      walletRecipientStatus.style.borderColor = 'var(--border-subtle)';
+      walletRecipientStatus.innerHTML = '<span>Enter @handle or 0x address to auto-verify recipient</span>';
+      return;
+    }
+
+    if (/^0x[a-fA-F0-9]{40}$/.test(rawVal)) {
+      resolvedP2PAddress = rawVal;
+      resolvedP2PDisplayName = `${rawVal.slice(0, 6)}...${rawVal.slice(-4)}`;
+      walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
+      walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      walletRecipientStatus.innerHTML = `
+        <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+          <span>✓</span> <span>Valid Celo Address: ${resolvedP2PDisplayName}</span>
+        </div>
+      `;
+      return;
+    }
+
+    walletRecipientStatus.style.background = 'rgba(6, 182, 212, 0.08)';
+    walletRecipientStatus.style.borderColor = 'rgba(6, 182, 212, 0.25)';
+    walletRecipientStatus.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan);">Resolving Sivan identity...</span>';
+
+    p2pLookupTimeout = setTimeout(async () => {
+      try {
+        const res = await identityService.resolveTarget(rawVal, 'celo');
+        if (res.found && res.user) {
+          const celoWallet = res.user.wallets?.find(w => w.chain.toLowerCase() === 'celo')?.address ||
+                             res.user.targetAddress ||
+                             (res.user as any).address;
+          if (celoWallet) {
+            resolvedP2PAddress = celoWallet;
+            resolvedP2PDisplayName = res.user.username ? `@${res.user.username.replace(/^@/, '')}` : res.user.displayName || rawVal;
+            walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
+            walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            walletRecipientStatus.innerHTML = `
+              <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                <span>✓</span> <span>Verified Sivan User: ${resolvedP2PDisplayName} (${celoWallet.slice(0, 6)}...${celoWallet.slice(-4)})</span>
+              </div>
+            `;
+            return;
+          }
+        }
+        walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
+        walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Sivan handle not found. Please verify handle or enter a 0x address.</span>';
+      } catch {
+        walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
+        walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Identity resolution unavailable right now.</span>';
+      }
+    }, 350);
+  });
 
   const renderBankItems = (filterText = '') => {
     if (!bankItemsContainer) return;
@@ -325,12 +467,10 @@ export async function renderCashout(
   });
 
   // Only load bank directory for fiat corridors (Nigeria, Ghana, Kenya)
-  if (!isGlobal) {
-    void fxQuotesService.fetchBanks(country.code).then(banks => {
-      allBanks = banks;
-      renderBankItems('');
-    });
-  }
+  void fxQuotesService.fetchBanks(country.code).then(banks => {
+    allBanks = banks;
+    renderBankItems('');
+  });
 
   const updateBalanceDisplay = () => {
     const tok = tokenHiddenEl.value;
@@ -342,51 +482,32 @@ export async function renderCashout(
   };
 
   let currentLiveRate: number = fxQuotesService.getLatestRate('USDC', country.code);
-  let currentRateSource: string = isGlobal ? '1:1 USD Parity' : `${country.name} Liquidity`;
+  let currentRateSource: string = `${country.name} Liquidity`;
 
   const updateQuoteDisplay = async () => {
     const amt = parseFloat(amountEl.value) || 0;
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const sym = country.currencySymbol;
 
-    if (isGlobal) {
-      rateEl.textContent = `1 ${token} = $1.00 (1:1 USD Parity)`;
-      grossEl.textContent = `${sym}${amt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-      // Dynamically fetch live Sivan Transfer Fee from payments API
-      const tfQuote = await fxQuotesService.fetchTransferFeeQuote(amt, token, acctEl.value.trim());
-      if (feeLabelEl) {
-        feeLabelEl.textContent = `Sivan Transfer Fee (${tfQuote.effectivePercent}%):`;
-      }
-      feeEl.textContent = `-${sym}${tfQuote.fee.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      netEl.textContent = `${sym}${tfQuote.netAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent();
+    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
+    if (token === 'cNGN' && isNigeria) {
+      rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
     } else {
-      const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent();
-      const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
-      if (token === 'cNGN' && isNigeria) {
-        rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
-      } else {
-        rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
-      }
-
-      if (feeLabelEl) {
-        const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
-        feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
-      }
-      grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
     }
+
+    if (feeLabelEl) {
+      const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
+      feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
+    }
+    grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   const fetchAndRefreshRate = async () => {
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    if (isGlobal) {
-      currentLiveRate = 1.0;
-      currentRateSource = '1:1 USD Parity';
-      void updateQuoteDisplay();
-      return;
-    }
 
     if (token === 'cNGN' && isNigeria) {
       currentLiveRate = 1.0;
@@ -430,73 +551,24 @@ export async function renderCashout(
       tokenMenu.classList.remove('open');
       tokenTrigger.classList.remove('active');
 
-      // Update Global direct transfer description and rail indicator dynamically
-      if (isGlobal) {
-        if (corridorDescEl) {
-          corridorDescEl.textContent = `Global ${val} direct transfers for cross-border settlements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.`;
-        }
-        if (globalRailTitleEl) {
-          globalRailTitleEl.textContent = `${val} Direct Transfer (Celo)`;
-        }
-        if (globalRailIconEl) {
-          globalRailIconEl.innerHTML = getTokenIconSvg(val, 20);
-        }
-      }
-
       updateBalanceDisplay();
       void fetchAndRefreshRate();
     });
   });
 
-  document.addEventListener('click', () => {
-    tokenMenu?.classList.remove('open');
-    tokenTrigger?.classList.remove('active');
-    bankMenu?.classList.remove('open');
-    bankTrigger?.classList.remove('active');
+  amountEl?.addEventListener('input', () => {
+    void updateQuoteDisplay();
   });
 
   updateBalanceDisplay();
   void fetchAndRefreshRate();
 
-  let debounceTimer: any = null;
-  amountEl?.addEventListener('input', () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(() => {
-      void updateQuoteDisplay();
-    }, 150);
-  });
-
+  // NUBAN live account verification
   const checkAccount = async () => {
     const val = acctEl.value.trim();
 
-    // Global Corridor: Beneficiary 0x Celo wallet address validation
-    if (isGlobal) {
-      if (/^0x[a-fA-F0-9]{40}$/.test(val)) {
-        resolvedRecipientName = `Beneficiary (${val.slice(0, 6)}...${val.slice(-4)})`;
-        acctStatusEl.style.background = 'rgba(16, 185, 129, 0.08)';
-        acctStatusEl.style.borderColor = 'rgba(16, 185, 129, 0.25)';
-        acctStatusEl.innerHTML = `
-          <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px; display: flex; align-items: center; gap: 6px;">
-            <span>✓</span> <span>Valid Celo Beneficiary: ${val.slice(0, 6)}...${val.slice(-4)}</span>
-          </div>
-        `;
-        void updateQuoteDisplay();
-      } else if (val.length > 0) {
-        resolvedRecipientName = '';
-        acctStatusEl.style.background = 'var(--bg-glass)';
-        acctStatusEl.style.borderColor = 'var(--border-subtle)';
-        acctStatusEl.innerHTML = `<span style="color: var(--text-muted);">${val.startsWith('0x') ? `Enter 42-char 0x address (${val.length}/42)...` : 'Address must start with 0x...'}</span>`;
-      } else {
-        resolvedRecipientName = '';
-        acctStatusEl.style.background = 'var(--bg-glass)';
-        acctStatusEl.style.borderColor = 'var(--border-subtle)';
-        acctStatusEl.innerHTML = '<span>Enter 0x Celo address to verify beneficiary</span>';
-      }
-      return;
-    }
-
     if (isNigeria) {
-      const cleanVal = val.replace(/\D/g, '');
+      const cleanVal = val.replace(/\D/g, '').slice(0, 10);
       acctEl.value = cleanVal;
 
       if (cleanVal.length === 10) {
@@ -629,33 +701,71 @@ export async function renderCashout(
       return;
     }
 
-    const acctNum = acctEl.value.trim();
-    if (isGlobal) {
-      if (!/^0x[a-fA-F0-9]{40}$/.test(acctNum)) {
-        showToast('⚠️ Please enter a valid 42-character 0x Celo wallet address.');
+    if (activeTab === 'wallet') {
+      // P2P Transfer Mode
+      if (!resolvedP2PAddress) {
+        showToast('⚠️ Please specify a valid @handle or Celo address.');
         return;
       }
-    } else if (isNigeria && acctNum.length !== 10) {
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
+
+      try {
+        const txRes = await miniPayService.sendAttributedTransfer({
+          to: resolvedP2PAddress as `0x${string}`,
+          amount: amt,
+          currency: tok as SupportedTokenSymbol,
+        });
+
+        if (!txRes.success || !txRes.txHash) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = '<span>⚡ Send Instantly on Celo (Attributed)</span>';
+          showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
+          return;
+        }
+
+        // Record P2P Transfer in Transaction History
+        transactionsService.recordTransfer({
+          amount: amt,
+          token: tok,
+          recipientIdentifier: resolvedP2PDisplayName || resolvedP2PAddress,
+          recipientAddress: resolvedP2PAddress,
+          txHash: txRes.txHash,
+        });
+
+        submitBtn.innerHTML = '<span>🚀 Transfer Dispatched...</span>';
+        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Dispatched to ${resolvedP2PDisplayName}!`);
+
+        setTimeout(() => {
+          onNavigate('history');
+        }, 1500);
+      } catch (err: any) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>⚡ Send Instantly on Celo (Attributed)</span>';
+        showToast(`❌ Transfer error: ${err.message || 'Execution failed'}`);
+      }
+      return;
+    }
+
+    // Bank Cash Out Mode
+    const acctNum = acctEl.value.trim();
+    if (isNigeria && acctNum.length !== 10) {
       showToast('⚠️ Please enter a valid 10-digit NUBAN account number.');
       return;
-    } else if (!isNigeria && !isGlobal && acctNum.length < 9) {
+    } else if (!isNigeria && acctNum.length < 9) {
       showToast(`⚠️ Please enter a valid ${country.name} account or phone number.`);
       return;
     }
 
-    const bankName = isGlobal 
-      ? `${tok} Direct Transfer (Celo)` 
-      : (selectedBankName?.textContent || 'Destination Rail');
+    const bankName = selectedBankName?.textContent || 'Destination Rail';
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 
     try {
-      // In Global mode, send directly to the beneficiary Celo address.
       // In Fiat Off-ramp mode, send to Sivan's registered agent wallet for NIBSS/MoMo disbursement.
-      const destinationAddress = isGlobal 
-        ? (acctNum as `0x${string}`) 
-        : '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc';
+      const destinationAddress = '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc';
 
       const txRes = await miniPayService.sendAttributedTransfer({
         to: destinationAddress,
@@ -665,7 +775,7 @@ export async function renderCashout(
 
       if (!txRes.success || !txRes.txHash) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>`;
+        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
         showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
         return;
       }
@@ -678,24 +788,21 @@ export async function renderCashout(
         targetCurrency: country.currency,
         targetCurrencySymbol: country.currencySymbol,
         recipientAccount: acctNum,
-        recipientName: resolvedRecipientName || (isGlobal ? `Beneficiary (${acctNum.slice(0, 6)}...${acctNum.slice(-4)})` : bankName),
+        recipientName: resolvedRecipientName || bankName,
         bankOrRailName: bankName,
         countryCode: country.code,
         txHash: txRes.txHash,
       });
 
-      submitBtn.innerHTML = `<span>${isGlobal ? '🚀 Transfer Dispatched...' : '🚀 Off-Ramp Dispatched...'}</span>`;
-      showToast(isGlobal
-        ? `✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Direct transfer dispatched to ${acctNum.slice(0, 6)}...${acctNum.slice(-4)}!`
-        : `✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`
-      );
+      submitBtn.innerHTML = '<span>🚀 Off-Ramp Dispatched...</span>';
+      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`);
 
       setTimeout(() => {
         onNavigate('history');
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `<span>${isGlobal ? '⚡ Confirm Transfer (Instant On-Chain)' : '💸 Confirm Cash Out (Under 1-2 Mins)'}</span>`;
+      submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
       showToast(`❌ Transfer error: ${err.message || 'Execution failed'}`);
     }
   });

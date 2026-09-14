@@ -1,6 +1,6 @@
 import { CELO_CONFIG } from '../config/celo.config';
 
-export type TransactionType = 'cashout' | 'agreement_fund' | 'agreement_release';
+export type TransactionType = 'cashout' | 'agreement_fund' | 'agreement_release' | 'p2p_transfer';
 
 export interface TransactionItem {
   id: string;
@@ -108,6 +108,33 @@ class TransactionsService {
       title: isFund ? `Funded Deal: ${data.title}` : `Released Deal: ${data.title}`,
       sourceAmount: data.amount,
       sourceToken: data.token,
+      txHash: data.txHash,
+      status: 'completed',
+      timestamp: Date.now(),
+      attributionTag: CELO_CONFIG.attributionTag,
+    };
+
+    this.items.unshift(item);
+    this.save();
+    return item;
+  }
+
+  public recordTransfer(data: {
+    amount: number;
+    token: string;
+    recipientIdentifier: string;
+    recipientAddress: string;
+    txHash?: string;
+  }): TransactionItem {
+    const item: TransactionItem = {
+      id: `tx_transfer_${Date.now()}`,
+      type: 'p2p_transfer',
+      title: `Transfer to ${data.recipientIdentifier}`,
+      sourceAmount: data.amount,
+      sourceToken: data.token,
+      recipientAccount: data.recipientAddress,
+      recipientName: data.recipientIdentifier,
+      bankOrRailName: 'Celo P2P Direct Rail',
       txHash: data.txHash,
       status: 'completed',
       timestamp: Date.now(),
