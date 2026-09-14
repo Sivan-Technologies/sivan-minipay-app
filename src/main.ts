@@ -9,8 +9,9 @@ import { miniPayService } from './services/minipay.service';
 import { countryService } from './config/countries.config';
 import { initLegalModal, openLegalModal } from './components/LegalSupportModal';
 import { initShareModal, openShareModal } from './components/ShareAgreementModal';
+import { renderAcceptAgreement, type DealProposalData } from './components/AcceptAgreementView';
 
-type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history';
+type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history' | 'accept';
 
 class SivanMiniPayApp {
   private currentTab: Tab = 'dashboard';
@@ -18,8 +19,10 @@ class SivanMiniPayApp {
   private mainContentContainer!: HTMLElement;
   private bottomNavContainer!: HTMLElement;
   private toastContainer!: HTMLElement;
+  private incomingDeal: DealProposalData | null = null;
 
   constructor() {
+    this.checkIncomingDeal();
     this.initDOM();
     initLegalModal();
     initShareModal();
@@ -36,6 +39,40 @@ class SivanMiniPayApp {
     countryService.subscribe(() => {
       this.renderMainContent();
     });
+  }
+
+  private checkIncomingDeal() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const dealId = params.get('deal') || params.get('agreement');
+      if (dealId) {
+        const title = params.get('title') || 'Service Agreement';
+        const amount = parseFloat(params.get('amount') || '0');
+        const curr = (params.get('curr') || 'USDC') as any;
+        const net = parseFloat(params.get('net') || String(amount));
+        const hours = parseInt(params.get('hours') || '48', 10);
+        const desc = params.get('desc') || '';
+        const from = params.get('from') || '';
+        const tx = params.get('tx') || undefined;
+
+        if (amount > 0) {
+          this.incomingDeal = {
+            id: dealId,
+            title,
+            amount,
+            currency: curr,
+            netAmount: net,
+            deadlineHours: hours,
+            description: desc,
+            from,
+            fundingTxHash: tx,
+          };
+          this.currentTab = 'accept';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse incoming deal parameters:', e);
+    }
   }
 
   private initDOM() {
@@ -112,6 +149,18 @@ class SivanMiniPayApp {
           this.mainContentContainer,
           (t) => this.navigateTo(t as Tab)
         );
+        break;
+      case 'accept':
+        if (this.incomingDeal) {
+          renderAcceptAgreement(
+            this.mainContentContainer,
+            this.incomingDeal,
+            (t) => this.navigateTo(t as Tab),
+            (msg) => this.showToast(msg)
+          );
+        } else {
+          this.navigateTo('dashboard');
+        }
         break;
     }
   }

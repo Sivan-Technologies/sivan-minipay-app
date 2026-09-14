@@ -39,8 +39,23 @@ function renderShareModal() {
   if (!modalRoot || !activeAgreement) return;
 
   const agr = activeAgreement;
-  const webLink = `https://app.sivantech.online/agreements/${agr.id}`;
-  const telegramDeepLink = `https://t.me/Sivan_Ai?start=${agr.id}`;
+  const appBase = (import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://app.sivantech.online')).replace(/\/$/, '');
+  const telegramBotBase = (import.meta.env.VITE_TELEGRAM_BOT_URL || 'https://t.me/Sivan_Ai').replace(/\/$/, '');
+
+  const params = new URLSearchParams({
+    deal: agr.id,
+    title: agr.title,
+    amount: String(agr.amount),
+    curr: agr.currency,
+    net: String(agr.netAmount),
+    hours: String(agr.deadlineHours),
+    from: agr.contractorIdentifier || '',
+    desc: agr.description || '',
+    ...(agr.fundingTxHash ? { tx: agr.fundingTxHash } : {}),
+  });
+
+  const webLink = `${appBase}/?${params.toString()}`;
+  const telegramDeepLink = `${telegramBotBase}?start=${agr.id}`;
   
   const shareText = `🤝 Sivan Service Agreement\nI have funded and locked ${agr.netAmount} ${agr.currency} on Celo for: "${agr.title}".\nReview and accept here: ${webLink}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;

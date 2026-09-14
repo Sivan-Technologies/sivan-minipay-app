@@ -84,6 +84,17 @@ class AgreementsService {
     return newAgreement;
   }
 
+  public importAgreement(agreement: ServiceAgreement): ServiceAgreement {
+    const existingIndex = this.agreements.findIndex(a => a.id === agreement.id);
+    if (existingIndex >= 0) {
+      this.agreements[existingIndex] = { ...this.agreements[existingIndex], ...agreement };
+    } else {
+      this.agreements.unshift(agreement);
+    }
+    this.saveAgreements();
+    return agreement;
+  }
+
   public updateStatus(id: string, status: AgreementStatus, proofUrl?: string, releaseTxHash?: string): boolean {
     const agreement = this.agreements.find(a => a.id === id);
     if (!agreement) return false;
