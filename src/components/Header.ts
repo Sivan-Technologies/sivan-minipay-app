@@ -1,6 +1,6 @@
 import { miniPayService } from '../services/minipay.service';
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
+import { getActiveNetwork } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 import { openLegalModal } from './LegalSupportModal';
 import { identityService } from '../services/identity.service';
@@ -57,7 +57,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
           <!-- Network Badge / Toggle -->
           <button class="header-network-pill" id="btn-network-toggle" title="Switch Network (Mainnet / Testnet)" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: ${netBadgeColor};">
             <span style="width: 7px; height: 7px; border-radius: 50%; ${netBadgeDot}"></span>
-            <span style="font-weight: 600;">${isTestnet ? 'Sepolia' : 'Mainnet'}</span>
+            <span style="font-weight: 600;">${isTestnet ? 'Celo Sepolia' : 'Celo Mainnet'}</span>
           </button>
 
           <!-- Wallet Status Pill (Tap to Copy Address when connected) -->
@@ -307,34 +307,12 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     });
 
     container.querySelector('#btn-select-mainnet')?.addEventListener('click', async () => {
-      setActiveNetworkMode('mainnet');
-      const eth = (window as any).ethereum;
-      if (eth) {
-        try {
-          await eth.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xa4ec' }], // 42220
-          });
-        } catch (e) {
-          console.warn('Network switch prompt:', e);
-        }
-      }
+      await miniPayService.switchNetwork('mainnet');
       update(miniPayService.getState());
     });
 
     container.querySelector('#btn-select-testnet')?.addEventListener('click', async () => {
-      setActiveNetworkMode('testnet');
-      const eth = (window as any).ethereum;
-      if (eth) {
-        try {
-          await eth.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa36a7' }], // 11142220
-          });
-        } catch (e) {
-          console.warn('Network switch prompt:', e);
-        }
-      }
+      await miniPayService.switchNetwork('testnet');
       update(miniPayService.getState());
     });
 

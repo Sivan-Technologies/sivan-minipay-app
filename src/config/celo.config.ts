@@ -78,7 +78,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
   testnet: {
     mode: 'testnet',
     chainId: 11142220,
-    chainIdHex: '0xaa04ec',
+    chainIdHex: '0xaa044c',
     chainName: 'Celo Sepolia Testnet',
     rpcUrl: 'https://forno.celo-sepolia.celo-testnet.org',
     fallbackRpcUrl: 'https://celo-sepolia.drpc.org',

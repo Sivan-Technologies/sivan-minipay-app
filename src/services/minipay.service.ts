@@ -218,7 +218,13 @@ class MiniPayService {
           params: [{ chainId: target.chainIdHex }],
         });
       } catch (switchError: any) {
-        if (switchError.code === 4902) {
+        const isUnrecognized =
+          switchError.code === 4902 ||
+          switchError.data?.originalError?.code === 4902 ||
+          switchError.message?.includes('Unrecognized chain') ||
+          switchError.message?.includes('4902');
+
+        if (isUnrecognized) {
           try {
             const provider = (window as any).ethereum;
             await provider.request({
@@ -227,7 +233,7 @@ class MiniPayService {
                 chainId: target.chainIdHex,
                 chainName: target.chainName,
                 nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                rpcUrls: [target.rpcUrl],
+                rpcUrls: [target.rpcUrl, target.fallbackRpcUrl].filter(Boolean),
                 blockExplorerUrls: [target.blockExplorerUrl],
               }],
             });
@@ -264,29 +270,61 @@ class MiniPayService {
             params: [{ chainId: activeNet.chainIdHex }],
           });
         } catch (switchError: any) {
-          if (switchError.code === 4902 || switchError.message?.includes('Unrecognized chain') || switchError.message?.includes('4902')) {
-            await provider.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: activeNet.chainIdHex,
-                chainName: activeNet.chainName,
-                nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                rpcUrls: [activeNet.rpcUrl, activeNet.fallbackRpcUrl].filter(Boolean),
-                blockExplorerUrls: [activeNet.blockExplorerUrl],
-              }],
-            });
+          const isUnrecognized =
+            switchError.code === 4902 ||
+            switchError.data?.originalError?.code === 4902 ||
+            switchError.message?.includes('Unrecognized chain') ||
+            switchError.message?.includes('4902');
+
+          if (isUnrecognized) {
+            try {
+              await provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: activeNet.chainIdHex,
+                  chainName: activeNet.chainName,
+                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                  rpcUrls: [activeNet.rpcUrl, activeNet.fallbackRpcUrl].filter(Boolean),
+                  blockExplorerUrls: [activeNet.blockExplorerUrl],
+                }],
+              });
+            } catch (addError: any) {
+              return {
+                success: false,
+                error: `Could not add ${activeNet.chainName} to wallet: ${addError.message || 'Rejected'}`,
+              };
+            }
           } else {
             return {
               success: false,
-              error: `Please switch your wallet network to ${activeNet.chainName} to complete this transfer.`,
+              error: `Please switch your wallet network to ${activeNet.chainName} in MetaMask to complete this transfer.`,
             };
           }
         }
       }
+
+      // Re-verify that the active chain actually matches after prompt
+      const postChainId: string = await provider.request({ method: 'eth_chainId' });
+      if (postChainId && postChainId.toLowerCase() !== activeNet.chainIdHex.toLowerCase()) {
+        return {
+          success: false,
+          error: `Wallet is currently on network ${postChainId}. Please switch to ${activeNet.chainName} (${activeNet.chainIdHex}) in MetaMask to proceed.`,
+        };
+      }
+
       return { success: true };
     } catch (err: any) {
       console.warn('Network verification error:', err);
-      return { success: true };
+      try {
+        const verifyChain: string = await provider.request({ method: 'eth_chainId' });
+        if (verifyChain && verifyChain.toLowerCase() === activeNet.chainIdHex.toLowerCase()) {
+          return { success: true };
+        }
+      } catch {}
+      return {
+        success: false,
+        error: `Please switch your wallet network to ${activeNet.chainName} in MetaMask. (${err.message || 'Chain switch rejected'})`,
+      };
     }
   }
 
