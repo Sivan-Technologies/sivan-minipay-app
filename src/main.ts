@@ -8,6 +8,7 @@ import { renderTransactionHistory } from './components/TransactionHistoryView';
 import { miniPayService } from './services/minipay.service';
 import { countryService } from './config/countries.config';
 import { initLegalModal, openLegalModal } from './components/LegalSupportModal';
+import { initShareModal, openShareModal } from './components/ShareAgreementModal';
 
 type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history';
 
@@ -21,7 +22,9 @@ class SivanMiniPayApp {
   constructor() {
     this.initDOM();
     initLegalModal();
+    initShareModal();
     (window as any).openLegalModal = openLegalModal;
+    (window as any).openShareModal = openShareModal;
     this.render();
 
     // Re-render views when wallet connects, disconnects, or switches accounts

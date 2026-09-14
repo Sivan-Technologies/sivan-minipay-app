@@ -4,6 +4,7 @@ import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
+import { openShareModal } from './ShareAgreementModal';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -32,17 +33,15 @@ export async function renderCreateAgreement(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="deal-contractor">Contractor Celo 0x Address</label>
+        <label class="form-label" for="deal-contractor">Contractor (Phone, @username, or Celo 0x)</label>
         <input 
           type="text" 
           id="deal-contractor" 
           class="form-input" 
-          placeholder="0x..." 
+          placeholder="e.g. +2348012345678, @soliame, or 0x..." 
           required 
-          pattern="^0x[a-fA-F0-9]{40}$"
-          title="Must be a valid 42-character Celo/Ethereum address starting with 0x"
         />
-        <div class="form-helper">Destination wallet address where funds will settle upon completion</div>
+        <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
       </div>
 
       <div class="form-group">
@@ -232,7 +231,6 @@ export async function renderCreateAgreement(
     }
 
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
-    const contractorAddress = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
     const currency = currencyHiddenInput.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
@@ -270,11 +268,17 @@ export async function renderCreateAgreement(
         return;
       }
 
+      const contractorInput = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
+      const contractorAddress = contractorInput.startsWith('0x') ? contractorInput : CELO_CONFIG.agentWallet;
+      const contractorIdentifier = contractorInput.startsWith('0x')
+        ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
+        : contractorInput;
+
       // Save genuine service agreement
-      await agreementsService.createAgreement({
+      const created = await agreementsService.createAgreement({
         title,
         description,
-        contractorIdentifier: `${contractorAddress.slice(0, 6)}...${contractorAddress.slice(-4)}`,
+        contractorIdentifier,
         contractorAddress,
         amount,
         currency,
@@ -283,7 +287,9 @@ export async function renderCreateAgreement(
       });
 
       showToast(`🎉 Deal confirmed on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
-      onNavigate('deals');
+      openShareModal(created, () => {
+        onNavigate('deals');
+      });
     } catch (err: any) {
       console.error('Deal funding error:', err);
       showToast(`❌ Error: ${err.message || 'Transaction could not be completed'}`);

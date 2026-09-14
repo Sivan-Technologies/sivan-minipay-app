@@ -1,6 +1,7 @@
 import { agreementsService } from '../services/agreements.service';
 import type { ServiceAgreement } from '../types/minipay.types';
 import { miniPayService } from '../services/minipay.service';
+import { openShareModal } from './ShareAgreementModal';
 
 export function renderAgreementsList(
   container: HTMLElement,
@@ -118,6 +119,17 @@ export function renderAgreementsList(
     container.querySelectorAll('.btn-cashout-shortcut').forEach(btn => {
       btn.addEventListener('click', () => onNavigate('cashout'));
     });
+
+    // Share agreement shortcut
+    container.querySelectorAll('.btn-share-deal').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id!;
+        const agr = agreementsService.getById(id);
+        if (agr) {
+          openShareModal(agr);
+        }
+      });
+    });
   };
 
   const renderCard = (agr: ServiceAgreement) => {
@@ -147,7 +159,7 @@ export function renderAgreementsList(
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="color: var(--text-muted);">Destination Address:</span>
             <span style="font-family: monospace; color: var(--text-secondary); font-size: 11px;">
-              ${agr.contractorAddress.slice(0, 8)}...${agr.contractorAddress.slice(-6)}
+              ${agr.contractorAddress.startsWith('0x') && agr.contractorAddress.length === 42 ? `${agr.contractorAddress.slice(0, 8)}...${agr.contractorAddress.slice(-6)}` : agr.contractorAddress}
             </span>
           </div>
           <div style="display: flex; justify-content: space-between;">
@@ -192,14 +204,21 @@ export function renderAgreementsList(
               Cash Out 🏦
             </button>
           </div>
-        ` : isDelivered ? `
-          <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="font-size: 13px; padding: 12px;">
-            <span>⚡ Release ${formattedAmount} (Attributed)</span>
-          </button>
         ` : `
-          <button class="btn-secondary btn-mark-delivered" data-id="${agr.id}" style="font-size: 12px; padding: 10px;">
-            <span>📤 Mark Deliverable as Ready</span>
-          </button>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 10px 14px; font-size: 12px;" title="Share agreement link">
+              <span>🔗 Share</span>
+            </button>
+            ${isDelivered ? `
+              <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
+                <span>⚡ Release ${formattedAmount} (Attributed)</span>
+              </button>
+            ` : `
+              <button class="btn-secondary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
+                <span>📤 Mark Deliverable Ready</span>
+              </button>
+            `}
+          </div>
         `}
       </div>
     `;
