@@ -15,6 +15,7 @@ export interface CeloNetworkDefinition {
   blockExplorerUrl: string;
   agentId: number;
   agentWallet: string;
+  feeWallet: string;
   attributionTag: string;
   tokens: {
     USDC: { address: `0x${string}`; symbol: string; name: string; decimals: number; icon: string };
@@ -23,6 +24,14 @@ export interface CeloNetworkDefinition {
     cUSD: { address: `0x${string}`; symbol: string; name: string; decimals: number; icon: string };
     CELO: { address: `0x${string}`; symbol: string; name: string; decimals: number; icon: string };
   };
+}
+
+export function getSivanFeeWallet(): string {
+  const envFeeWallet = (import.meta as any).env?.VITE_SIVAN_FEE_WALLET_CELO || (import.meta as any).env?.VITE_CELO_FEE_WALLET;
+  if (envFeeWallet && /^0x[a-fA-F0-9]{40}$/.test(envFeeWallet.trim())) {
+    return envFeeWallet.trim();
+  }
+  return '0xd62D8aD1EE242745959221b5d020FAf20b41d14A';
 }
 
 export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
@@ -36,6 +45,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
     blockExplorerUrl: 'https://celoscan.io',
     agentId: 9827,
     agentWallet: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+    feeWallet: getSivanFeeWallet(),
     attributionTag: 'celo_bafcc2e56bd7',
     tokens: {
       USDC: {
@@ -85,6 +95,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
     blockExplorerUrl: 'https://sepolia.celoscan.io',
     agentId: 9827,
     agentWallet: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+    feeWallet: getSivanFeeWallet(),
     attributionTag: 'celo_bafcc2e56bd7',
     tokens: {
       USDC: {
