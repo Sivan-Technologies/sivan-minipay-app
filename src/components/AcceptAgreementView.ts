@@ -2,6 +2,7 @@ import { agreementsService } from '../services/agreements.service';
 import { miniPayService } from '../services/minipay.service';
 import { CELO_CONFIG } from '../config/celo.config';
 import type { ServiceAgreement } from '../types/minipay.types';
+import { formatDeadlineHours } from '../utils/deadline';
 
 export interface DealProposalData {
   id: string;
@@ -61,7 +62,7 @@ export function renderAcceptAgreement(
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 6px;">
           <span style="color: var(--text-muted);">Delivery Deadline:</span>
-          <span style="color: var(--accent-cyan); font-weight: 500;">⏱ ${deal.deadlineHours} Hours</span>
+          <span style="color: var(--accent-cyan); font-weight: 500;">⏱ ${formatDeadlineHours(deal.deadlineHours)}</span>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ export interface TokenBalance {
   usdValue: number;
 }
 
-export type AgreementStatus = 'funded' | 'in_progress' | 'delivered' | 'released';
+export type AgreementStatus = 'funded' | 'in_progress' | 'delivered' | 'released' | 'disputed' | 'refunded' | 'cancelled';
 
 export interface ServiceAgreement {
   id: string;
@@ -36,6 +36,9 @@ export interface ServiceAgreement {
   deliverableProofUrl?: string;
   fundingTxHash?: string;
   releaseTxHash?: string;
+  disputeReason?: string;
+  disputeTxHash?: string;
+  refundTxHash?: string;
   attributionTag: string;
 }
 

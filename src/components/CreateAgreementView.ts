@@ -6,6 +6,7 @@ import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openShareModal } from './ShareAgreementModal';
 import { identityService } from '../services/identity.service';
+import { DELIVERY_DEADLINE_PRESETS } from '../utils/deadline';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -87,10 +88,11 @@ export async function renderCreateAgreement(
       <div class="form-group">
         <label class="form-label" for="deal-deadline">Delivery Deadline</label>
         <select id="deal-deadline" class="form-select">
-          <option value="24">24 Hours (1 Day)</option>
-          <option value="48" selected>48 Hours (2 Days)</option>
-          <option value="72">72 Hours (3 Days)</option>
-          <option value="168">7 Days (1 Week)</option>
+          ${DELIVERY_DEADLINE_PRESETS.map(preset => `
+            <option value="${preset.hours}" ${preset.hours === 48 ? 'selected' : ''}>
+              ${preset.label}
+            </option>
+          `).join('')}
         </select>
       </div>
 

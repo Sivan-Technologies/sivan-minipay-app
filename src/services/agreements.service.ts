@@ -127,20 +127,41 @@ class AgreementsService {
     }
   }
 
-  public updateStatus(id: string, status: AgreementStatus, proofUrl?: string, releaseTxHash?: string): boolean {
+  public updateStatus(
+    id: string,
+    status: AgreementStatus,
+    proofUrl?: string,
+    releaseTxHash?: string,
+    disputeReason?: string,
+    refundTxHash?: string
+  ): boolean {
     const agreement = this.agreements.find(a => a.id === id);
     if (!agreement) return false;
 
     agreement.status = status;
-    if (proofUrl) {
+    if (proofUrl !== undefined) {
       agreement.deliverableProofUrl = proofUrl;
     }
-    if (releaseTxHash) {
+    if (releaseTxHash !== undefined) {
       agreement.releaseTxHash = releaseTxHash;
+    }
+    if (disputeReason !== undefined) {
+      agreement.disputeReason = disputeReason;
+    }
+    if (refundTxHash !== undefined) {
+      agreement.refundTxHash = refundTxHash;
     }
 
     this.saveAgreements();
     return true;
+  }
+
+  public raiseDispute(id: string, reason: string, disputeSignature?: string): boolean {
+    return this.updateStatus(id, 'disputed', undefined, undefined, reason, disputeSignature);
+  }
+
+  public refundAgreement(id: string, refundSignature?: string): boolean {
+    return this.updateStatus(id, 'refunded', undefined, undefined, undefined, refundSignature);
   }
 
   public subscribe(fn: (agreements: ServiceAgreement[]) => void) {

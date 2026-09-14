@@ -364,6 +364,104 @@ class MiniPayService {
     }
   }
 
+  /**
+   * Prompts connected wallet to cryptographically sign a dispute filing with reason.
+   */
+  public async signDisputeFiling(params: {
+    agreementId: string;
+    reason: string;
+  }): Promise<{ success: boolean; signature?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const message = [
+      'Sivan Ai Autonomous Service Agreement',
+      'Action: Formal Dispute Filing',
+      `Agreement ID: ${params.agreementId}`,
+      `Complainant: ${this.state.address}`,
+      `Reason: ${params.reason}`,
+      `Attribution Tag: ${CELO_CONFIG.attributionTag}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    try {
+      const hexMessage = `0x${Array.from(new TextEncoder().encode(message))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')}`;
+
+      const signature: string = await provider.request({
+        method: 'personal_sign',
+        params: [hexMessage, this.state.address],
+      });
+
+      return { success: true, signature };
+    } catch (err: any) {
+      console.error('Signing dispute filing failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Signature request was rejected in wallet'
+          : (err.message || 'Signature request failed'),
+      };
+    }
+  }
+
+  /**
+   * Prompts connected wallet to cryptographically sign a mutual agreement refund back to client.
+   */
+  public async signRefundAuthorization(params: {
+    agreementId: string;
+    amount: number;
+    currency: string;
+    buyerAddress?: string;
+  }): Promise<{ success: boolean; signature?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const message = [
+      'Sivan Ai Autonomous Service Agreement',
+      'Action: Authorize Client Refund',
+      `Agreement ID: ${params.agreementId}`,
+      `Authorized By: ${this.state.address}`,
+      `Refund Amount: ${params.amount} ${params.currency}`,
+      `Attribution Tag: ${CELO_CONFIG.attributionTag}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    try {
+      const hexMessage = `0x${Array.from(new TextEncoder().encode(message))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')}`;
+
+      const signature: string = await provider.request({
+        method: 'personal_sign',
+        params: [hexMessage, this.state.address],
+      });
+
+      return { success: true, signature };
+    } catch (err: any) {
+      console.error('Signing refund authorization failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Signature request was rejected in wallet'
+          : (err.message || 'Signature request failed'),
+      };
+    }
+  }
+
   public getState(): MiniPayDetectionState {
     return this.state;
   }

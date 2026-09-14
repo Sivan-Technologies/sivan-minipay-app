@@ -1,4 +1,5 @@
 import type { ServiceAgreement } from '../types/minipay.types';
+import { formatDeadlineHours } from '../utils/deadline';
 
 let modalRoot: HTMLElement | null = null;
 let activeAgreement: ServiceAgreement | null = null;
@@ -90,7 +91,7 @@ function renderShareModal() {
               </div>
               <div>
                 <span style="color: var(--text-muted); display: block; font-size: 10px;">Deadline</span>
-                <span style="color: var(--text-secondary); font-size: 12px;">⏱ ${agr.deadlineHours} Hours</span>
+                <span style="color: var(--text-secondary); font-size: 12px;">⏱ ${formatDeadlineHours(agr.deadlineHours)}</span>
               </div>
             </div>
 
