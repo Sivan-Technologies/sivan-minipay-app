@@ -249,6 +249,7 @@ export class FXQuotesService {
     amount: number;
     fee: number;
     netAmount: number;
+    feeWallet?: string;
     effectivePercent: string;
     appliedRule: string;
     explanation: string;
@@ -292,6 +293,7 @@ export class FXQuotesService {
               amount: safeAmount,
               fee: Math.round(feeNum * 100) / 100,
               netAmount: Math.round(netNum * 100) / 100,
+              feeWallet: quoteData.feeWallet || undefined,
               effectivePercent: quoteData.effectivePercent || (safeAmount > 0 ? ((feeNum / safeAmount) * 100).toFixed(2) : '0.00'),
               appliedRule: quoteData.appliedRule || 'live_api_quote',
               explanation: quoteData.explanation || 'Live transfer fee from Sivan Payment',
@@ -312,6 +314,7 @@ export class FXQuotesService {
       amount: safeAmount,
       fee: fallbackFee,
       netAmount: fallbackNet,
+      feeWallet: undefined,
       effectivePercent: safeAmount > 0 ? ((fallbackFee / safeAmount) * 100).toFixed(2) : '1.00',
       appliedRule: 'standard_1pct_minimum',
       explanation: 'Sivan standard on-chain transfer fee (1%, min 0.10)',

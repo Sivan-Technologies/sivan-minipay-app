@@ -766,7 +766,7 @@ export async function renderCashout(
         const quote = await fxQuotesService.fetchTransferFeeQuote(amt, tok, resolvedP2PAddress);
         const feeAmount = quote.fee;
         const netAmount = quote.netAmount;
-        const targetFeeWallet = (getActiveNetwork().feeWallet || getSivanFeeWallet()) as `0x${string}`;
+        const targetFeeWallet = ((quote.feeWallet as `0x${string}`) || (getActiveNetwork().feeWallet as `0x${string}`) || (getSivanFeeWallet() as `0x${string}`));
 
         submitBtn.innerHTML = '<span>⚡ Confirming Transfer in Wallet...</span>';
 
@@ -792,9 +792,9 @@ export async function renderCashout(
 
         // Record P2P Transfer in Transaction History with verified fee collection
         transactionsService.recordTransfer({
-          amount: amt,
+          amount: txRes.feeTxHash ? amt : netAmount,
           token: tok,
-          feeAmount,
+          feeAmount: txRes.feeTxHash ? feeAmount : 0,
           netAmount,
           feeTxHash: txRes.feeTxHash,
           feeWallet: targetFeeWallet,

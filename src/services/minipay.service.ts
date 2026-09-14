@@ -329,6 +329,50 @@ class MiniPayService {
   }
 
   /**
+   * Polls Celo JSON-RPC for a transaction receipt to ensure mining before consecutive actions.
+   * Celo has ~1-second block times.
+   */
+  public async waitForReceipt(txHash: string, maxWaitMs = 15_000): Promise<boolean> {
+    const startTime = Date.now();
+    const provider = (window as any).ethereum;
+    const activeNet = getActiveNetwork();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      try {
+        let receipt: any = null;
+        if (provider?.request) {
+          receipt = await provider.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          });
+        }
+        if (!receipt && activeNet.rpcUrl) {
+          const res = await fetch(activeNet.rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'eth_getTransactionReceipt',
+              params: [txHash],
+            }),
+          });
+          const data = await res.json();
+          receipt = data?.result;
+        }
+
+        if (receipt && receipt.blockNumber) {
+          return true;
+        }
+      } catch {
+        // Retry
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    return false;
+  }
+
+  /**
    * Sends a genuine transaction on Celo Mainnet via the connected wallet,
    * appended with Sivan's official ERC-8021 attribution tag.
    */
@@ -412,6 +456,9 @@ class MiniPayService {
         if (hasFee && targetFeeWallet) {
           try {
             params.onProgress?.('fee');
+            // Wait for initial transfer receipt on Celo so account nonce increments cleanly
+            await this.waitForReceipt(txHash);
+
             const safeFeeStr = toSafeDecimalString(params.feeAmount!, 18);
             const rawFee = parseUnits(safeFeeStr, 18);
             const feeData = attachAttributionSuffix('0x');
@@ -489,6 +536,9 @@ class MiniPayService {
         if (hasFee && targetFeeWallet) {
           try {
             params.onProgress?.('fee');
+            // Wait for initial transfer receipt on Celo so account nonce increments cleanly
+            await this.waitForReceipt(txHash);
+
             const safeFeeStr = toSafeDecimalString(params.feeAmount!, tokenInfo.decimals);
             const rawFee = parseUnits(safeFeeStr, tokenInfo.decimals);
             const feeData = buildAttributedTransferCalldata(targetFeeWallet, rawFee);
