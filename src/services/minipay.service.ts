@@ -337,7 +337,9 @@ class MiniPayService {
     amount: number;
     currency: SupportedTokenSymbol;
     feeAmount?: number;
-  }): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    feeWallet?: `0x${string}`;
+    onProgress?: (step: 'transfer' | 'fee') => void;
+  }): Promise<{ success: boolean; txHash?: string; feeTxHash?: string; error?: string }> {
     if (!this.state.address) {
       return { success: false, error: 'Please connect your wallet first' };
     }
@@ -359,8 +361,12 @@ class MiniPayService {
       return { success: false, error: `Unsupported currency: ${params.currency}` };
     }
 
+    const targetFeeWallet = (params.feeWallet || activeNet.feeWallet) as `0x${string}` | undefined;
+    const hasFee = Boolean(params.feeAmount && params.feeAmount > 0 && targetFeeWallet && targetFeeWallet.toLowerCase() !== params.to.toLowerCase());
+
     try {
       let txHash: string;
+      let feeTxHash: string | undefined;
       const safeAmountStr = toSafeDecimalString(params.amount, tokenInfo.decimals);
 
       if (params.currency === 'CELO') {
@@ -390,6 +396,7 @@ class MiniPayService {
           // Keep safe 100,000 gas default
         }
 
+        params.onProgress?.('transfer');
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
@@ -400,6 +407,47 @@ class MiniPayService {
             gas: gasHex,
           }],
         });
+
+        // Collect protocol fee on-chain to Sivan Fee Wallet
+        if (hasFee && targetFeeWallet) {
+          try {
+            params.onProgress?.('fee');
+            const safeFeeStr = toSafeDecimalString(params.feeAmount!, 18);
+            const rawFee = parseUnits(safeFeeStr, 18);
+            const feeData = attachAttributionSuffix('0x');
+            let feeGasHex = '0x186a0';
+            try {
+              const estFee = await provider.request({
+                method: 'eth_estimateGas',
+                params: [{
+                  from: this.state.address,
+                  to: targetFeeWallet,
+                  value: `0x${rawFee.toString(16)}`,
+                  data: feeData,
+                }],
+              });
+              if (estFee) {
+                const val = typeof estFee === 'string' ? parseInt(estFee, 16) : Number(estFee);
+                if (Number.isFinite(val) && val > 0 && val < 500_000) {
+                  feeGasHex = `0x${Math.min(300_000, Math.ceil(val * 1.3)).toString(16)}`;
+                }
+              }
+            } catch {}
+
+            feeTxHash = await provider.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                from: this.state.address,
+                to: targetFeeWallet,
+                value: `0x${rawFee.toString(16)}`,
+                data: feeData,
+                gas: feeGasHex,
+              }],
+            });
+          } catch (feeErr: any) {
+            console.warn('CELO protocol fee collection transfer skipped/failed:', feeErr);
+          }
+        }
       } else {
         // ERC-20 token transfer (USDC, USDT, cUSD, cNGN) with attribution tag
         const rawAmount = parseUnits(safeAmountStr, tokenInfo.decimals);
@@ -426,6 +474,7 @@ class MiniPayService {
           // Keep safe 200,000 gas default
         }
 
+        params.onProgress?.('transfer');
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
@@ -435,9 +484,48 @@ class MiniPayService {
             gas: gasHex,
           }],
         });
+
+        // Collect protocol fee on-chain to Sivan Fee Wallet
+        if (hasFee && targetFeeWallet) {
+          try {
+            params.onProgress?.('fee');
+            const safeFeeStr = toSafeDecimalString(params.feeAmount!, tokenInfo.decimals);
+            const rawFee = parseUnits(safeFeeStr, tokenInfo.decimals);
+            const feeData = buildAttributedTransferCalldata(targetFeeWallet, rawFee);
+            let feeGasHex = '0x30d40';
+            try {
+              const estFee = await provider.request({
+                method: 'eth_estimateGas',
+                params: [{
+                  from: this.state.address,
+                  to: tokenInfo.address,
+                  data: feeData,
+                }],
+              });
+              if (estFee) {
+                const val = typeof estFee === 'string' ? parseInt(estFee, 16) : Number(estFee);
+                if (Number.isFinite(val) && val > 0 && val < 500_000) {
+                  feeGasHex = `0x${Math.min(300_000, Math.ceil(val * 1.3)).toString(16)}`;
+                }
+              }
+            } catch {}
+
+            feeTxHash = await provider.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                from: this.state.address,
+                to: tokenInfo.address,
+                data: feeData,
+                gas: feeGasHex,
+              }],
+            });
+          } catch (feeErr: any) {
+            console.warn('ERC-20 protocol fee collection transfer skipped/failed:', feeErr);
+          }
+        }
       }
 
-      return { success: true, txHash };
+      return { success: true, txHash, feeTxHash };
     } catch (err: any) {
       console.error('On-chain transaction failed:', err);
       return {

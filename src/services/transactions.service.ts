@@ -13,6 +13,8 @@ export interface TransactionItem {
   targetCurrencySymbol?: string;
   feeAmount?: number;
   netAmount?: number;
+  feeTxHash?: string;
+  feeWallet?: string;
   recipientAccount?: string;
   recipientName?: string;
   bankOrRailName?: string;
@@ -126,6 +128,8 @@ class TransactionsService {
     token: string;
     feeAmount?: number;
     netAmount?: number;
+    feeTxHash?: string;
+    feeWallet?: string;
     recipientIdentifier: string;
     recipientAddress: string;
     txHash?: string;
@@ -138,6 +142,8 @@ class TransactionsService {
       sourceToken: data.token,
       feeAmount: data.feeAmount,
       netAmount: data.netAmount,
+      feeTxHash: data.feeTxHash,
+      feeWallet: data.feeWallet,
       recipientAccount: data.recipientAddress,
       recipientName: data.recipientIdentifier,
       bankOrRailName: 'Celo P2P Direct Rail',

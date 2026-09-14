@@ -4,7 +4,7 @@ import { fetchTokenBalances } from '../services/celo-client';
 import { countryService } from '../config/countries.config';
 import { transactionsService } from '../services/transactions.service';
 import { identityService } from '../services/identity.service';
-import type { SupportedTokenSymbol } from '../config/celo.config';
+import { getActiveNetwork, getSivanFeeWallet, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
 
 export async function renderCashout(
@@ -766,14 +766,21 @@ export async function renderCashout(
         const quote = await fxQuotesService.fetchTransferFeeQuote(amt, tok, resolvedP2PAddress);
         const feeAmount = quote.fee;
         const netAmount = quote.netAmount;
+        const targetFeeWallet = (getActiveNetwork().feeWallet || getSivanFeeWallet()) as `0x${string}`;
 
-        submitBtn.innerHTML = '<span>⚡ Confirming in Wallet...</span>';
+        submitBtn.innerHTML = '<span>⚡ Confirming Transfer in Wallet...</span>';
 
         const txRes = await miniPayService.sendAttributedTransfer({
           to: resolvedP2PAddress as `0x${string}`,
           amount: netAmount,
           currency: tok as SupportedTokenSymbol,
           feeAmount,
+          feeWallet: targetFeeWallet,
+          onProgress: (step) => {
+            if (step === 'fee') {
+              submitBtn.innerHTML = '<span>⚡ Confirming Protocol Fee to Sivan Wallet...</span>';
+            }
+          },
         });
 
         if (!txRes.success || !txRes.txHash) {
@@ -783,19 +790,22 @@ export async function renderCashout(
           return;
         }
 
-        // Record P2P Transfer in Transaction History
+        // Record P2P Transfer in Transaction History with verified fee collection
         transactionsService.recordTransfer({
           amount: amt,
           token: tok,
           feeAmount,
           netAmount,
+          feeTxHash: txRes.feeTxHash,
+          feeWallet: targetFeeWallet,
           recipientIdentifier: resolvedP2PDisplayName || resolvedP2PAddress,
           recipientAddress: resolvedP2PAddress,
           txHash: txRes.txHash,
         });
 
         submitBtn.innerHTML = '<span>🚀 Transfer Dispatched...</span>';
-        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Sent ${netAmount.toFixed(2)} ${tok} to ${resolvedP2PDisplayName}!`);
+        const feeNote = txRes.feeTxHash ? ' · Fee settled ✓' : '';
+        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Sent ${netAmount.toFixed(2)} ${tok} to ${resolvedP2PDisplayName}${feeNote}!`);
 
         setTimeout(() => {
           onNavigate('history');
