@@ -229,11 +229,15 @@ export async function renderCashout(
           </div>
           <div class="quote-row">
             <span>Sivan Transfer Fee:</span>
-            <span style="font-weight: 600; color: var(--accent-emerald);">0.00 (Gas-Sponsored)</span>
+            <span id="p2p-fee-display" style="font-weight: 600; color: var(--accent-cyan);">-0.10 USDC (1.00%)</span>
+          </div>
+          <div class="quote-row">
+            <span>Net Recipient Credit:</span>
+            <span id="p2p-net-display" style="font-weight: 700; color: var(--accent-emerald);">9.90 USDC</span>
           </div>
           <div class="quote-row">
             <span>Settlement Speed:</span>
-            <span style="font-weight: 500; color: var(--text-secondary);">Sub-second (0.15s internal ledger)</span>
+            <span id="p2p-speed-display" style="font-weight: 500; color: var(--text-secondary);">Sub-second (Celo Finality)</span>
           </div>
         </div>
       </div>
@@ -280,7 +284,10 @@ export async function renderCashout(
   const acctStatusEl = container.querySelector('#acct-lookup-status') as HTMLElement;
   const submitBtn = container.querySelector('#btn-submit-cashout') as HTMLButtonElement;
 
-  // P2P Recipient Elements
+  // P2P Recipient & Summary Elements
+  const p2pFeeDisplay = container.querySelector('#p2p-fee-display') as HTMLElement | null;
+  const p2pNetDisplay = container.querySelector('#p2p-net-display') as HTMLElement | null;
+  const p2pSpeedDisplay = container.querySelector('#p2p-speed-display') as HTMLElement | null;
   const walletRecipientInput = container.querySelector('#wallet-recipient-input') as HTMLInputElement;
   const walletRecipientStatus = container.querySelector('#wallet-recipient-status') as HTMLElement;
   let resolvedP2PAddress: string | null = null;
@@ -288,6 +295,47 @@ export async function renderCashout(
   let p2pLookupTimeout: any = null;
 
   let resolvedRecipientName = '';
+
+  const updateP2PQuoteDisplay = async () => {
+    if (activeTab !== 'wallet') return;
+    const amt = parseFloat(amountEl.value) || 0;
+    const tok = tokenHiddenEl.value || 'USDC';
+
+    if (amt <= 0) {
+      if (p2pFeeDisplay) p2pFeeDisplay.textContent = `0.00 ${tok}`;
+      if (p2pNetDisplay) p2pNetDisplay.textContent = `0.00 ${tok}`;
+      if (p2pSpeedDisplay) p2pSpeedDisplay.textContent = 'Sub-second (Celo Finality)';
+      submitBtnText.textContent = '⚡ Send Instantly on Celo (Attributed)';
+      return;
+    }
+
+    if (p2pSpeedDisplay) {
+      p2pSpeedDisplay.textContent = 'Sub-second (Celo Finality)';
+    }
+
+    try {
+      const quote = await fxQuotesService.fetchTransferFeeQuote(amt, tok, resolvedP2PAddress || undefined);
+      const feeFormatted = quote.fee.toFixed(2);
+      const netFormatted = quote.netAmount.toFixed(2);
+      if (p2pFeeDisplay) {
+        p2pFeeDisplay.textContent = `-${feeFormatted} ${tok} (${quote.effectivePercent}%)`;
+      }
+      if (p2pNetDisplay) {
+        p2pNetDisplay.textContent = `${netFormatted} ${tok}`;
+      }
+      submitBtnText.textContent = `⚡ Send ${netFormatted} ${tok} on Celo (Attributed)`;
+    } catch {
+      const fallbackFee = Math.max(0.10, Math.round(amt * 0.01 * 100) / 100);
+      const fallbackNet = Math.max(0, amt - fallbackFee);
+      if (p2pFeeDisplay) {
+        p2pFeeDisplay.textContent = `-${fallbackFee.toFixed(2)} ${tok} (1.00%)`;
+      }
+      if (p2pNetDisplay) {
+        p2pNetDisplay.textContent = `${fallbackNet.toFixed(2)} ${tok}`;
+      }
+      submitBtnText.textContent = `⚡ Send ${fallbackNet.toFixed(2)} ${tok} on Celo (Attributed)`;
+    }
+  };
 
   // Tab Switching Logic
   const switchTab = (tab: 'bank' | 'wallet') => {
@@ -313,6 +361,7 @@ export async function renderCashout(
       submitBtnText.textContent = '⚡ Send Instantly on Celo (Attributed)';
       acctEl.required = false;
       walletRecipientInput.required = true;
+      void updateP2PQuoteDisplay();
     }
   };
 
@@ -553,11 +602,13 @@ export async function renderCashout(
 
       updateBalanceDisplay();
       void fetchAndRefreshRate();
+      void updateP2PQuoteDisplay();
     });
   });
 
   amountEl?.addEventListener('input', () => {
     void updateQuoteDisplay();
+    void updateP2PQuoteDisplay();
   });
 
   updateBalanceDisplay();
@@ -709,18 +760,25 @@ export async function renderCashout(
       }
 
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
+      submitBtn.innerHTML = '<span>⚡ Quoting & Signing Celo Transfer...</span>';
 
       try {
+        const quote = await fxQuotesService.fetchTransferFeeQuote(amt, tok, resolvedP2PAddress);
+        const feeAmount = quote.fee;
+        const netAmount = quote.netAmount;
+
+        submitBtn.innerHTML = '<span>⚡ Confirming in Wallet...</span>';
+
         const txRes = await miniPayService.sendAttributedTransfer({
           to: resolvedP2PAddress as `0x${string}`,
-          amount: amt,
+          amount: netAmount,
           currency: tok as SupportedTokenSymbol,
+          feeAmount,
         });
 
         if (!txRes.success || !txRes.txHash) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = '<span>⚡ Send Instantly on Celo (Attributed)</span>';
+          submitBtn.innerHTML = `<span>⚡ Send ${netAmount.toFixed(2)} ${tok} on Celo (Attributed)</span>`;
           showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
           return;
         }
@@ -729,13 +787,15 @@ export async function renderCashout(
         transactionsService.recordTransfer({
           amount: amt,
           token: tok,
+          feeAmount,
+          netAmount,
           recipientIdentifier: resolvedP2PDisplayName || resolvedP2PAddress,
           recipientAddress: resolvedP2PAddress,
           txHash: txRes.txHash,
         });
 
         submitBtn.innerHTML = '<span>🚀 Transfer Dispatched...</span>';
-        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Dispatched to ${resolvedP2PDisplayName}!`);
+        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Sent ${netAmount.toFixed(2)} ${tok} to ${resolvedP2PDisplayName}!`);
 
         setTimeout(() => {
           onNavigate('history');

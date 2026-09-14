@@ -246,6 +246,51 @@ class MiniPayService {
   }
 
   /**
+   * Ensures connected wallet provider is switched to the active Celo network
+   * before broadcasting any on-chain transaction.
+   */
+  public async ensureCeloNetwork(): Promise<{ success: boolean; error?: string }> {
+    if (!this.hasInjectedWallet()) return { success: true };
+    const provider = (window as any).ethereum;
+    if (!provider?.request) return { success: true };
+
+    const activeNet = getActiveNetwork();
+    try {
+      const currentChainIdHex: string = await provider.request({ method: 'eth_chainId' });
+      if (currentChainIdHex && currentChainIdHex.toLowerCase() !== activeNet.chainIdHex.toLowerCase()) {
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: activeNet.chainIdHex }],
+          });
+        } catch (switchError: any) {
+          if (switchError.code === 4902 || switchError.message?.includes('Unrecognized chain') || switchError.message?.includes('4902')) {
+            await provider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: activeNet.chainIdHex,
+                chainName: activeNet.chainName,
+                nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                rpcUrls: [activeNet.rpcUrl, activeNet.fallbackRpcUrl].filter(Boolean),
+                blockExplorerUrls: [activeNet.blockExplorerUrl],
+              }],
+            });
+          } else {
+            return {
+              success: false,
+              error: `Please switch your wallet network to ${activeNet.chainName} to complete this transfer.`,
+            };
+          }
+        }
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Network verification error:', err);
+      return { success: true };
+    }
+  }
+
+  /**
    * Sends a genuine transaction on Celo Mainnet via the connected wallet,
    * appended with Sivan's official ERC-8021 attribution tag.
    */
@@ -253,6 +298,7 @@ class MiniPayService {
     to: `0x${string}`;
     amount: number;
     currency: SupportedTokenSymbol;
+    feeAmount?: number;
   }): Promise<{ success: boolean; txHash?: string; error?: string }> {
     if (!this.state.address) {
       return { success: false, error: 'Please connect your wallet first' };
@@ -262,8 +308,15 @@ class MiniPayService {
       return { success: false, error: 'Web3 provider not available' };
     }
 
+    // 1. Ensure the wallet is switched to active Celo network before broadcasting
+    const netCheck = await this.ensureCeloNetwork();
+    if (!netCheck.success) {
+      return { success: false, error: netCheck.error };
+    }
+
     const provider = (window as any).ethereum;
-    const tokenInfo = CELO_CONFIG.tokens[params.currency];
+    const activeNet = getActiveNetwork();
+    const tokenInfo = activeNet.tokens[params.currency] || CELO_CONFIG.tokens[params.currency];
     if (!tokenInfo) {
       return { success: false, error: `Unsupported currency: ${params.currency}` };
     }
@@ -277,6 +330,28 @@ class MiniPayService {
         const rawAmount = parseUnits(safeAmountStr, 18);
         const data = attachAttributionSuffix('0x');
 
+        // Safe bounded gas limit (capped between 65,000 and 200,000)
+        let gasHex = '0x186a0'; // 100,000 safe default
+        try {
+          const est = await provider.request({
+            method: 'eth_estimateGas',
+            params: [{
+              from: this.state.address,
+              to: params.to,
+              value: `0x${rawAmount.toString(16)}`,
+              data,
+            }],
+          });
+          if (est) {
+            const gasVal = typeof est === 'string' ? parseInt(est, 16) : Number(est);
+            if (Number.isFinite(gasVal) && gasVal > 0 && gasVal < 500_000) {
+              gasHex = `0x${Math.min(300_000, Math.ceil(gasVal * 1.3)).toString(16)}`;
+            }
+          }
+        } catch {
+          // Keep safe 100,000 gas default
+        }
+
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
@@ -284,6 +359,7 @@ class MiniPayService {
             to: params.to,
             value: `0x${rawAmount.toString(16)}`,
             data,
+            gas: gasHex,
           }],
         });
       } else {
@@ -291,12 +367,34 @@ class MiniPayService {
         const rawAmount = parseUnits(safeAmountStr, tokenInfo.decimals);
         const data = buildAttributedTransferCalldata(params.to, rawAmount);
 
+        // Safe bounded gas limit (never allow fallback to 21,000,000)
+        let gasHex = '0x30d40'; // 200,000 safe default for ERC-20 with attribution calldata
+        try {
+          const est = await provider.request({
+            method: 'eth_estimateGas',
+            params: [{
+              from: this.state.address,
+              to: tokenInfo.address,
+              data,
+            }],
+          });
+          if (est) {
+            const gasVal = typeof est === 'string' ? parseInt(est, 16) : Number(est);
+            if (Number.isFinite(gasVal) && gasVal > 0 && gasVal < 500_000) {
+              gasHex = `0x${Math.min(300_000, Math.ceil(gasVal * 1.3)).toString(16)}`;
+            }
+          }
+        } catch {
+          // Keep safe 200,000 gas default
+        }
+
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
             from: this.state.address,
             to: tokenInfo.address,
             data,
+            gas: gasHex,
           }],
         });
       }

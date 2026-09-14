@@ -305,15 +305,17 @@ export class FXQuotesService {
       // API error or timeout
     }
 
-    // If API request is in-flight or unreachable, return safe live-pending state without fake numbers
+    // If API request is in-flight or unreachable, fall back to standard protocol rule (1%, min 0.10)
+    const fallbackFee = safeAmount > 0 ? Math.max(0.10, Math.round(safeAmount * 0.01 * 100) / 100) : 0;
+    const fallbackNet = Math.max(0, safeAmount - fallbackFee);
     return {
       amount: safeAmount,
-      fee: 0,
-      netAmount: safeAmount,
-      effectivePercent: '0.00',
-      appliedRule: 'awaiting_api',
-      explanation: 'Live transfer fee from Sivan Payment',
-      source: 'live_api_pending',
+      fee: fallbackFee,
+      netAmount: fallbackNet,
+      effectivePercent: safeAmount > 0 ? ((fallbackFee / safeAmount) * 100).toFixed(2) : '1.00',
+      appliedRule: 'standard_1pct_minimum',
+      explanation: 'Sivan standard on-chain transfer fee (1%, min 0.10)',
+      source: 'protocol_fallback',
     };
   }
 

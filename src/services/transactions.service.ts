@@ -11,6 +11,8 @@ export interface TransactionItem {
   targetAmount?: number;
   targetCurrency?: string;
   targetCurrencySymbol?: string;
+  feeAmount?: number;
+  netAmount?: number;
   recipientAccount?: string;
   recipientName?: string;
   bankOrRailName?: string;
@@ -122,6 +124,8 @@ class TransactionsService {
   public recordTransfer(data: {
     amount: number;
     token: string;
+    feeAmount?: number;
+    netAmount?: number;
     recipientIdentifier: string;
     recipientAddress: string;
     txHash?: string;
@@ -132,6 +136,8 @@ class TransactionsService {
       title: `Transfer to ${data.recipientIdentifier}`,
       sourceAmount: data.amount,
       sourceToken: data.token,
+      feeAmount: data.feeAmount,
+      netAmount: data.netAmount,
       recipientAccount: data.recipientAddress,
       recipientName: data.recipientIdentifier,
       bankOrRailName: 'Celo P2P Direct Rail',
