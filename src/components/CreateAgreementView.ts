@@ -5,6 +5,7 @@ import { fetchTokenBalances } from '../services/celo-client';
 import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openShareModal } from './ShareAgreementModal';
+import { identityService } from '../services/identity.service';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -41,6 +42,7 @@ export async function renderCreateAgreement(
           placeholder="e.g. +2348012345678, @soliame, or 0x..." 
           required 
         />
+        <div id="contractor-resolution-badge" class="form-helper" style="font-size: 11px; margin-top: 4px; display: none;"></div>
         <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
       </div>
 
@@ -216,6 +218,62 @@ export async function renderCreateAgreement(
 
   amountInput?.addEventListener('input', updateCalc);
 
+  // Contractor handle resolution listener
+  const contractorField = container.querySelector('#deal-contractor') as HTMLInputElement;
+  const resolutionBadge = container.querySelector('#contractor-resolution-badge') as HTMLElement;
+  let resolvedAddress: string | null = null;
+  let resolveTimer: any = null;
+
+  contractorField?.addEventListener('input', () => {
+    const val = contractorField.value.trim();
+    resolvedAddress = null;
+    clearTimeout(resolveTimer);
+
+    if (!val) {
+      if (resolutionBadge) resolutionBadge.style.display = 'none';
+      return;
+    }
+
+    if (val.startsWith('0x') && val.length === 42) {
+      if (resolutionBadge) {
+        resolutionBadge.style.display = 'block';
+        resolutionBadge.style.color = 'var(--accent-cyan)';
+        resolutionBadge.innerHTML = '<span>Direct Celo Wallet Address</span>';
+      }
+      resolvedAddress = val;
+      return;
+    }
+
+    if (val.startsWith('@') || val.length >= 3) {
+      if (resolutionBadge) {
+        resolutionBadge.style.display = 'block';
+        resolutionBadge.style.color = 'var(--text-muted)';
+        resolutionBadge.innerHTML = '<span>🔍 Resolving Sivan handle...</span>';
+      }
+
+      resolveTimer = setTimeout(async () => {
+        const res = await identityService.resolveTarget(val, 'celo');
+        if (res.found && res.user?.targetAddress) {
+          resolvedAddress = res.user.targetAddress;
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--accent-emerald)';
+            resolutionBadge.innerHTML = `<span>✅ Verified Sivan User: ${res.user.displayName || val} (${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)})</span>`;
+          }
+        } else if (res.found && res.user) {
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--accent-emerald)';
+            resolutionBadge.innerHTML = `<span>✅ Sivan User: ${res.user.displayName || val}</span>`;
+          }
+        } else {
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--text-muted)';
+            resolutionBadge.innerHTML = '<span>Contractor will receive invite claim link</span>';
+          }
+        }
+      }, 350);
+    }
+  });
+
   // Back button
   container.querySelector('#btn-cancel-create')?.addEventListener('click', () => onNavigate('dashboard'));
 
@@ -269,7 +327,7 @@ export async function renderCreateAgreement(
       }
 
       const contractorInput = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
-      const contractorAddress = contractorInput.startsWith('0x') ? contractorInput : CELO_CONFIG.agentWallet;
+      const contractorAddress = resolvedAddress || (contractorInput.startsWith('0x') ? contractorInput : CELO_CONFIG.agentWallet);
       const contractorIdentifier = contractorInput.startsWith('0x')
         ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
         : contractorInput;

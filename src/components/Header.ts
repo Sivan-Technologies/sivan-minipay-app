@@ -3,6 +3,7 @@ import type { MiniPayDetectionState } from '../types/minipay.types';
 import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 import { openLegalModal } from './LegalSupportModal';
+import { identityService } from '../services/identity.service';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -169,6 +170,16 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
                 <span style="color: var(--text-muted); font-size: 11px;">${activeNet.rpcUrl.replace('https://', '')}</span>
               </div>
               ${state.address ? `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
+                  <span style="color: var(--text-muted);">Sivan Handle:</span>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    ${identityService.getSavedUsername() ? `
+                      <span style="font-weight: 600; color: var(--accent-emerald); font-family: monospace;">${identityService.getSavedUsername()}</span>
+                    ` : `
+                      <button type="button" id="btn-claim-handle" style="background: rgba(16, 185, 129, 0.12); border: 1px solid var(--accent-emerald); border-radius: 12px; color: var(--accent-emerald); font-size: 11px; padding: 2px 10px; cursor: pointer; font-weight: 600;">+ Claim @handle</button>
+                    `}
+                  </div>
+                </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
                   <span style="color: var(--text-muted);">Address:</span>
                   <div style="display: flex; align-items: center; gap: 6px;">
@@ -349,6 +360,18 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
         if (ok && onToast) {
           onToast(`Wallet address copied: ${shortAddr}`);
         }
+      }
+    });
+
+    container.querySelector('#btn-claim-handle')?.addEventListener('click', async () => {
+      const handle = prompt('Choose your unique Sivan handle (e.g. @soliame):');
+      if (!handle) return;
+      const res = await identityService.claimUsername(handle, state.address || '');
+      if (res.success && res.username) {
+        if (onToast) onToast(`🎉 Sivan handle claimed: ${res.username}`);
+        update(miniPayService.getState());
+      } else if (res.error) {
+        if (onToast) onToast(`❌ ${res.error}`);
       }
     });
   };

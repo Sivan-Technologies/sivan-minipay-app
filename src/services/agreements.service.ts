@@ -81,6 +81,7 @@ class AgreementsService {
 
     this.agreements.unshift(newAgreement);
     this.saveAgreements();
+    this.syncAgreementToBackend(newAgreement).catch(() => {});
     return newAgreement;
   }
 
@@ -92,7 +93,38 @@ class AgreementsService {
       this.agreements.unshift(agreement);
     }
     this.saveAgreements();
+    this.syncAgreementToBackend(agreement).catch(() => {});
     return agreement;
+  }
+
+  private get apiBase(): string {
+    return (import.meta.env.VITE_PAYMENT_API_URL || 'https://api-staging.sivantech.online').replace(/\/$/, '');
+  }
+
+  public async syncAgreementToBackend(agreement: ServiceAgreement): Promise<boolean> {
+    try {
+      const url = `${this.apiBase}/api/agreements`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: agreement.id,
+          buyerUserId: 'minipay_buyer',
+          sellerUserId: agreement.contractorAddress || agreement.contractorIdentifier,
+          title: agreement.title,
+          description: agreement.description,
+          amountUsdc: agreement.amount,
+          currency: agreement.currency,
+          network: 'celo',
+          deadlineDays: Math.max(1, Math.round(agreement.deadlineHours / 24)),
+          channel: 'minipay',
+        }),
+      });
+      return res.ok;
+    } catch (e) {
+      console.warn('[AgreementsService.syncAgreementToBackend] note:', e);
+      return false;
+    }
   }
 
   public updateStatus(id: string, status: AgreementStatus, proofUrl?: string, releaseTxHash?: string): boolean {
