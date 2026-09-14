@@ -3,6 +3,7 @@ import type { ServiceAgreement } from '../types/minipay.types';
 import { miniPayService } from '../services/minipay.service';
 import { openShareModal } from './ShareAgreementModal';
 import { getCountdownStatus, formatDeadlineHours } from '../utils/deadline';
+import { getNetworkExplorer } from '../utils/explorers';
 
 export function renderAgreementsList(
   container: HTMLElement,
@@ -303,7 +304,7 @@ export function renderAgreementsList(
         ${agr.fundingTxHash ? `
           <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
             <span>🔒 Funding Tx:</span>
-            <a href="https://celoscan.io/tx/${agr.fundingTxHash}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
+            <a href="${getNetworkExplorer('celo', agr.fundingTxHash).url}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
               ${agr.fundingTxHash.slice(0, 12)}... ↗
             </a>
           </div>
@@ -314,7 +315,7 @@ export function renderAgreementsList(
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
               ✅ Settled on Celo Mainnet<br/>
               ${agr.releaseTxHash ? (agr.releaseTxHash.length === 66 ? `
-                <a href="https://celoscan.io/tx/${agr.releaseTxHash}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
+                <a href="${getNetworkExplorer('celo', agr.releaseTxHash).url}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
                   Tx: ${agr.releaseTxHash.slice(0, 14)}... ↗
                 </a>
               ` : `

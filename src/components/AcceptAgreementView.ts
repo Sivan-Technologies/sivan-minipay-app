@@ -3,6 +3,7 @@ import { miniPayService } from '../services/minipay.service';
 import { CELO_CONFIG } from '../config/celo.config';
 import type { ServiceAgreement } from '../types/minipay.types';
 import { formatDeadlineHours } from '../utils/deadline';
+import { getNetworkExplorer } from '../utils/explorers';
 
 export interface DealProposalData {
   id: string;
@@ -69,7 +70,7 @@ export function renderAcceptAgreement(
       ${deal.fundingTxHash ? `
         <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 4px; padding: 8px 10px; background: rgba(16, 185, 129, 0.08); border-radius: var(--radius-sm);">
           <span>🔒 Verified on Celo Mainnet:</span>
-          <a href="https://celoscan.io/tx/${deal.fundingTxHash}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
+          <a href="${getNetworkExplorer('celo', deal.fundingTxHash).url}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
             ${deal.fundingTxHash.slice(0, 12)}... ↗
           </a>
         </div>

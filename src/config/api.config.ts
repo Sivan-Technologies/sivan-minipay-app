@@ -12,7 +12,8 @@ export function getPaymentApiUrl(): string {
     if (proc.env.VITE_PAYMENT_API_URL) return String(proc.env.VITE_PAYMENT_API_URL).replace(/\/+$/, '');
     if (proc.env.PAYMENT_API_URL) return String(proc.env.PAYMENT_API_URL).replace(/\/+$/, '');
   }
-  return 'https://api.sivantech.online';
+  const isProd = typeof import.meta !== 'undefined' && (import.meta.env?.MODE === 'production' && import.meta.env?.VITE_APP_ENV === 'production');
+  return isProd ? 'https://api.sivantech.online' : 'https://api-staging.sivantech.online';
 }
 
 export function getTextileApiUrl(): string {
