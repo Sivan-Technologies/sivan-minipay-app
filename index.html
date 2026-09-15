@@ -17,9 +17,10 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body class="bg-[#0a0e17] text-slate-100 antialiased min-h-screen">
+    <div id="app"></div>
+
     <!-- Static semantic fallback & SSR shell for headless audit crawlers and AskBots -->
-    <div id="app">
-      <!-- Static semantic fallback & SSR shell for headless audit crawlers and AskBots -->
+    <noscript>
       <nav aria-label="Main Navigation" class="p-4 border-b border-slate-800 bg-slate-950 text-white">
         <div class="max-w-xl mx-auto flex items-center justify-between flex-wrap gap-3">
           <div class="flex items-center gap-3">
@@ -264,23 +265,10 @@
             Attribution Tag: <span class="font-mono text-emerald-400">celo_bafcc2e56bd7</span> • Celo Mainnet Registered Agent ID #9827
           </p>
           <p class="text-[11px] text-slate-600 m-0">
-            Founder: Samson Micheal (Abuja, Nigeria) • Sivan Technology
+            Founder: Samson Micheal • Sivan Technology
           </p>
         </footer>
       </main>
-    </div>
-
-    <!-- Noscript fallback for crawlers with strict scripting disabled -->
-    <noscript>
-      <div class="p-6 max-w-lg mx-auto text-center space-y-4">
-        <h2 class="text-xl font-bold text-white">JavaScript Required for Interactive MiniPay Wallet</h2>
-        <p class="text-sm text-slate-300">
-          Sivan Ai provides autonomous Service Agreements and instant NGN bank off-ramps on Celo Mainnet. Please enable JavaScript in your browser or open inside Opera MiniPay to connect your Celo wallet.
-        </p>
-        <p class="text-xs text-emerald-400">
-          Official Attribution Tag: celo_bafcc2e56bd7 | ERC-8004 Agent ID #9827
-        </p>
-      </div>
     </noscript>
 
     <script type="module" src="/src/main.ts"></script>
