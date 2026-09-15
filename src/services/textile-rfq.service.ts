@@ -12,6 +12,7 @@
  */
 
 import { getActiveNetwork } from '../config/celo.config';
+import { getPaymentApiUrl } from '../config/api.config';
 
 export type SwapToken = 'USDT' | 'USDC' | 'cUSD' | 'cNGN';
 
@@ -31,14 +32,13 @@ export interface SwapQuoteResult {
   calldata?: string;
 }
 
-const TEXTILE_RFQ_API = 'https://api.textilecredit.com/v2/rfq';
 const CACHE_TTL_MS = 25_000;
 
 class TextileRfqService {
   private quoteCache = new Map<string, { quote: SwapQuoteResult; fetchedAt: number }>();
 
   /**
-   * Fetches an indicative or firm RFQ swap quote
+   * Fetches an indicative or firm RFQ swap quote from Sivan Payment backend
    */
   public async getSwapQuote(
     fromToken: SwapToken,
@@ -68,42 +68,48 @@ class TextileRfqService {
     }
 
     const network = getActiveNetwork();
-    const sellTokenDef = network.tokens[fromToken as keyof typeof network.tokens];
-    const buyTokenDef = network.tokens[toToken as keyof typeof network.tokens];
-
     let rate = 1.0;
     let source = 'Textile Credit RFQ';
 
-    // Baseline live corridor rate (USD Stablecoin to cNGN)
     const isFromUsd = fromToken === 'USDT' || fromToken === 'USDC' || fromToken === 'cUSD';
     const isToUsd = toToken === 'USDT' || toToken === 'USDC' || toToken === 'cUSD';
 
+    // 1. Primary: Query secure Sivan Payment backend gateway (keeps API key secure on server)
+    const apiBase = getPaymentApiUrl();
     try {
-      // 1. Attempt Textile v2 RFQ preview call
-      const previewRes = await fetch(`${TEXTILE_RFQ_API}/preview`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          chainId: network.chainId,
-          sellToken: sellTokenDef?.address,
-          buyToken: buyTokenDef?.address,
-          sellAmount: String(Math.round(amount * Math.pow(10, sellTokenDef?.decimals || 6))),
-        }),
-        signal: AbortSignal.timeout(3500),
+      const qParams = new URLSearchParams({
+        fromToken,
+        toToken,
+        amount: String(amount),
+      });
+      const res = await fetch(`${apiBase}/api/v1/cashout/swap-quote?${qParams.toString()}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(4000),
       }).catch(() => null);
 
-      if (previewRes && previewRes.ok) {
-        const data = await previewRes.json();
-        if (data?.buyAmount && sellTokenDef && buyTokenDef) {
-          const rawBuy = parseFloat(data.buyAmount) / Math.pow(10, buyTokenDef.decimals);
-          if (rawBuy > 0 && amount > 0) {
-            rate = rawBuy / amount;
-            source = 'Textile Market Makers (Live RFQ)';
-          }
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data?.rate && typeof data.rate === 'number') {
+          const result: SwapQuoteResult = {
+            fromToken,
+            toToken,
+            inputAmount: amount,
+            outputAmount: data.outputAmount || (amount * data.rate),
+            rate: data.rate,
+            inverseRate: data.inverseRate || (data.rate > 0 ? 1 / data.rate : 0),
+            priceImpactBps: 15,
+            protocolFee: data.protocolFee || 0,
+            minimumReceived: data.minimumReceived || (data.outputAmount * 0.995),
+            expiresInSeconds: 60,
+            source: data.source || 'Textile Credit RFQ (Server Authenticated)',
+            depositAddress: data.depositAddress || network.agentWallet,
+          };
+          this.quoteCache.set(cacheKey, { quote: result, fetchedAt: Date.now() });
+          return result;
         }
       }
     } catch {
-      // Handled via institutional benchmark below
+      // fallback to resilient local pricing below
     }
 
     // 2. Resilient live benchmark if RFQ preview is pending or offline
