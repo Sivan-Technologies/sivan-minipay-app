@@ -278,7 +278,7 @@ export async function renderCashout(
   const tokenTrigger = container.querySelector('#token-select-trigger') as HTMLElement;
   const tokenMenu = container.querySelector('#token-select-menu') as HTMLElement;
   const tokenDisplay = container.querySelector('#selected-token-display') as HTMLElement;
-  const tokenItems = container.querySelectorAll('.custom-select-item');
+  const tokenItems = container.querySelectorAll('#token-select-menu .custom-select-item');
 
   const availEl = container.querySelector('#cashout-avail-bal') as HTMLElement;
   const rateEl = container.querySelector('#q-rate') as HTMLElement;

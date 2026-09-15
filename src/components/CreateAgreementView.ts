@@ -148,7 +148,7 @@ export async function renderCreateAgreement(
   const currencyTrigger = container.querySelector('#deal-currency-trigger') as HTMLElement;
   const currencyMenu = container.querySelector('#deal-currency-menu') as HTMLElement;
   const currencyDisplay = container.querySelector('#deal-currency-display') as HTMLElement;
-  const currencyItems = container.querySelectorAll('.custom-select-item');
+  const currencyItems = container.querySelectorAll('#deal-currency-menu .custom-select-item');
 
   const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;

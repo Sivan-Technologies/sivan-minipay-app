@@ -93,7 +93,7 @@ class AgreementFeeService {
       };
     }
 
-    const cacheKey = `${currency.toUpperCase()}_${amount}`;
+    const cacheKey = `${(currency || 'USDC').toUpperCase()}_${amount}`;
     const cached = this.quoteCache.get(cacheKey);
     const now = Date.now();
     if (cached && now - cached.timestamp < this.CACHE_TTL_MS) {
