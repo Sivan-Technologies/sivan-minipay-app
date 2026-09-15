@@ -134,6 +134,16 @@ class AgreementsService {
           attributionTag: agreement.attributionTag,
         }),
       });
+
+      // If agreement has been funded on-chain, ensure backend marks it funded immediately
+      if (agreement.fundingTxHash || agreement.status === 'funded') {
+        fetch(`${this.apiBase}/api/agreements/${agreement.id}/fund`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fundingTxHash: agreement.fundingTxHash }),
+        }).catch(() => {});
+      }
+
       return res.ok;
     } catch (e) {
       console.warn('[AgreementsService.syncAgreementToBackend] note:', e);
