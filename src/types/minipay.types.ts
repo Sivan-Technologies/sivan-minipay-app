@@ -25,6 +25,7 @@ export interface ServiceAgreement {
   description: string;
   contractorIdentifier: string; // Phone, Celo 0x, or handle
   contractorAddress: string;
+  buyerAddress: string;         // Real connected wallet address of the buyer — never a placeholder
   amount: number;
   currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
   protocolFee: number; // 1%

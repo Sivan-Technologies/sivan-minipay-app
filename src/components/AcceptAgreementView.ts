@@ -120,6 +120,7 @@ export function renderAcceptAgreement(
         description: deal.description,
         contractorIdentifier: `${validAddress.slice(0, 6)}...${validAddress.slice(-4)}`,
         contractorAddress: validAddress,
+        buyerAddress: deal.from || '',  // Real buyer wallet who originated the deal proposal
         amount: deal.amount,
         currency: deal.currency,
         protocolFee: feeAmount,

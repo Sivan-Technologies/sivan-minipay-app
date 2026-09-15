@@ -50,6 +50,7 @@ class AgreementsService {
     description: string;
     contractorIdentifier: string;
     contractorAddress: string;
+    buyerAddress: string;      // Real connected wallet address — required, never a placeholder
     amount: number;
     currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     deadlineHours: number;
@@ -67,6 +68,7 @@ class AgreementsService {
       description: data.description,
       contractorIdentifier: data.contractorIdentifier,
       contractorAddress: data.contractorAddress,
+      buyerAddress: data.buyerAddress,
       amount: data.amount,
       currency: data.currency as any,
       protocolFee: fee,
@@ -102,6 +104,14 @@ class AgreementsService {
   }
 
   public async syncAgreementToBackend(agreement: ServiceAgreement): Promise<boolean> {
+    // buyerAddress must be the real connected wallet address — never a placeholder or mock.
+    // If somehow missing (legacy import), log a warning and skip the sync rather than
+    // poisoning the backend with fake identity data.
+    if (!agreement.buyerAddress || agreement.buyerAddress.length < 10) {
+      console.warn('[AgreementsService] Refusing to sync agreement without a real buyerAddress:', agreement.id);
+      return false;
+    }
+
     try {
       const url = `${this.apiBase}/api/agreements`;
       const res = await fetch(url, {
@@ -109,8 +119,10 @@ class AgreementsService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: agreement.id,
-          buyerUserId: 'minipay_buyer',
+          buyerUserId: agreement.buyerAddress,          // Real Celo wallet address of the buyer
           sellerUserId: agreement.contractorAddress || agreement.contractorIdentifier,
+          buyerWalletAddress: agreement.buyerAddress,  // Explicit wallet field for backend indexing
+          sellerWalletAddress: agreement.contractorAddress || undefined,
           title: agreement.title,
           description: agreement.description,
           amountUsdc: agreement.amount,
@@ -118,6 +130,8 @@ class AgreementsService {
           network: 'celo',
           deadlineDays: Math.max(1, Math.round(agreement.deadlineHours / 24)),
           channel: 'minipay',
+          fundingTxHash: agreement.fundingTxHash || undefined,
+          attributionTag: agreement.attributionTag,
         }),
       });
       return res.ok;

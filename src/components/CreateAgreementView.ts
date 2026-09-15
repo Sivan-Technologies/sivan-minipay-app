@@ -394,12 +394,13 @@ export async function renderCreateAgreement(
         ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
         : contractorInput;
 
-      // Save genuine service agreement
+      // Save genuine service agreement with the real connected buyer wallet address
       const created = await agreementsService.createAgreement({
         title,
         description,
         contractorIdentifier,
         contractorAddress,
+        buyerAddress: state.address as string,   // Real connected MiniPay wallet — never a placeholder
         amount,
         currency,
         deadlineHours,
