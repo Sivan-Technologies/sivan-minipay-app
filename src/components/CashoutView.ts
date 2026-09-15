@@ -6,6 +6,8 @@ import { transactionsService } from '../services/transactions.service';
 import { identityService } from '../services/identity.service';
 import { getActiveNetwork, getSivanFeeWallet, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
+import { textileKycService } from '../services/textile-kyc.service';
+import { openTextileKycModal } from './TextileKycModal';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -58,7 +60,7 @@ export async function renderCashout(
     </div>
 
     <!-- Live Corridor Status: Bank Mode -->
-    <div id="corridor-banner-bank" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
+    <div id="corridor-banner-bank" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: ${isNigeria ? '10px' : '20px'}; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 700; color: var(--text-emerald);">${corridorTitle}</span>
         <span style="font-size: 11px; color: var(--text-muted);">${corridorProvider}</span>
@@ -67,6 +69,20 @@ export async function renderCashout(
         ${country.settlementDescription}
       </div>
     </div>
+
+    ${isNigeria ? `
+    <!-- KYC Compliance Status Banner (Nigeria Only) -->
+    <div id="kyc-status-banner" style="margin-bottom: 16px; padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 16px;">⏳</span>
+        <div>
+          <span style="font-weight: 700; color: #f59e0b; font-size: 11px; display: block;">Identity Verification Required</span>
+          <span style="color: var(--text-muted); font-size: 11px;">Checking KYC status with Busha...</span>
+        </div>
+      </div>
+      <span style="font-size: 11px; color: #f59e0b; font-weight: 600;">Verify →</span>
+    </div>
+    ` : ''}
 
     <!-- Live Corridor Status: Wallet Mode -->
     <div id="corridor-banner-wallet" style="display: none; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
@@ -613,6 +629,91 @@ export async function renderCashout(
 
   updateBalanceDisplay();
   void fetchAndRefreshRate();
+
+  // KYC Status Banner: Live update for Nigeria corridor (non-blocking)
+  if (isNigeria && state.address) {
+    const kycBanner = container.querySelector('#kyc-status-banner') as HTMLElement | null;
+    if (kycBanner) {
+      // Wire up click to open verification modal
+      kycBanner.addEventListener('click', () => {
+        openTextileKycModal(() => {
+          if (kycBanner) {
+            kycBanner.style.background = 'rgba(16, 185, 129, 0.08)';
+            kycBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            kycBanner.style.cursor = 'default';
+            kycBanner.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 16px;">✓</span>
+                <div>
+                  <span style="font-weight: 700; color: var(--accent-emerald); font-size: 11px; display: block;">Identity Verified</span>
+                  <span style="color: var(--text-muted); font-size: 11px;">Full bank cashout access enabled via Busha / NIBSS</span>
+                </div>
+              </div>
+              <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">✓ Verified</span>
+            `;
+          }
+        });
+      });
+
+      // Check local cache first, then fetch live status in background
+      const localKyc = textileKycService.getLocalKycState(state.address);
+      const updateBannerForState = (kycState: string | null) => {
+        if (!kycBanner) return;
+        if (kycState === 'verified') {
+          kycBanner.style.background = 'rgba(16, 185, 129, 0.08)';
+          kycBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+          kycBanner.style.cursor = 'default';
+          kycBanner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">✓</span>
+              <div>
+                <span style="font-weight: 700; color: var(--accent-emerald); font-size: 11px; display: block;">Identity Verified</span>
+                <span style="color: var(--text-muted); font-size: 11px;">Full bank cashout access enabled via Busha / NIBSS</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">✓ Verified</span>
+          `;
+        } else if (kycState === 'pending') {
+          kycBanner.style.background = 'rgba(245, 158, 11, 0.08)';
+          kycBanner.style.borderColor = 'rgba(245, 158, 11, 0.25)';
+          kycBanner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">⏳</span>
+              <div>
+                <span style="font-weight: 700; color: #f59e0b; font-size: 11px; display: block;">Review in Progress</span>
+                <span style="color: var(--text-muted); font-size: 11px;">Busha compliance team is reviewing your identity. Usually 1–5 mins.</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; color: #f59e0b; font-weight: 600;">Check →</span>
+          `;
+        } else {
+          kycBanner.style.background = 'rgba(239, 68, 68, 0.08)';
+          kycBanner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
+          kycBanner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 16px;">🛡️</span>
+              <div>
+                <span style="font-weight: 700; color: #ef4444; font-size: 11px; display: block;">Identity Verification Required</span>
+                <span style="color: var(--text-muted); font-size: 11px;">Tap to verify identity with Busha before cashing out to your bank.</span>
+              </div>
+            </div>
+            <span style="font-size: 11px; color: #ef4444; font-weight: 600;">Verify →</span>
+          `;
+        }
+      };
+
+      if (localKyc?.state) {
+        updateBannerForState(localKyc.state);
+      }
+
+      // Always refresh KYC status from live API silently
+      textileKycService.getKycStatus(state.address).then(res => {
+        if (res.kyc?.state) {
+          updateBannerForState(res.kyc.state);
+        }
+      }).catch(() => { /* silent */ });
+    }
+  }
 
   // NUBAN live account verification
   const checkAccount = async () => {
