@@ -7,6 +7,7 @@ import { getTokenIconSvg } from '../utils/token-icons';
 import { openShareModal } from './ShareAgreementModal';
 import { identityService } from '../services/identity.service';
 import { DELIVERY_DEADLINE_PRESETS } from '../utils/deadline';
+import { injectClaimHandleNudge } from './ClaimHandleNudge';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -142,6 +143,16 @@ export async function renderCreateAgreement(
       </button>
     </form>
   `;
+
+  // Inject @handle nudge banner before the form for users without a handle
+  const formEl = container.querySelector('#form-create-deal') as HTMLElement | null;
+  injectClaimHandleNudge(container, {
+    insertBefore: formEl,
+    onToast: showToast,
+    onClaimed: (username) => {
+      showToast(`🎉 Sivan handle set: ${username} — others can now find you by name`);
+    },
+  });
 
   const amountInput = container.querySelector('#deal-amount') as HTMLInputElement;
   const currencyHiddenInput = container.querySelector('#deal-currency') as HTMLInputElement;

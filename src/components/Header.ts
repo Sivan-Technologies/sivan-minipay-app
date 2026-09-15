@@ -4,6 +4,7 @@ import { getActiveNetwork } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 import { openLegalModal } from './LegalSupportModal';
 import { identityService } from '../services/identity.service';
+import { openClaimHandleModal } from './ClaimHandleModal';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -342,15 +343,16 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     });
 
     container.querySelector('#btn-claim-handle')?.addEventListener('click', async () => {
-      const handle = prompt('Choose your unique Sivan handle (e.g. @soliame):');
-      if (!handle) return;
-      const res = await identityService.claimUsername(handle, state.address || '');
-      if (res.success && res.username) {
-        if (onToast) onToast(`🎉 Sivan handle claimed: ${res.username}`);
-        update(miniPayService.getState());
-      } else if (res.error) {
-        if (onToast) onToast(`❌ ${res.error}`);
-      }
+      isWalletModalOpen = false;
+      update(miniPayService.getState());
+      await openClaimHandleModal(
+        state.address || '',
+        (username) => {
+          if (onToast) onToast(`🎉 Sivan handle claimed: ${username}`);
+          update(miniPayService.getState());
+        },
+        onToast
+      );
     });
   };
 

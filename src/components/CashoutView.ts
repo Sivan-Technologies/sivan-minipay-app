@@ -8,6 +8,7 @@ import { getActiveNetwork, getSivanFeeWallet, type SupportedTokenSymbol } from '
 import { getTokenIconSvg } from '../utils/token-icons';
 import { textileKycService } from '../services/textile-kyc.service';
 import { openTextileKycModal } from './TextileKycModal';
+import { injectClaimHandleNudge } from './ClaimHandleNudge';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -263,6 +264,16 @@ export async function renderCashout(
       </button>
     </form>
   `;
+
+  // Inject @handle nudge banner for users without a handle (Wallet tab context is key for this)
+  const cashoutFormEl = container.querySelector('#form-cashout') as HTMLElement | null;
+  injectClaimHandleNudge(container, {
+    insertBefore: cashoutFormEl,
+    onToast: showToast,
+    onClaimed: (username) => {
+      showToast(`🎉 Sivan handle set: ${username} — others can send deals & payments to you by name`);
+    },
+  });
 
   // Elements
   const tabBankBtn = container.querySelector('#tab-btn-bank') as HTMLButtonElement;
