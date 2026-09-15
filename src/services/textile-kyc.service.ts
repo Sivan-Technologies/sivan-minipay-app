@@ -48,7 +48,7 @@ const LOCAL_KYC_CACHE_KEY = 'sivan_textile_kyc_state';
 const LOCAL_PROFILE_KEY = 'sivan_textile_customer_profile';
 
 class TextileKycService {
-  private cachedProof: { proof: TextileProof; wallet: string; expiresAt: number } | null = null;
+  private cachedProof: { proof: TextileProof; wallet: string; chainId: number; expiresAt: number } | null = null;
 
   /**
    * Generates or reuses valid EIP-712 TakerControl proof of control.
@@ -59,6 +59,7 @@ class TextileKycService {
     if (
       this.cachedProof &&
       this.cachedProof.wallet.toLowerCase() === walletAddress.toLowerCase() &&
+      this.cachedProof.chainId === chainId &&
       now < this.cachedProof.expiresAt
     ) {
       return this.cachedProof.proof;
@@ -132,6 +133,7 @@ class TextileKycService {
     this.cachedProof = {
       proof,
       wallet: walletAddress,
+      chainId,
       expiresAt: now + 45_000,
     };
 

@@ -4,6 +4,7 @@ import { textileRfqService, type SwapToken, type SwapQuoteResult } from '../serv
 import { transactionsService } from '../services/transactions.service';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { getActiveNetwork, type SupportedTokenSymbol } from '../config/celo.config';
+import { renderBuyCngn } from './BuyCngnView';
 
 export async function renderSwap(
   container: HTMLElement,
@@ -23,7 +24,7 @@ export async function renderSwap(
 
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 16px;">
-      <h2 class="section-title">Instant Token Swap</h2>
+      <h2 class="section-title">Swap & Buy</h2>
       <span class="section-link" id="btn-back-swap">Back</span>
     </div>
 
@@ -33,7 +34,7 @@ export async function renderSwap(
         <span style="font-weight: 700; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
           <span>⚡ Textile Credit Market Maker RFQ</span>
         </span>
-        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Celo Mainnet</span>
+        <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">${getActiveNetwork().chainName}</span>
       </div>
       <div style="color: var(--text-secondary); line-height: 1.4;">
         Institutional liquidity on Celo. Swap between Nigerian cNGN and USD stablecoins with zero custodial holding.
@@ -178,6 +179,26 @@ export async function renderSwap(
 
     </div>
   `;
+
+  const swapPanel = document.createElement('div');
+  while (container.firstChild) swapPanel.append(container.firstChild);
+  const buyPanel = document.createElement('div');
+  buyPanel.hidden = true;
+  const tabs = document.createElement('div');
+  tabs.style.cssText = 'display:flex;gap:8px;margin-bottom:16px';
+  for (const label of ['Swap', 'Buy cNGN']) {
+    const tab = document.createElement('button');
+    tab.textContent = label; tab.className = 'btn-primary';
+    tab.setAttribute('aria-pressed', String(label === 'Swap'));
+    tab.onclick = () => {
+      const buy = label === 'Buy cNGN';
+      swapPanel.hidden = buy; buyPanel.hidden = !buy;
+      tabs.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button === tab)));
+      if (buy) void renderBuyCngn(buyPanel);
+    };
+    tabs.append(tab);
+  }
+  container.append(tabs, swapPanel, buyPanel);
 
   // Elements
   const btnBack = container.querySelector('#btn-back-swap') as HTMLElement;
