@@ -103,6 +103,15 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         <span class="action-tile-title">Cash Out</span>
         <span class="action-tile-badge">${country.currency === 'USD' ? '($) USD' : `(${country.currencySymbol}) ${country.currency}`}</span>
       </div>
+      <div class="action-tile" id="tile-swap">
+        <div class="action-tile-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+          </svg>
+        </div>
+        <span class="action-tile-title">Swap</span>
+        <span class="action-tile-badge">cNGN ⇄ USD</span>
+      </div>
       <div class="action-tile" id="tile-create-agreement">
         <div class="action-tile-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -194,6 +203,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     renderDashboard(container, onNavigate);
   });
   container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
+  container.querySelector('#tile-swap')?.addEventListener('click', () => onNavigate('swap'));
   container.querySelector('#tile-create-agreement')?.addEventListener('click', () => onNavigate('create'));
   container.querySelector('#tile-cashout')?.addEventListener('click', () => onNavigate('cashout'));
   container.querySelector('#tile-deals')?.addEventListener('click', () => onNavigate('deals'));

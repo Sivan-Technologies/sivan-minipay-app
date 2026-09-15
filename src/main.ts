@@ -5,13 +5,14 @@ import { renderCreateAgreement } from './components/CreateAgreementView';
 import { renderAgreementsList } from './components/AgreementsListView';
 import { renderCashout } from './components/CashoutView';
 import { renderTransactionHistory } from './components/TransactionHistoryView';
+import { renderSwap } from './components/SwapView';
 import { miniPayService } from './services/minipay.service';
 import { countryService } from './config/countries.config';
 import { initLegalModal, openLegalModal } from './components/LegalSupportModal';
 import { initShareModal, openShareModal } from './components/ShareAgreementModal';
 import { renderAcceptAgreement, type DealProposalData } from './components/AcceptAgreementView';
 
-type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history' | 'accept';
+type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'swap' | 'history' | 'accept';
 
 class SivanMiniPayApp {
   private currentTab: Tab = 'dashboard';
@@ -144,6 +145,13 @@ class SivanMiniPayApp {
           (msg) => this.showToast(msg)
         );
         break;
+      case 'swap':
+        renderSwap(
+          this.mainContentContainer,
+          (t) => this.navigateTo(t as Tab),
+          (msg) => this.showToast(msg)
+        );
+        break;
       case 'history':
         renderTransactionHistory(
           this.mainContentContainer,
@@ -198,6 +206,14 @@ class SivanMiniPayApp {
           </svg>
         </span>
         <span>Cash Out</span>
+      </button>
+      <button class="nav-item ${this.currentTab === 'swap' ? 'active' : ''}" data-tab="swap">
+        <span class="nav-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+          </svg>
+        </span>
+        <span>Swap</span>
       </button>
     `;
 
