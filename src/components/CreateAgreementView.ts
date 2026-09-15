@@ -86,14 +86,25 @@ export async function renderCreateAgreement(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="deal-deadline">Delivery Deadline</label>
-        <select id="deal-deadline" class="form-select">
-          ${DELIVERY_DEADLINE_PRESETS.map(preset => `
-            <option value="${preset.hours}" ${preset.hours === 48 ? 'selected' : ''}>
-              ${preset.label}
-            </option>
-          `).join('')}
-        </select>
+        <label class="form-label">Delivery Deadline</label>
+        <input type="hidden" id="deal-deadline" value="48">
+        <div class="custom-select-wrap" id="deadline-select-wrap">
+          <div class="custom-select-trigger" id="deadline-select-trigger">
+            <span id="deadline-display" style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+              48 Hours (2 Days)
+            </span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="custom-select-menu" id="deadline-select-menu">
+            ${DELIVERY_DEADLINE_PRESETS.map(preset => `
+              <div class="custom-select-item ${preset.hours === 48 ? 'selected' : ''}" data-hours="${preset.hours}" data-label="${preset.label}" style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.6;flex-shrink:0"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+                <span>${preset.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -213,6 +224,43 @@ export async function renderCreateAgreement(
   document.addEventListener('click', () => {
     currencyMenu?.classList.remove('open');
     currencyTrigger?.classList.remove('active');
+    deadlineMenu?.classList.remove('open');
+    deadlineTrigger?.classList.remove('active');
+  });
+
+  // Deadline custom dropdown
+  const deadlineHiddenInput = container.querySelector('#deal-deadline') as HTMLInputElement;
+  const deadlineTrigger = container.querySelector('#deadline-select-trigger') as HTMLElement;
+  const deadlineMenu = container.querySelector('#deadline-select-menu') as HTMLElement;
+  const deadlineDisplay = container.querySelector('#deadline-display') as HTMLElement;
+  const deadlineItems = container.querySelectorAll('#deadline-select-menu .custom-select-item');
+
+  deadlineTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = deadlineMenu.classList.contains('open');
+    deadlineMenu.classList.toggle('open', !isOpen);
+    deadlineTrigger.classList.toggle('active', !isOpen);
+  });
+
+  deadlineItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = e.currentTarget as HTMLElement;
+      const hours = el.dataset.hours!;
+      const label = el.dataset.label!;
+
+      deadlineHiddenInput.value = hours;
+      deadlineDisplay.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+        <span>${label}</span>
+      `;
+
+      deadlineItems.forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+
+      deadlineMenu.classList.remove('open');
+      deadlineTrigger.classList.remove('active');
+    });
   });
 
   updateBalanceDisplay();
@@ -293,7 +341,8 @@ export async function renderCreateAgreement(
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
     const currency = currencyHiddenInput.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
+    const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLInputElement).value, 10);
+
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 
     if (!amount || amount <= 0) {
