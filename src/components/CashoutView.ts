@@ -104,26 +104,36 @@ export async function renderCashout(
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="token-select-wrap">
             <div class="custom-select-trigger" id="token-select-trigger">
-              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
+              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg(isNigeria ? 'cNGN' : 'USDC', 16)} <span>${isNigeria ? 'cNGN' : 'USDC'}</span></span>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="token-select-menu">
-              <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
-              </div>
               ${isNigeria ? `
-                <div class="custom-select-item" data-value="cNGN" style="display: flex; align-items: center; gap: 8px;">
+                <div class="custom-select-item selected" data-value="cNGN" style="display: flex; align-items: center; gap: 8px;">
                   ${getTokenIconSvg('cNGN', 16)} <span>cNGN (Celo)</span>
                 </div>
-              ` : ''}
+                <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
+                </div>
+              ` : `
+                <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
+                </div>
+              `}
             </div>
-            <input type="hidden" id="cashout-token" value="USDC" />
+            <input type="hidden" id="cashout-token" value="${isNigeria ? 'cNGN' : 'USDC'}" />
           </div>
 
           <input 
@@ -557,8 +567,9 @@ export async function renderCashout(
       : 'Wallet not connected';
   };
 
-  let currentLiveRate: number = fxQuotesService.getLatestRate('USDC', country.code);
-  let currentRateSource: string = '';
+  const defaultToken = isNigeria ? 'cNGN' : 'USDC';
+  let currentLiveRate: number = isNigeria ? 1.0 : fxQuotesService.getLatestRate(defaultToken, country.code);
+  let currentRateSource: string = isNigeria ? 'Parity' : '';
   let currentDepositAddress: string = '';
   let currentQuoteId: string | undefined = undefined;
   let rateDebounceTimer: any = null;
