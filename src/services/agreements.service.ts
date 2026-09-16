@@ -1,6 +1,7 @@
 import type { ServiceAgreement, AgreementStatus } from '../types/minipay.types';
 import { CELO_CONFIG } from '../config/celo.config';
 import { agreementFeeService } from './agreement-fee.service';
+import { getPaymentApiUrl } from '../config/api.config';
 
 const STORAGE_KEY = 'sivan_minipay_agreements';
 
@@ -100,7 +101,7 @@ class AgreementsService {
   }
 
   private get apiBase(): string {
-    return (import.meta.env.VITE_PAYMENT_API_URL || 'https://api-staging.sivantech.online').replace(/\/$/, '');
+    return getPaymentApiUrl();
   }
 
   public async syncAgreementToBackend(agreement: ServiceAgreement): Promise<boolean> {

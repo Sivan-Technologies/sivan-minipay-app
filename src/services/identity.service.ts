@@ -1,3 +1,5 @@
+import { getPaymentApiUrl } from '../config/api.config';
+
 export interface ResolvedTargetResult {
   found: boolean;
   target: string;
@@ -23,7 +25,7 @@ const PROFILE_KEY = 'sivan_minipay_user_profile';
 
 class IdentityService {
   private get apiBase(): string {
-    return (import.meta.env.VITE_PAYMENT_API_URL || 'https://api-staging.sivantech.online').replace(/\/$/, '');
+    return getPaymentApiUrl();
   }
 
   public getSavedUsername(): string | null {
