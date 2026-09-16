@@ -256,7 +256,7 @@ export async function renderSwap(
     quoteRateVal.textContent = 'Quoting RFQ...';
 
     try {
-      currentQuote = await textileRfqService.getSwapQuote(fromToken, toToken, amt);
+      currentQuote = await textileRfqService.getSwapQuote(fromToken, toToken, amt, state.address || undefined);
       outputAmount.value = currentQuote.outputAmount >= 1
         ? currentQuote.outputAmount.toLocaleString(undefined, { maximumFractionDigits: 4 })
         : currentQuote.outputAmount.toFixed(6);
@@ -382,12 +382,16 @@ export async function renderSwap(
       return;
     }
 
+    if (!currentQuote?.depositAddress) {
+      showToast('⚠️ Liquidity provider swap router unavailable. Please wait for quote.');
+      return;
+    }
+
     btnExecute.disabled = true;
     btnExecute.innerHTML = '<span>⚡ Signing Swap in MiniPay...</span>';
 
     try {
-      const network = getActiveNetwork();
-      const targetAddress = (currentQuote?.depositAddress || network.agentWallet) as `0x${string}`;
+      const targetAddress = currentQuote.depositAddress as `0x${string}`;
 
       const txRes = await miniPayService.sendAttributedTransfer({
         to: targetAddress,

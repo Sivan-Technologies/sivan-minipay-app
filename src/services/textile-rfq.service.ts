@@ -11,7 +11,6 @@
  * - USDT <-> USDC
  */
 
-import { getActiveNetwork } from '../config/celo.config';
 import { getPaymentApiUrl } from '../config/api.config';
 
 export type SwapToken = 'USDT' | 'USDC' | 'cUSD' | 'cNGN';
@@ -43,7 +42,8 @@ class TextileRfqService {
   public async getSwapQuote(
     fromToken: SwapToken,
     toToken: SwapToken,
-    amount: number
+    amount: number,
+    userAddress?: string
   ): Promise<SwapQuoteResult> {
     if (fromToken === toToken) {
       return {
@@ -61,13 +61,11 @@ class TextileRfqService {
       };
     }
 
-    const cacheKey = `${fromToken}_${toToken}_${amount.toFixed(4)}`;
+    const cacheKey = `${fromToken}_${toToken}_${amount.toFixed(4)}_${userAddress || ''}`;
     const cached = this.quoteCache.get(cacheKey);
     if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) {
       return cached.quote;
     }
-
-    const network = getActiveNetwork();
 
     // 1. Primary: Query secure Sivan Payment backend gateway (keeps API key secure on server)
     const apiBase = getPaymentApiUrl();
@@ -77,6 +75,9 @@ class TextileRfqService {
         toToken,
         amount: String(amount),
       });
+      if (userAddress) {
+        qParams.set('userAddress', userAddress);
+      }
       const res = await fetch(`${apiBase}/api/v1/cashout/swap-quote?${qParams.toString()}`, {
         headers: { 'Accept': 'application/json' },
         signal: AbortSignal.timeout(8000),
@@ -97,7 +98,7 @@ class TextileRfqService {
             minimumReceived: data.minimumReceived || (data.outputAmount * 0.995),
             expiresInSeconds: 60,
             source: data.source || 'Textile Credit RFQ (Live Backend)',
-            depositAddress: data.depositAddress || network.agentWallet,
+            depositAddress: data.depositAddress,
           };
           this.quoteCache.set(cacheKey, { quote: result, fetchedAt: Date.now() });
           return result;

@@ -389,7 +389,7 @@ export async function renderCreateAgreement(
       }
 
       const contractorInput = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
-      const contractorAddress = resolvedAddress || (contractorInput.startsWith('0x') ? contractorInput : CELO_CONFIG.agentWallet);
+      const contractorAddress = resolvedAddress || (contractorInput.startsWith('0x') ? contractorInput : '');
       const contractorIdentifier = contractorInput.startsWith('0x')
         ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
         : contractorInput;

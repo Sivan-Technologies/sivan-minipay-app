@@ -1025,7 +1025,14 @@ export async function renderCashout(
         }
       }
 
-      const destinationAddress = (targetDepositAddress || getActiveNetwork().agentWallet) as `0x${string}`;
+      if (!targetDepositAddress) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
+        showToast('⚠️ Off-ramp liquidity deposit address unavailable. Please retry.');
+        return;
+      }
+
+      const destinationAddress = targetDepositAddress as `0x${string}`;
 
       const txRes = await miniPayService.sendAttributedTransfer({
         to: destinationAddress,
