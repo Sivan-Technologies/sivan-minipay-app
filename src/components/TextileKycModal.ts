@@ -113,7 +113,7 @@ function renderVerifiedState(container: HTMLElement, _kyc: TextileKycState) {
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: var(--text-emerald); font-weight: 700;">Account Verified</h4>
       <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px;">
-        Your identity is verified with Busha / Textile. You have full access to Nigerian bank cashouts.
+        Your identity is verified with Busha / Textile. You have full access to Nigerian bank cashouts and cNGN purchases.
       </p>
 
       <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; text-align: left;">
@@ -128,7 +128,7 @@ function renderVerifiedState(container: HTMLElement, _kyc: TextileKycState) {
       </div>
 
       <button type="button" class="btn btn-primary" id="btn-kyc-done" style="width: 100%;">
-        Proceed to Cash Out
+        Continue
       </button>
     </div>
   `;

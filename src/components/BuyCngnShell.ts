@@ -10,6 +10,17 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
         <div style="display:flex;justify-content:space-between;gap:12px"><span>Receive in</span><strong data-buy-wallet style="text-align:right;overflow-wrap:anywhere"></strong></div>
         <div style="display:flex;justify-content:space-between;gap:12px"><span>Payment method</span><strong>Bank transfer · NGN</strong></div>
       </div>
+      <!-- Textile / Busha Compliance Verification Banner -->
+      <div data-buy-kyc-banner id="buy-cngn-kyc-banner" style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:12px;cursor:pointer;transition:all 0.2s ease;">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:16px">🛡️</span>
+          <div>
+            <span data-buy-kyc-title style="font-weight:700;color:#60a5fa;font-size:11px;display:block">Identity Verification</span>
+            <span data-buy-kyc-desc style="color:var(--text-muted,#8892a4);font-size:11px">Required by Textile compliance before bank transfer instructions</span>
+          </div>
+        </div>
+        <span data-buy-kyc-action style="font-size:11px;color:#60a5fa;font-weight:600">Check Status →</span>
+      </div>
       <div data-buy-preview style="display:grid;gap:12px">
         <label style="display:grid;gap:8px">You pay (NGN)
           <input data-buy-amount class="form-input" type="text" inputmode="decimal" placeholder="Enter naira amount" autocomplete="off" style="box-sizing:border-box;width:100%;min-width:0" />
@@ -33,5 +44,6 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
     status: container.querySelector<HTMLParagraphElement>('[role="status"]')!,
     preview: container.querySelector<HTMLElement>('[data-buy-preview]')!,
     amount: container.querySelector<HTMLInputElement>('[data-buy-amount]')!,
+    kycBanner: container.querySelector<HTMLElement>('[data-buy-kyc-banner]')!,
   };
 }
