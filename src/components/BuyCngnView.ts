@@ -3,12 +3,13 @@ import { getActiveNetwork } from '../config/celo.config';
 import { miniPayService } from '../services/minipay.service';
 import { textileKycService } from '../services/textile-kyc.service';
 import { BuyViewSession } from '../services/buy-view-session';
+import { buyCngnRequest } from '../services/buy-cngn-request';
+import { createBuyCngnShell } from './BuyCngnShell';
 
 export async function renderBuyCngn(container: HTMLElement) {
-  container.innerHTML = '<h3>Buy cNGN with naira</h3><p role="status">Checking availability…</p>';
-  const status = container.querySelector('p')!;
   const wallet = miniPayService.getState().address;
   const network = getActiveNetwork();
+  const { flow, status, preview, amount: draftAmount } = createBuyCngnShell(container, network.chainName, wallet);
   const active = () => container.isConnected && !container.hidden && container.contains(status);
   if (!wallet) { status.textContent = 'Connect your wallet to continue.'; return; }
   const storageKey = `sivan-buy-cngn:${network.chainId}:${wallet.toLowerCase()}`;
@@ -22,14 +23,14 @@ export async function renderBuyCngn(container: HTMLElement) {
   const current = () => {
     if (!active()) { stopPolling(); throw new Error('Buy view is no longer active.'); }
     if (miniPayService.getState().address?.toLowerCase() !== wallet.toLowerCase() || getActiveNetwork().chainId !== network.chainId) {
-      stopPolling(); container.replaceChildren(status);
+      stopPolling(); flow.replaceChildren(status);
       status.textContent = 'Wallet or network changed. Reopen Buy cNGN.';
       throw new Error(status.textContent);
     }
   };
   const onError = (error: unknown) => {
     if (!active()) return;
-    if (miniPayService.getState().address?.toLowerCase() !== wallet.toLowerCase() || getActiveNetwork().chainId !== network.chainId) container.replaceChildren(status);
+    if (miniPayService.getState().address?.toLowerCase() !== wallet.toLowerCase() || getActiveNetwork().chainId !== network.chainId) flow.replaceChildren(status);
     status.textContent = error instanceof Error ? error.message : 'Request failed';
   };
   const run = (action: () => Promise<void>) => session.run(async () => { current(); await action(); }, onError);
@@ -39,16 +40,7 @@ export async function renderBuyCngn(container: HTMLElement) {
   async function request(path: string, body?: unknown, claim?: string) {
     current();
     try {
-    const response = await fetch(`${getPaymentApiUrl()}${path}`, {
-      method: body === undefined ? 'GET' : 'POST',
-      headers: { 'Content-Type': 'application/json', ...(claim ? { 'X-Ramp-Claim': claim } : {}) },
-      body: body === undefined ? undefined : JSON.stringify(body),
-      signal: AbortSignal.timeout(30000),
-    });
-    const data = await response.json();
-    current(); // A wallet, network or view may have changed while awaiting the response.
-    if (!response.ok) throw Object.assign(new Error(typeof data.error === 'string' ? data.error : data.error?.message || 'Request failed. Please try again.'), { status: response.status, code: data.error?.code, details: data.error?.details, kyc: data.error?.kyc, providerError: data.error });
-    return data;
+    return await buyCngnRequest(`${getPaymentApiUrl()}${path}`, body, claim);
     } finally { current(); }
   }
   async function identity() {
@@ -66,7 +58,7 @@ export async function renderBuyCngn(container: HTMLElement) {
       try { await run(action); }
       finally { element.disabled = false; }
     };
-    container.append(element);
+    flow.append(element);
     return element;
   }
   function form(fields: Array<[string, string, string]>, label: string, submit: (form: HTMLFormElement) => Promise<void>) {
@@ -75,6 +67,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     for (const [name, title, type] of fields) {
       const wrapper = document.createElement('label'); wrapper.textContent = title;
       const input = document.createElement('input'); input.name = name; input.type = type; input.required = true; input.className = 'form-input';
+      if (name === 'amount') { input.value = draftAmount.value; input.inputMode = 'decimal'; }
       if (type === 'file') input.accept = 'image/jpeg,image/png';
       wrapper.append(input); element.append(wrapper);
     }
@@ -93,14 +86,14 @@ export async function renderBuyCngn(container: HTMLElement) {
     element.append(consent);
     const send = document.createElement('button'); send.className = 'btn-primary'; send.textContent = label;
     send.disabled = checkbox.disabled;
-    element.append(send); container.append(element);
+    element.append(send); flow.append(element);
     element.onsubmit = async event => {
       event.preventDefault(); send.disabled = true;
       try { await run(async () => { current(); await submit(element); }); }
       finally { send.disabled = false; }
     };
   }
-  const reset = () => { current(); stopPolling(); container.replaceChildren(status); };
+  const reset = (showPreview = false) => { current(); stopPolling(); flow.replaceChildren(status); preview.hidden = !showPreview; preview.style.display = showPreview ? 'grid' : 'none'; };
   async function recoverOrder(saved: any) {
     provider = saved.provider;
     if (saved.result) {
@@ -189,7 +182,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     }
     if (transfer.payOut?.blockchain_hash) rows.push(['Transaction', transfer.payOut.blockchain_hash]);
     for (const [label, value] of rows) { const row = document.createElement('p'); row.textContent = `${label}: ${value ?? 'Unavailable'}`; details.append(row); }
-    container.append(details);
+    flow.append(details);
     button('Refresh purchase status', async () => {
       const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(transfer.id)}`, undefined, claim);
       await showOrder(result.transfer, claim);
@@ -205,21 +198,27 @@ export async function renderBuyCngn(container: HTMLElement) {
       }, 10000);
     }
   }
+  async function loadBuy() {
+  reset(true); status.textContent = `Checking Buy cNGN availability on ${network.chainName}…`;
   try {
     const saved = readSaved();
-    if (saved?.id && saved.claim) {
-      const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(saved.id)}`, undefined, saved.claim);
-      await showOrder(result.transfer, saved.claim); return;
-    }
     const result = await request(`/api/v1/buy-cngn/providers?chainId=${network.chainId}`);
     const available = result.providers?.find((item: any) => item.chainIds?.includes(network.chainId) && item.sides?.includes('buy'));
     provider = available?.provider || '';
-    status.textContent = available ? 'Check your identity verification to continue.' : `New purchases are unavailable on ${network.chainName}. You can still recover an existing purchase.`;
+    status.textContent = available ? 'Check your identity verification to continue.' : `No buy provider is currently available on ${network.chainName}. No purchase has been started. You can still recover an existing purchase.`;
     button(available ? 'Continue' : 'Recover previous purchase', () => review());
+    if (saved?.id && saved.claim) button('Resume saved purchase', async () => {
+      const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(saved.id)}`, undefined, saved.claim);
+      await showOrder(result.transfer, saved.claim);
+    });
+    if (!available) button('Check availability again', loadBuy);
   } catch (error) {
     if (active()) {
       status.textContent = error instanceof Error ? error.message : 'Unable to load Buy cNGN';
+      button('Retry loading Buy cNGN', loadBuy);
       button('Recover previous purchases', () => review());
     }
   }
+  }
+  await run(loadBuy);
 }
