@@ -180,25 +180,41 @@ export async function renderSwap(
     </div>
   `;
 
+  // Keep the title/Back action above both modes, matching Cash Out.
+  const header = container.querySelector<HTMLElement>('.section-header')!;
+  header.remove();
   const swapPanel = document.createElement('div');
   while (container.firstChild) swapPanel.append(container.firstChild);
   const buyPanel = document.createElement('div');
   buyPanel.hidden = true;
   const tabs = document.createElement('div');
-  tabs.style.cssText = 'display:flex;gap:8px;margin-bottom:16px';
+  tabs.className = 'segmented-tabs-wrapper';
+  tabs.setAttribute('role', 'group');
+  tabs.setAttribute('aria-label', 'Swap or buy cNGN');
   for (const label of ['Swap', 'Buy cNGN']) {
     const tab = document.createElement('button');
-    tab.textContent = label; tab.className = 'btn-primary';
+    tab.type = 'button';
+    tab.className = `segmented-tab${label === 'Swap' ? ' active' : ''}`;
+    const icon = document.createElement('span');
+    icon.textContent = label === 'Swap' ? '⇄' : '🏦';
+    icon.setAttribute('aria-hidden', 'true');
+    const text = document.createElement('span');
+    text.textContent = label;
+    tab.append(icon, text);
     tab.setAttribute('aria-pressed', String(label === 'Swap'));
     tab.onclick = () => {
+      if (tab.getAttribute('aria-pressed') === 'true') return;
       const buy = label === 'Buy cNGN';
       swapPanel.hidden = buy; buyPanel.hidden = !buy;
-      tabs.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button === tab)));
+      tabs.querySelectorAll('button').forEach(button => {
+        button.setAttribute('aria-pressed', String(button === tab));
+        button.classList.toggle('active', button === tab);
+      });
       if (buy) void renderBuyCngn(buyPanel);
     };
     tabs.append(tab);
   }
-  container.append(tabs, swapPanel, buyPanel);
+  container.append(header, tabs, swapPanel, buyPanel);
 
   // Elements
   const btnBack = container.querySelector('#btn-back-swap') as HTMLElement;
