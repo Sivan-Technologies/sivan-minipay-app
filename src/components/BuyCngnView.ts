@@ -118,7 +118,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     const consent = document.createElement('label');
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.required = true;
     consent.append(checkbox, ' I accept the provider terms and consent to processing my details for this request.');
-    const termsUrl = String(import.meta.env.VITE_TEXTILE_TERMS_URL || '');
+    const termsUrl = String(import.meta.env.VITE_TEXTILE_TERMS_URL || 'https://sivantech.online/terms');
     const terms = document.createElement('a');
     if (termsUrl && new URL(termsUrl).protocol === 'https:') {
       terms.href = termsUrl; terms.target = '_blank'; terms.rel = 'noopener noreferrer'; terms.textContent = 'Read terms';
