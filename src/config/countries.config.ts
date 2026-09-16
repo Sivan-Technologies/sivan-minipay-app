@@ -28,7 +28,7 @@ export const SUPPORTED_COUNTRIES: Record<string, SupportedCountry> = {
     railType: 'mobile_money_and_bank',
     accountLabel: 'Beneficiary Wallet Address',
     accountPlaceholder: 'Enter 0x Celo wallet address',
-    settlementDescription: 'Global direct settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second internal ledger settlement.',
+    settlementDescription: 'Global direct settlements for cross-border service agreements. Native 1:1 USD backing on Celo with sub-second on-chain settlement.',
     defaultBanks: [
       { code: 'GLOBAL_DIRECT', name: 'USDC Direct Transfer (Celo)', category: 'fintech_wallet' },
     ],
@@ -43,7 +43,7 @@ export const SUPPORTED_COUNTRIES: Record<string, SupportedCountry> = {
     railType: 'nibss_bank',
     accountLabel: '10-Digit NUBAN Account Number',
     accountPlaceholder: 'e.g. 0123456789',
-    settlementDescription: 'Direct payout to Nigerian commercial and digital banks. Bank credit typically in under 1 to 2 minutes via NIBSS / NIP rails; internal ledger settled in 0.15s.',
+    settlementDescription: 'Direct payout to Nigerian commercial and digital banks. Bank credit typically in under 1 to 2 minutes via NIBSS / NIP rails; sub-second on-chain settlement (0.15s).',
     defaultBanks: [
       { code: '100004', name: 'OPay Digital Services', category: 'fintech_wallet', logoUrl: '/banks/opay.png' },
       { code: '100033', name: 'PalmPay Limited', category: 'fintech_wallet', logoUrl: '/banks/palmpay.png' },

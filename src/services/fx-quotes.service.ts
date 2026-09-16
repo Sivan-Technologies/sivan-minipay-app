@@ -52,29 +52,22 @@ export class FXQuotesService {
     }
 
     const apiBase = getPaymentApiUrl();
-    const endpoints = [
-      '/api/fees/offramp',
-      apiBase ? `${apiBase}/api/fees/offramp` : null,
-    ].filter(Boolean) as string[];
-
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url, {
-          headers: { 'x-sivan-target-service': 'payments' },
-          signal: AbortSignal.timeout(3500),
-        });
-        if (res.ok) {
-          const json = await res.json();
-          const pct = parseFloat(json?.data?.percent);
-          if (Number.isFinite(pct) && pct > 0) {
-            this.dynamicOfframpFeePercent = pct / 100;
-            this.offrampFeeFetchedAt = now;
-            return this.dynamicOfframpFeePercent;
-          }
+    try {
+      const res = await fetch(`${apiBase}/api/fees/offramp`, {
+        headers: { 'x-sivan-target-service': 'payments' },
+        signal: AbortSignal.timeout(4500),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const pct = parseFloat(json?.data?.percent);
+        if (Number.isFinite(pct) && pct > 0) {
+          this.dynamicOfframpFeePercent = pct / 100;
+          this.offrampFeeFetchedAt = now;
+          return this.dynamicOfframpFeePercent;
         }
-      } catch {
-        // try next endpoint
       }
+    } catch {
+      // ignore
     }
 
     return this.dynamicOfframpFeePercent ?? PROTOCOL_FEE_PERCENT;
@@ -106,38 +99,31 @@ export class FXQuotesService {
       return items;
     }
 
-    // For Nigeria, query banks directory via same-origin endpoint or dynamic API URL
+    // For Nigeria, query banks directory via dynamic API URL
     const apiBase = getPaymentApiUrl();
-    const endpoints = [
-      '/api/v1/cashout/banks',
-      apiBase ? `${apiBase}/api/v1/cashout/banks` : null,
-    ].filter(Boolean) as string[];
+    try {
+      const res = await fetch(`${apiBase}/api/v1/cashout/banks`, {
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(4500),
+      }).catch(() => null);
 
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url, {
-          headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(4500),
-        }).catch(() => null);
-
-        if (res && res.ok) {
-          const json = await res.json();
-          const banksList: any[] = Array.isArray(json) ? json : (json.data || json.banks || []);
-          if (Array.isArray(banksList) && banksList.length > 0) {
-            const mapped: BankItem[] = banksList.map((b: any) => ({
-              code: String(b.code || b.id),
-              name: String(b.name),
-              id: String(b.id || b.code),
-              logoUrl: getBankLogoUrl(b.name),
-              category: (b.code === '100004' || b.code === '100033' || b.code === '090267') ? 'fintech_wallet' : 'commercial_bank',
-            }));
-            this.banksCacheByCountry[code] = mapped;
-            return mapped;
-          }
+      if (res && res.ok) {
+        const json = await res.json();
+        const banksList: any[] = Array.isArray(json) ? json : (json.data || json.banks || []);
+        if (Array.isArray(banksList) && banksList.length > 0) {
+          const mapped: BankItem[] = banksList.map((b: any) => ({
+            code: String(b.code || b.id),
+            name: String(b.name),
+            id: String(b.id || b.code),
+            logoUrl: getBankLogoUrl(b.name),
+            category: (b.code === '100004' || b.code === '100033' || b.code === '090267') ? 'fintech_wallet' : 'commercial_bank',
+          }));
+          this.banksCacheByCountry[code] = mapped;
+          return mapped;
         }
-      } catch {
-        // try next endpoint
       }
+    } catch {
+      // ignore
     }
 
     // Fallback to configured default banks
@@ -182,34 +168,28 @@ export class FXQuotesService {
     const apiBase = getPaymentApiUrl();
     const queryParams = new URLSearchParams({
       sourceCurrency: token,
+      token: token,
       targetCurrency: country.currency,
       amount: amount.toString(),
       countryCode: country.code,
     });
 
-    const endpoints = [
-      `/api/v1/cashout/quote?${queryParams.toString()}`,
-      apiBase ? `${apiBase}/api/v1/cashout/quote?${queryParams.toString()}` : null,
-    ].filter(Boolean) as string[];
-
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(4000) });
-        if (res.ok) {
-          const json = await res.json();
-          const rate = json.rate || json.exchangeRate;
-          if (rate && typeof rate === 'number') {
-            this.rateCache[cacheKey] = {
-              rate,
-              source: json.source || `${country.name} Liquidity`,
-              fetchedAt: Date.now(),
-            };
-            return { rate, source: json.source || `${country.name} Liquidity` };
-          }
+    try {
+      const res = await fetch(`${apiBase}/api/v1/cashout/quote?${queryParams.toString()}`, { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const json = await res.json();
+        const rate = json.rate || json.exchangeRate;
+        if (rate && typeof rate === 'number') {
+          this.rateCache[cacheKey] = {
+            rate,
+            source: json.source || `${country.name} Liquidity`,
+            fetchedAt: Date.now(),
+          };
+          return { rate, source: json.source || `${country.name} Liquidity` };
         }
-      } catch {
-        // try next endpoint
       }
+    } catch {
+      // fallback
     }
 
     // Dynamic calibrated rate
@@ -269,6 +249,7 @@ export class FXQuotesService {
     amount: number;
     fee: number;
     netAmount: number;
+    feeWallet?: string;
     effectivePercent: string;
     appliedRule: string;
     explanation: string;
@@ -293,21 +274,14 @@ export class FXQuotesService {
     }
 
     const apiBase = getPaymentApiUrl();
-    const endpoints = [
-      `/api/transfer-fee?${queryParams.toString()}`,
-      `/api/v1/cashout/transfer-fee?${queryParams.toString()}`,
-      apiBase ? `${apiBase}/api/balance/transfers/quote?${queryParams.toString()}` : null,
-    ].filter(Boolean) as string[];
-
-    for (const url of endpoints) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
-        const res = await fetch(url, {
-          headers: { 'x-sivan-target-service': 'payments' },
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 4000);
+      const res = await fetch(`${apiBase}/api/balance/transfers/quote?${queryParams.toString()}`, {
+        headers: { 'x-sivan-target-service': 'payments' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
 
         if (res.ok) {
           const json = await res.json();
@@ -319,6 +293,7 @@ export class FXQuotesService {
               amount: safeAmount,
               fee: Math.round(feeNum * 100) / 100,
               netAmount: Math.round(netNum * 100) / 100,
+              feeWallet: quoteData.feeWallet || undefined,
               effectivePercent: quoteData.effectivePercent || (safeAmount > 0 ? ((feeNum / safeAmount) * 100).toFixed(2) : '0.00'),
               appliedRule: quoteData.appliedRule || 'live_api_quote',
               explanation: quoteData.explanation || 'Live transfer fee from Sivan Payment',
@@ -328,20 +303,22 @@ export class FXQuotesService {
             return result;
           }
         }
-      } catch {
-        // Try next endpoint
-      }
+    } catch {
+      // API error or timeout
     }
 
-    // If API request is in-flight or unreachable, return safe live-pending state without fake numbers
+    // If API request is in-flight or unreachable, fall back to standard protocol rule (1%, min 0.10)
+    const fallbackFee = safeAmount > 0 ? Math.max(0.10, Math.round(safeAmount * 0.01 * 100) / 100) : 0;
+    const fallbackNet = Math.max(0, safeAmount - fallbackFee);
     return {
       amount: safeAmount,
-      fee: 0,
-      netAmount: safeAmount,
-      effectivePercent: '0.00',
-      appliedRule: 'awaiting_api',
-      explanation: 'Live transfer fee from Sivan Payment',
-      source: 'live_api_pending',
+      fee: fallbackFee,
+      netAmount: fallbackNet,
+      feeWallet: undefined,
+      effectivePercent: safeAmount > 0 ? ((fallbackFee / safeAmount) * 100).toFixed(2) : '1.00',
+      appliedRule: 'standard_1pct_minimum',
+      explanation: 'Sivan standard on-chain transfer fee (1%, min 0.10)',
+      source: 'protocol_fallback',
     };
   }
 
@@ -415,19 +392,13 @@ export class FXQuotesService {
     }
 
     const apiBase = getPaymentApiUrl();
-    const endpoints = [
-      '/api/v1/cashout/resolve-account',
-      apiBase ? `${apiBase}/api/v1/cashout/resolve-account` : null,
-    ].filter(Boolean) as string[];
-
-    for (const url of endpoints) {
-      try {
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ accountNumber, bankCode }),
-          signal: AbortSignal.timeout(5000),
-        }).catch(() => null);
+    try {
+      const res = await fetch(`${apiBase}/api/v1/cashout/resolve-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountNumber, bankCode }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => null);
 
         if (res && res.ok) {
           const json = await res.json();
@@ -438,9 +409,8 @@ export class FXQuotesService {
             };
           }
         }
-      } catch (err) {
-        console.warn('Account resolution request error:', err);
-      }
+    } catch (err) {
+      console.warn('Account resolution request error:', err);
     }
 
     // High-reliability fallback for standard 10-digit NUBAN to prevent blocking user

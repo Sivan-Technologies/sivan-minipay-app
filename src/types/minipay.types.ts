@@ -17,7 +17,7 @@ export interface TokenBalance {
   usdValue: number;
 }
 
-export type AgreementStatus = 'funded' | 'in_progress' | 'delivered' | 'released';
+export type AgreementStatus = 'funded' | 'in_progress' | 'delivered' | 'released' | 'disputed' | 'refunded' | 'cancelled';
 
 export interface ServiceAgreement {
   id: string;
@@ -25,6 +25,7 @@ export interface ServiceAgreement {
   description: string;
   contractorIdentifier: string; // Phone, Celo 0x, or handle
   contractorAddress: string;
+  buyerAddress: string;         // Real connected wallet address of the buyer — never a placeholder
   amount: number;
   currency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
   protocolFee: number; // 1%
@@ -36,6 +37,9 @@ export interface ServiceAgreement {
   deliverableProofUrl?: string;
   fundingTxHash?: string;
   releaseTxHash?: string;
+  disputeReason?: string;
+  disputeTxHash?: string;
+  refundTxHash?: string;
   attributionTag: string;
 }
 

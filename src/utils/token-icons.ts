@@ -44,7 +44,7 @@ export function getCeloSvg(size = 14): string {
 }
 
 export function getTokenIconSvg(symbol: string, size = 14): string {
-  switch (symbol.toUpperCase()) {
+  switch ((symbol || '').toUpperCase()) {
     case 'USDT':
       return getUsdtSvg(size);
     case 'USDC':

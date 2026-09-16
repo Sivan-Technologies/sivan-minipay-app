@@ -218,7 +218,13 @@ class MiniPayService {
           params: [{ chainId: target.chainIdHex }],
         });
       } catch (switchError: any) {
-        if (switchError.code === 4902) {
+        const isUnrecognized =
+          switchError.code === 4902 ||
+          switchError.data?.originalError?.code === 4902 ||
+          switchError.message?.includes('Unrecognized chain') ||
+          switchError.message?.includes('4902');
+
+        if (isUnrecognized) {
           try {
             const provider = (window as any).ethereum;
             await provider.request({
@@ -227,7 +233,7 @@ class MiniPayService {
                 chainId: target.chainIdHex,
                 chainName: target.chainName,
                 nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                rpcUrls: [target.rpcUrl],
+                rpcUrls: [target.rpcUrl, target.fallbackRpcUrl].filter(Boolean),
                 blockExplorerUrls: [target.blockExplorerUrl],
               }],
             });
@@ -246,6 +252,127 @@ class MiniPayService {
   }
 
   /**
+   * Ensures connected wallet provider is switched to the active Celo network
+   * before broadcasting any on-chain transaction.
+   */
+  public async ensureCeloNetwork(): Promise<{ success: boolean; error?: string }> {
+    if (!this.hasInjectedWallet()) return { success: true };
+    const provider = (window as any).ethereum;
+    if (!provider?.request) return { success: true };
+
+    const activeNet = getActiveNetwork();
+    try {
+      const currentChainIdHex: string = await provider.request({ method: 'eth_chainId' });
+      if (currentChainIdHex && currentChainIdHex.toLowerCase() !== activeNet.chainIdHex.toLowerCase()) {
+        try {
+          await provider.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: activeNet.chainIdHex }],
+          });
+        } catch (switchError: any) {
+          const isUnrecognized =
+            switchError.code === 4902 ||
+            switchError.data?.originalError?.code === 4902 ||
+            switchError.message?.includes('Unrecognized chain') ||
+            switchError.message?.includes('4902');
+
+          if (isUnrecognized) {
+            try {
+              await provider.request({
+                method: 'wallet_addEthereumChain',
+                params: [{
+                  chainId: activeNet.chainIdHex,
+                  chainName: activeNet.chainName,
+                  nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                  rpcUrls: [activeNet.rpcUrl, activeNet.fallbackRpcUrl].filter(Boolean),
+                  blockExplorerUrls: [activeNet.blockExplorerUrl],
+                }],
+              });
+            } catch (addError: any) {
+              return {
+                success: false,
+                error: `Could not add ${activeNet.chainName} to wallet: ${addError.message || 'Rejected'}`,
+              };
+            }
+          } else {
+            return {
+              success: false,
+              error: `Please switch your wallet network to ${activeNet.chainName} in MetaMask to complete this transfer.`,
+            };
+          }
+        }
+      }
+
+      // Re-verify that the active chain actually matches after prompt
+      const postChainId: string = await provider.request({ method: 'eth_chainId' });
+      if (postChainId && postChainId.toLowerCase() !== activeNet.chainIdHex.toLowerCase()) {
+        return {
+          success: false,
+          error: `Wallet is currently on network ${postChainId}. Please switch to ${activeNet.chainName} (${activeNet.chainIdHex}) in MetaMask to proceed.`,
+        };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.warn('Network verification error:', err);
+      try {
+        const verifyChain: string = await provider.request({ method: 'eth_chainId' });
+        if (verifyChain && verifyChain.toLowerCase() === activeNet.chainIdHex.toLowerCase()) {
+          return { success: true };
+        }
+      } catch {}
+      return {
+        success: false,
+        error: `Please switch your wallet network to ${activeNet.chainName} in MetaMask. (${err.message || 'Chain switch rejected'})`,
+      };
+    }
+  }
+
+  /**
+   * Polls Celo JSON-RPC for a transaction receipt to ensure mining before consecutive actions.
+   * Celo has ~1-second block times.
+   */
+  public async waitForReceipt(txHash: string, maxWaitMs = 15_000): Promise<boolean> {
+    const startTime = Date.now();
+    const provider = (window as any).ethereum;
+    const activeNet = getActiveNetwork();
+
+    while (Date.now() - startTime < maxWaitMs) {
+      try {
+        let receipt: any = null;
+        if (provider?.request) {
+          receipt = await provider.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash],
+          });
+        }
+        if (!receipt && activeNet.rpcUrl) {
+          const res = await fetch(activeNet.rpcUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'eth_getTransactionReceipt',
+              params: [txHash],
+            }),
+          });
+          const data = await res.json();
+          receipt = data?.result;
+        }
+
+        if (receipt && receipt.blockNumber) {
+          return true;
+        }
+      } catch {
+        // Retry
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+    return false;
+  }
+
+  /**
    * Sends a genuine transaction on Celo Mainnet via the connected wallet,
    * appended with Sivan's official ERC-8021 attribution tag.
    */
@@ -253,7 +380,10 @@ class MiniPayService {
     to: `0x${string}`;
     amount: number;
     currency: SupportedTokenSymbol;
-  }): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    feeAmount?: number;
+    feeWallet?: `0x${string}`;
+    onProgress?: (step: 'transfer' | 'fee') => void;
+  }): Promise<{ success: boolean; txHash?: string; feeTxHash?: string; error?: string }> {
     if (!this.state.address) {
       return { success: false, error: 'Please connect your wallet first' };
     }
@@ -262,14 +392,25 @@ class MiniPayService {
       return { success: false, error: 'Web3 provider not available' };
     }
 
+    // 1. Ensure the wallet is switched to active Celo network before broadcasting
+    const netCheck = await this.ensureCeloNetwork();
+    if (!netCheck.success) {
+      return { success: false, error: netCheck.error };
+    }
+
     const provider = (window as any).ethereum;
-    const tokenInfo = CELO_CONFIG.tokens[params.currency];
+    const activeNet = getActiveNetwork();
+    const tokenInfo = activeNet.tokens[params.currency] || CELO_CONFIG.tokens[params.currency];
     if (!tokenInfo) {
       return { success: false, error: `Unsupported currency: ${params.currency}` };
     }
 
+    const targetFeeWallet = (params.feeWallet || activeNet.feeWallet) as `0x${string}` | undefined;
+    const hasFee = Boolean(params.feeAmount && params.feeAmount > 0 && targetFeeWallet && targetFeeWallet.toLowerCase() !== params.to.toLowerCase());
+
     try {
       let txHash: string;
+      let feeTxHash: string | undefined;
       const safeAmountStr = toSafeDecimalString(params.amount, tokenInfo.decimals);
 
       if (params.currency === 'CELO') {
@@ -277,6 +418,29 @@ class MiniPayService {
         const rawAmount = parseUnits(safeAmountStr, 18);
         const data = attachAttributionSuffix('0x');
 
+        // Safe bounded gas limit (capped between 65,000 and 200,000)
+        let gasHex = '0x186a0'; // 100,000 safe default
+        try {
+          const est = await provider.request({
+            method: 'eth_estimateGas',
+            params: [{
+              from: this.state.address,
+              to: params.to,
+              value: `0x${rawAmount.toString(16)}`,
+              data,
+            }],
+          });
+          if (est) {
+            const gasVal = typeof est === 'string' ? parseInt(est, 16) : Number(est);
+            if (Number.isFinite(gasVal) && gasVal > 0 && gasVal < 500_000) {
+              gasHex = `0x${Math.min(300_000, Math.ceil(gasVal * 1.3)).toString(16)}`;
+            }
+          }
+        } catch {
+          // Keep safe 100,000 gas default
+        }
+
+        params.onProgress?.('transfer');
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
@@ -284,24 +448,134 @@ class MiniPayService {
             to: params.to,
             value: `0x${rawAmount.toString(16)}`,
             data,
+            gas: gasHex,
           }],
         });
+
+        // Collect protocol fee on-chain to Sivan Fee Wallet
+        if (hasFee && targetFeeWallet) {
+          try {
+            params.onProgress?.('fee');
+            // Wait for initial transfer receipt on Celo so account nonce increments cleanly
+            await this.waitForReceipt(txHash);
+
+            const safeFeeStr = toSafeDecimalString(params.feeAmount!, 18);
+            const rawFee = parseUnits(safeFeeStr, 18);
+            const feeData = attachAttributionSuffix('0x');
+            let feeGasHex = '0x186a0';
+            try {
+              const estFee = await provider.request({
+                method: 'eth_estimateGas',
+                params: [{
+                  from: this.state.address,
+                  to: targetFeeWallet,
+                  value: `0x${rawFee.toString(16)}`,
+                  data: feeData,
+                }],
+              });
+              if (estFee) {
+                const val = typeof estFee === 'string' ? parseInt(estFee, 16) : Number(estFee);
+                if (Number.isFinite(val) && val > 0 && val < 500_000) {
+                  feeGasHex = `0x${Math.min(300_000, Math.ceil(val * 1.3)).toString(16)}`;
+                }
+              }
+            } catch {}
+
+            feeTxHash = await provider.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                from: this.state.address,
+                to: targetFeeWallet,
+                value: `0x${rawFee.toString(16)}`,
+                data: feeData,
+                gas: feeGasHex,
+              }],
+            });
+          } catch (feeErr: any) {
+            console.warn('CELO protocol fee collection transfer skipped/failed:', feeErr);
+          }
+        }
       } else {
         // ERC-20 token transfer (USDC, USDT, cUSD, cNGN) with attribution tag
         const rawAmount = parseUnits(safeAmountStr, tokenInfo.decimals);
         const data = buildAttributedTransferCalldata(params.to, rawAmount);
 
+        // Safe bounded gas limit (never allow fallback to 21,000,000)
+        let gasHex = '0x30d40'; // 200,000 safe default for ERC-20 with attribution calldata
+        try {
+          const est = await provider.request({
+            method: 'eth_estimateGas',
+            params: [{
+              from: this.state.address,
+              to: tokenInfo.address,
+              data,
+            }],
+          });
+          if (est) {
+            const gasVal = typeof est === 'string' ? parseInt(est, 16) : Number(est);
+            if (Number.isFinite(gasVal) && gasVal > 0 && gasVal < 500_000) {
+              gasHex = `0x${Math.min(300_000, Math.ceil(gasVal * 1.3)).toString(16)}`;
+            }
+          }
+        } catch {
+          // Keep safe 200,000 gas default
+        }
+
+        params.onProgress?.('transfer');
         txHash = await provider.request({
           method: 'eth_sendTransaction',
           params: [{
             from: this.state.address,
             to: tokenInfo.address,
             data,
+            gas: gasHex,
           }],
         });
+
+        // Collect protocol fee on-chain to Sivan Fee Wallet
+        if (hasFee && targetFeeWallet) {
+          try {
+            params.onProgress?.('fee');
+            // Wait for initial transfer receipt on Celo so account nonce increments cleanly
+            await this.waitForReceipt(txHash);
+
+            const safeFeeStr = toSafeDecimalString(params.feeAmount!, tokenInfo.decimals);
+            const rawFee = parseUnits(safeFeeStr, tokenInfo.decimals);
+            const feeData = buildAttributedTransferCalldata(targetFeeWallet, rawFee);
+            let feeGasHex = '0x30d40';
+            try {
+              const estFee = await provider.request({
+                method: 'eth_estimateGas',
+                params: [{
+                  from: this.state.address,
+                  to: tokenInfo.address,
+                  data: feeData,
+                }],
+              });
+              if (estFee) {
+                const val = typeof estFee === 'string' ? parseInt(estFee, 16) : Number(estFee);
+                if (Number.isFinite(val) && val > 0 && val < 500_000) {
+                  feeGasHex = `0x${Math.min(300_000, Math.ceil(val * 1.3)).toString(16)}`;
+                }
+              }
+            } catch {}
+
+            feeTxHash = await provider.request({
+              method: 'eth_sendTransaction',
+              params: [{
+                from: this.state.address,
+                to: tokenInfo.address,
+                data: feeData,
+                gas: feeGasHex,
+              }],
+            });
+          } catch (feeErr: any) {
+            console.warn('ERC-20 protocol fee collection transfer skipped/failed:', feeErr);
+          }
+        }
       }
 
-      return { success: true, txHash };
+      return { success: true, txHash, feeTxHash };
     } catch (err: any) {
       console.error('On-chain transaction failed:', err);
       return {
@@ -355,6 +629,104 @@ class MiniPayService {
       return { success: true, signature };
     } catch (err: any) {
       console.error('Signing release authorization failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Signature request was rejected in wallet'
+          : (err.message || 'Signature request failed'),
+      };
+    }
+  }
+
+  /**
+   * Prompts connected wallet to cryptographically sign a dispute filing with reason.
+   */
+  public async signDisputeFiling(params: {
+    agreementId: string;
+    reason: string;
+  }): Promise<{ success: boolean; signature?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const message = [
+      'Sivan Ai Autonomous Service Agreement',
+      'Action: Formal Dispute Filing',
+      `Agreement ID: ${params.agreementId}`,
+      `Complainant: ${this.state.address}`,
+      `Reason: ${params.reason}`,
+      `Attribution Tag: ${CELO_CONFIG.attributionTag}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    try {
+      const hexMessage = `0x${Array.from(new TextEncoder().encode(message))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')}`;
+
+      const signature: string = await provider.request({
+        method: 'personal_sign',
+        params: [hexMessage, this.state.address],
+      });
+
+      return { success: true, signature };
+    } catch (err: any) {
+      console.error('Signing dispute filing failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Signature request was rejected in wallet'
+          : (err.message || 'Signature request failed'),
+      };
+    }
+  }
+
+  /**
+   * Prompts connected wallet to cryptographically sign a mutual agreement refund back to client.
+   */
+  public async signRefundAuthorization(params: {
+    agreementId: string;
+    amount: number;
+    currency: string;
+    buyerAddress?: string;
+  }): Promise<{ success: boolean; signature?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const provider = (window as any).ethereum;
+    const message = [
+      'Sivan Ai Autonomous Service Agreement',
+      'Action: Authorize Client Refund',
+      `Agreement ID: ${params.agreementId}`,
+      `Authorized By: ${this.state.address}`,
+      `Refund Amount: ${params.amount} ${params.currency}`,
+      `Attribution Tag: ${CELO_CONFIG.attributionTag}`,
+      `Timestamp: ${new Date().toISOString()}`,
+    ].join('\n');
+
+    try {
+      const hexMessage = `0x${Array.from(new TextEncoder().encode(message))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')}`;
+
+      const signature: string = await provider.request({
+        method: 'personal_sign',
+        params: [hexMessage, this.state.address],
+      });
+
+      return { success: true, signature };
+    } catch (err: any) {
+      console.error('Signing refund authorization failed:', err);
       return {
         success: false,
         error: err.message?.includes('User rejected') || err.message?.includes('user rejected')

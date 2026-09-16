@@ -4,6 +4,10 @@ import { miniPayService } from '../services/minipay.service';
 import { fetchTokenBalances } from '../services/celo-client';
 import { CELO_CONFIG, type SupportedTokenSymbol } from '../config/celo.config';
 import { getTokenIconSvg } from '../utils/token-icons';
+import { openShareModal } from './ShareAgreementModal';
+import { identityService } from '../services/identity.service';
+import { DELIVERY_DEADLINE_PRESETS } from '../utils/deadline';
+import { injectClaimHandleNudge } from './ClaimHandleNudge';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -32,17 +36,16 @@ export async function renderCreateAgreement(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="deal-contractor">Contractor Celo 0x Address</label>
+        <label class="form-label" for="deal-contractor">Contractor (Phone, @username, or Celo 0x)</label>
         <input 
           type="text" 
           id="deal-contractor" 
           class="form-input" 
-          placeholder="0x..." 
+          placeholder="e.g. +2348012345678, @soliame, or 0x..." 
           required 
-          pattern="^0x[a-fA-F0-9]{40}$"
-          title="Must be a valid 42-character Celo/Ethereum address starting with 0x"
         />
-        <div class="form-helper">Destination wallet address where funds will settle upon completion</div>
+        <div id="contractor-resolution-badge" class="form-helper" style="font-size: 11px; margin-top: 4px; display: none;"></div>
+        <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
       </div>
 
       <div class="form-group">
@@ -84,13 +87,25 @@ export async function renderCreateAgreement(
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="deal-deadline">Delivery Deadline</label>
-        <select id="deal-deadline" class="form-select">
-          <option value="24">24 Hours (1 Day)</option>
-          <option value="48" selected>48 Hours (2 Days)</option>
-          <option value="72">72 Hours (3 Days)</option>
-          <option value="168">7 Days (1 Week)</option>
-        </select>
+        <label class="form-label">Delivery Deadline</label>
+        <input type="hidden" id="deal-deadline" value="48">
+        <div class="custom-select-wrap" id="deadline-select-wrap">
+          <div class="custom-select-trigger" id="deadline-select-trigger">
+            <span id="deadline-display" style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+              48 Hours (2 Days)
+            </span>
+            <span class="chevron">▾</span>
+          </div>
+          <div class="custom-select-menu" id="deadline-select-menu">
+            ${DELIVERY_DEADLINE_PRESETS.map(preset => `
+              <div class="custom-select-item ${preset.hours === 48 ? 'selected' : ''}" data-hours="${preset.hours}" data-label="${preset.label}" style="display: flex; align-items: center; gap: 8px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.6;flex-shrink:0"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+                <span>${preset.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -129,12 +144,22 @@ export async function renderCreateAgreement(
     </form>
   `;
 
+  // Inject @handle nudge banner before the form for users without a handle
+  const formEl = container.querySelector('#form-create-deal') as HTMLElement | null;
+  injectClaimHandleNudge(container, {
+    insertBefore: formEl,
+    onToast: showToast,
+    onClaimed: (username) => {
+      showToast(`🎉 Sivan handle set: ${username} — others can now find you by name`);
+    },
+  });
+
   const amountInput = container.querySelector('#deal-amount') as HTMLInputElement;
   const currencyHiddenInput = container.querySelector('#deal-currency') as HTMLInputElement;
   const currencyTrigger = container.querySelector('#deal-currency-trigger') as HTMLElement;
   const currencyMenu = container.querySelector('#deal-currency-menu') as HTMLElement;
   const currencyDisplay = container.querySelector('#deal-currency-display') as HTMLElement;
-  const currencyItems = container.querySelectorAll('.custom-select-item');
+  const currencyItems = container.querySelectorAll('#deal-currency-menu .custom-select-item');
 
   const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;
@@ -210,12 +235,105 @@ export async function renderCreateAgreement(
   document.addEventListener('click', () => {
     currencyMenu?.classList.remove('open');
     currencyTrigger?.classList.remove('active');
+    deadlineMenu?.classList.remove('open');
+    deadlineTrigger?.classList.remove('active');
+  });
+
+  // Deadline custom dropdown
+  const deadlineHiddenInput = container.querySelector('#deal-deadline') as HTMLInputElement;
+  const deadlineTrigger = container.querySelector('#deadline-select-trigger') as HTMLElement;
+  const deadlineMenu = container.querySelector('#deadline-select-menu') as HTMLElement;
+  const deadlineDisplay = container.querySelector('#deadline-display') as HTMLElement;
+  const deadlineItems = container.querySelectorAll('#deadline-select-menu .custom-select-item');
+
+  deadlineTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = deadlineMenu.classList.contains('open');
+    deadlineMenu.classList.toggle('open', !isOpen);
+    deadlineTrigger.classList.toggle('active', !isOpen);
+  });
+
+  deadlineItems.forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const el = e.currentTarget as HTMLElement;
+      const hours = el.dataset.hours!;
+      const label = el.dataset.label!;
+
+      deadlineHiddenInput.value = hours;
+      deadlineDisplay.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+        <span>${label}</span>
+      `;
+
+      deadlineItems.forEach(i => i.classList.remove('selected'));
+      el.classList.add('selected');
+
+      deadlineMenu.classList.remove('open');
+      deadlineTrigger.classList.remove('active');
+    });
   });
 
   updateBalanceDisplay();
   updateCalc();
 
   amountInput?.addEventListener('input', updateCalc);
+
+  // Contractor handle resolution listener
+  const contractorField = container.querySelector('#deal-contractor') as HTMLInputElement;
+  const resolutionBadge = container.querySelector('#contractor-resolution-badge') as HTMLElement;
+  let resolvedAddress: string | null = null;
+  let resolveTimer: any = null;
+
+  contractorField?.addEventListener('input', () => {
+    const val = contractorField.value.trim();
+    resolvedAddress = null;
+    clearTimeout(resolveTimer);
+
+    if (!val) {
+      if (resolutionBadge) resolutionBadge.style.display = 'none';
+      return;
+    }
+
+    if (val.startsWith('0x') && val.length === 42) {
+      if (resolutionBadge) {
+        resolutionBadge.style.display = 'block';
+        resolutionBadge.style.color = 'var(--accent-cyan)';
+        resolutionBadge.innerHTML = '<span>Direct Celo Wallet Address</span>';
+      }
+      resolvedAddress = val;
+      return;
+    }
+
+    if (val.startsWith('@') || val.length >= 3) {
+      if (resolutionBadge) {
+        resolutionBadge.style.display = 'block';
+        resolutionBadge.style.color = 'var(--text-muted)';
+        resolutionBadge.innerHTML = '<span>🔍 Resolving Sivan handle...</span>';
+      }
+
+      resolveTimer = setTimeout(async () => {
+        const res = await identityService.resolveTarget(val, 'celo');
+        if (res.found && res.user?.targetAddress) {
+          resolvedAddress = res.user.targetAddress;
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--accent-emerald)';
+            resolutionBadge.innerHTML = `<span>✅ Verified Sivan User: ${res.user.displayName || val} (${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)})</span>`;
+          }
+        } else if (res.found && res.user) {
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--accent-emerald)';
+            resolutionBadge.innerHTML = `<span>✅ Sivan User: ${res.user.displayName || val}</span>`;
+          }
+        } else {
+          if (resolutionBadge) {
+            resolutionBadge.style.color = 'var(--text-muted)';
+            resolutionBadge.innerHTML = '<span>Contractor will receive invite claim link</span>';
+          }
+        }
+      }, 350);
+    }
+  });
 
   // Back button
   container.querySelector('#btn-cancel-create')?.addEventListener('click', () => onNavigate('dashboard'));
@@ -232,10 +350,10 @@ export async function renderCreateAgreement(
     }
 
     const title = (container.querySelector('#deal-title') as HTMLInputElement).value.trim();
-    const contractorAddress = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
     const amount = parseFloat(amountInput.value);
     const currency = currencyHiddenInput.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLSelectElement).value, 10);
+    const deadlineHours = parseInt((container.querySelector('#deal-deadline') as HTMLInputElement).value, 10);
+
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 
     if (!amount || amount <= 0) {
@@ -270,12 +388,19 @@ export async function renderCreateAgreement(
         return;
       }
 
-      // Save genuine service agreement
-      await agreementsService.createAgreement({
+      const contractorInput = (container.querySelector('#deal-contractor') as HTMLInputElement).value.trim();
+      const contractorAddress = resolvedAddress || (contractorInput.startsWith('0x') ? contractorInput : CELO_CONFIG.agentWallet);
+      const contractorIdentifier = contractorInput.startsWith('0x')
+        ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
+        : contractorInput;
+
+      // Save genuine service agreement with the real connected buyer wallet address
+      const created = await agreementsService.createAgreement({
         title,
         description,
-        contractorIdentifier: `${contractorAddress.slice(0, 6)}...${contractorAddress.slice(-4)}`,
+        contractorIdentifier,
         contractorAddress,
+        buyerAddress: state.address as string,   // Real connected MiniPay wallet — never a placeholder
         amount,
         currency,
         deadlineHours,
@@ -283,7 +408,9 @@ export async function renderCreateAgreement(
       });
 
       showToast(`🎉 Deal confirmed on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
-      onNavigate('deals');
+      openShareModal(created, () => {
+        onNavigate('deals');
+      });
     } catch (err: any) {
       console.error('Deal funding error:', err);
       showToast(`❌ Error: ${err.message || 'Transaction could not be completed'}`);

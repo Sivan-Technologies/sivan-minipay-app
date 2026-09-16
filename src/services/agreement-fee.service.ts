@@ -6,9 +6,9 @@
  * configured in the Admin Hub.
  * 
  * Endpoints:
- * - GET /api/escrow/fee-quote?currency=USDC&amount=25
+ * - GET /api/agreements/quote?amount=25
  * - GET /api/v1/agreement/fee?currency=USDC&amount=25
- * - GET /api/escrow/settings/limits
+ * - GET /api/v1/agreement/limits
  */
 
 import { getPaymentApiUrl } from '../config/api.config';
@@ -60,26 +60,18 @@ class AgreementFeeService {
     }
 
     const apiBase = getPaymentApiUrl();
-    const endpoints = [
-      '/api/escrow/settings/limits',
-      '/api/v1/agreement/limits',
-      apiBase ? `${apiBase}/api/escrow/settings/limits` : null,
-    ].filter(Boolean) as string[];
-
-    for (const ep of endpoints) {
-      try {
-        const res = await fetch(ep, { signal: AbortSignal.timeout(3500) }).catch(() => null);
-        if (res && res.ok) {
-          const data = await res.json();
-          if (data && (data.usdcFeePercent !== undefined || data.minNairaAmount !== undefined)) {
-            this.adminLimits = data;
-            this.limitsFetchedAt = now;
-            return this.adminLimits;
-          }
+    try {
+      const res = await fetch(`${apiBase}/api/v1/agreement/limits`, { signal: AbortSignal.timeout(3500) }).catch(() => null);
+      if (res && res.ok) {
+        const data = await res.json();
+        if (data && (data.usdcFeePercent !== undefined || data.minNairaAmount !== undefined)) {
+          this.adminLimits = data;
+          this.limitsFetchedAt = now;
+          return this.adminLimits;
         }
-      } catch {
-        continue;
       }
+    } catch {
+      // ignore
     }
 
     return this.adminLimits;
@@ -101,7 +93,7 @@ class AgreementFeeService {
       };
     }
 
-    const cacheKey = `${currency.toUpperCase()}_${amount}`;
+    const cacheKey = `${(currency || 'USDC').toUpperCase()}_${amount}`;
     const cached = this.quoteCache.get(cacheKey);
     const now = Date.now();
     if (cached && now - cached.timestamp < this.CACHE_TTL_MS) {
@@ -111,25 +103,25 @@ class AgreementFeeService {
     // 1. Query backend dynamic fee quote endpoints
     const apiBase = getPaymentApiUrl();
     const quoteEndpoints = [
-      `/api/escrow/fee-quote?currency=${encodeURIComponent(currency)}&amount=${amount}`,
-      `/api/v1/agreement/fee?currency=${encodeURIComponent(currency)}&amount=${amount}`,
-      apiBase ? `${apiBase}/api/escrow/fee-quote?currency=${encodeURIComponent(currency)}&amount=${amount}` : null,
-    ].filter(Boolean) as string[];
+      `${apiBase}/api/agreements/quote?amount=${amount}&network=celo`,
+      `${apiBase}/api/v1/agreement/fee?currency=${encodeURIComponent(currency)}&amount=${amount}`,
+    ];
 
     for (const url of quoteEndpoints) {
       try {
         const res = await fetch(url, { signal: AbortSignal.timeout(3500) }).catch(() => null);
         if (res && res.ok) {
           const data = await res.json();
-          if (data && typeof data.protocolFee === 'number') {
+          const fee = typeof data.protocolFee === 'number' ? data.protocolFee : (typeof data.feeAmount === 'number' ? data.feeAmount : null);
+          if (fee !== null && typeof fee === 'number') {
             const quote: AgreementFeeQuote = {
               amount,
               currency,
-              protocolFee: data.protocolFee,
-              netAmount: data.netAmount ?? Math.max(0, amount - data.protocolFee),
-              totalWithFee: data.totalWithFee,
-              feeFormula: data.feeFormula || 'Dynamic Admin Fee',
-              source: data.source || 'sivan_backend_admin_settings',
+              protocolFee: fee,
+              netAmount: data.sellerNetAmount ?? data.netAmount ?? Math.max(0, amount - fee),
+              totalWithFee: data.buyerTotalPayable ?? data.totalWithFee,
+              feeFormula: data.explanation || data.feeFormula || 'Dynamic Admin Fee',
+              source: data.source || 'sivan_payment_api',
             };
             this.quoteCache.set(cacheKey, { quote, timestamp: now });
             return quote;

@@ -5,11 +5,15 @@ import { renderCreateAgreement } from './components/CreateAgreementView';
 import { renderAgreementsList } from './components/AgreementsListView';
 import { renderCashout } from './components/CashoutView';
 import { renderTransactionHistory } from './components/TransactionHistoryView';
+import { renderSwap } from './components/SwapView';
 import { miniPayService } from './services/minipay.service';
 import { countryService } from './config/countries.config';
 import { initLegalModal, openLegalModal } from './components/LegalSupportModal';
+import { initShareModal, openShareModal } from './components/ShareAgreementModal';
+import { renderAcceptAgreement, type DealProposalData } from './components/AcceptAgreementView';
+import { initTextileKycModal } from './components/TextileKycModal';
 
-type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'history';
+type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'swap' | 'history' | 'accept';
 
 class SivanMiniPayApp {
   private currentTab: Tab = 'dashboard';
@@ -17,12 +21,18 @@ class SivanMiniPayApp {
   private mainContentContainer!: HTMLElement;
   private bottomNavContainer!: HTMLElement;
   private toastContainer!: HTMLElement;
+  private incomingDeal: DealProposalData | null = null;
 
   constructor() {
+    this.checkIncomingDeal();
     this.initDOM();
     initLegalModal();
+    initShareModal();
+    initTextileKycModal();
     (window as any).openLegalModal = openLegalModal;
+    (window as any).openShareModal = openShareModal;
     this.render();
+
 
     // Re-render views when wallet connects, disconnects, or switches accounts
     miniPayService.subscribe(() => {
@@ -33,6 +43,40 @@ class SivanMiniPayApp {
     countryService.subscribe(() => {
       this.renderMainContent();
     });
+  }
+
+  private checkIncomingDeal() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const dealId = params.get('deal') || params.get('agreement');
+      if (dealId) {
+        const title = params.get('title') || 'Service Agreement';
+        const amount = parseFloat(params.get('amount') || '0');
+        const curr = (params.get('curr') || 'USDC') as any;
+        const net = parseFloat(params.get('net') || String(amount));
+        const hours = parseInt(params.get('hours') || '48', 10);
+        const desc = params.get('desc') || '';
+        const from = params.get('from') || '';
+        const tx = params.get('tx') || undefined;
+
+        if (amount > 0) {
+          this.incomingDeal = {
+            id: dealId,
+            title,
+            amount,
+            currency: curr,
+            netAmount: net,
+            deadlineHours: hours,
+            description: desc,
+            from,
+            fundingTxHash: tx,
+          };
+          this.currentTab = 'accept';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to parse incoming deal parameters:', e);
+    }
   }
 
   private initDOM() {
@@ -104,11 +148,30 @@ class SivanMiniPayApp {
           (msg) => this.showToast(msg)
         );
         break;
+      case 'swap':
+        renderSwap(
+          this.mainContentContainer,
+          (t) => this.navigateTo(t as Tab),
+          (msg) => this.showToast(msg)
+        );
+        break;
       case 'history':
         renderTransactionHistory(
           this.mainContentContainer,
           (t) => this.navigateTo(t as Tab)
         );
+        break;
+      case 'accept':
+        if (this.incomingDeal) {
+          renderAcceptAgreement(
+            this.mainContentContainer,
+            this.incomingDeal,
+            (t) => this.navigateTo(t as Tab),
+            (msg) => this.showToast(msg)
+          );
+        } else {
+          this.navigateTo('dashboard');
+        }
         break;
     }
   }
@@ -131,13 +194,13 @@ class SivanMiniPayApp {
         </span>
         <span>Deals</span>
       </button>
-      <button class="nav-item ${this.currentTab === 'create' ? 'active' : ''}" data-tab="create">
+      <button class="nav-item ${this.currentTab === 'swap' ? 'active' : ''}" data-tab="swap">
         <span class="nav-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-8-2h2v-4h4v-2h-4V7h-2v4H7v2h4v4z"/>
+            <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
           </svg>
         </span>
-        <span>New Deal</span>
+        <span>Swap</span>
       </button>
       <button class="nav-item ${this.currentTab === 'cashout' ? 'active' : ''}" data-tab="cashout">
         <span class="nav-icon">
@@ -148,6 +211,7 @@ class SivanMiniPayApp {
         <span>Cash Out</span>
       </button>
     `;
+
 
     this.bottomNavContainer.querySelectorAll('.nav-item').forEach((btn) => {
       btn.addEventListener('click', (e) => {

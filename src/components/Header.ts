@@ -1,8 +1,10 @@
 import { miniPayService } from '../services/minipay.service';
 import type { MiniPayDetectionState } from '../types/minipay.types';
-import { getActiveNetwork, setActiveNetworkMode } from '../config/celo.config';
+import { getActiveNetwork } from '../config/celo.config';
 import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config';
 import { openLegalModal } from './LegalSupportModal';
+import { identityService } from '../services/identity.service';
+import { openClaimHandleModal } from './ClaimHandleModal';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -56,7 +58,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
           <!-- Network Badge / Toggle -->
           <button class="header-network-pill" id="btn-network-toggle" title="Switch Network (Mainnet / Testnet)" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: 20px; padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 6px; cursor: pointer; color: ${netBadgeColor};">
             <span style="width: 7px; height: 7px; border-radius: 50%; ${netBadgeDot}"></span>
-            <span style="font-weight: 600;">${isTestnet ? 'Sepolia' : 'Mainnet'}</span>
+            <span style="font-weight: 600;">${isTestnet ? 'Celo Sepolia' : 'Celo Mainnet'}</span>
           </button>
 
           <!-- Wallet Status Pill (Tap to Copy Address when connected) -->
@@ -169,6 +171,16 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
                 <span style="color: var(--text-muted); font-size: 11px;">${activeNet.rpcUrl.replace('https://', '')}</span>
               </div>
               ${state.address ? `
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
+                  <span style="color: var(--text-muted);">Sivan Handle:</span>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    ${identityService.getSavedUsername() ? `
+                      <span style="font-weight: 600; color: var(--accent-emerald); font-family: monospace;">${identityService.getSavedUsername()}</span>
+                    ` : `
+                      <button type="button" id="btn-claim-handle" style="background: rgba(16, 185, 129, 0.12); border: 1px solid var(--accent-emerald); border-radius: 12px; color: var(--accent-emerald); font-size: 11px; padding: 2px 10px; cursor: pointer; font-weight: 600;">+ Claim @handle</button>
+                    `}
+                  </div>
+                </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 8px;">
                   <span style="color: var(--text-muted);">Address:</span>
                   <div style="display: flex; align-items: center; gap: 6px;">
@@ -296,34 +308,12 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     });
 
     container.querySelector('#btn-select-mainnet')?.addEventListener('click', async () => {
-      setActiveNetworkMode('mainnet');
-      const eth = (window as any).ethereum;
-      if (eth) {
-        try {
-          await eth.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xa4ec' }], // 42220
-          });
-        } catch (e) {
-          console.warn('Network switch prompt:', e);
-        }
-      }
+      await miniPayService.switchNetwork('mainnet');
       update(miniPayService.getState());
     });
 
     container.querySelector('#btn-select-testnet')?.addEventListener('click', async () => {
-      setActiveNetworkMode('testnet');
-      const eth = (window as any).ethereum;
-      if (eth) {
-        try {
-          await eth.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xaa36a7' }], // 11142220
-          });
-        } catch (e) {
-          console.warn('Network switch prompt:', e);
-        }
-      }
+      await miniPayService.switchNetwork('testnet');
       update(miniPayService.getState());
     });
 
@@ -350,6 +340,19 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
           onToast(`Wallet address copied: ${shortAddr}`);
         }
       }
+    });
+
+    container.querySelector('#btn-claim-handle')?.addEventListener('click', async () => {
+      isWalletModalOpen = false;
+      update(miniPayService.getState());
+      await openClaimHandleModal(
+        state.address || '',
+        (username) => {
+          if (onToast) onToast(`🎉 Sivan handle claimed: ${username}`);
+          update(miniPayService.getState());
+        },
+        onToast
+      );
     });
   };
 

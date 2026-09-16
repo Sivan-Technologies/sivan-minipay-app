@@ -73,7 +73,7 @@ export function renderTransactionHistory(
             </div>
             <div style="font-size: 12px; color: var(--text-muted); max-width: 280px; margin: 0 auto 16px;">
               ${activeFilter === 'deals' 
-                ? 'Create an autonomous service agreement with milestone deliverables and escrow protection on Celo.' 
+                ? 'Create an autonomous service agreement with milestone deliverables and Service Agreement protection on Celo.' 
                 : activeFilter === 'cashouts'
                   ? 'Cash out your digital dollars directly to your local bank account.'
                   : 'Cash out to your local bank or create your first service agreement to view settled records here.'}

@@ -6,6 +6,7 @@ import { countryService } from '../config/countries.config';
 import { fxQuotesService } from '../services/fx-quotes.service';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openLegalModal } from './LegalSupportModal';
+import { getCountdownStatus } from '../utils/deadline';
 
 export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
   const state = miniPayService.getState();
@@ -102,6 +103,15 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         <span class="action-tile-title">Cash Out</span>
         <span class="action-tile-badge">${country.currency === 'USD' ? '($) USD' : `(${country.currencySymbol}) ${country.currency}`}</span>
       </div>
+      <div class="action-tile" id="tile-swap">
+        <div class="action-tile-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/>
+          </svg>
+        </div>
+        <span class="action-tile-title">Swap</span>
+        <span class="action-tile-badge">cNGN ⇄ USD</span>
+      </div>
       <div class="action-tile" id="tile-create-agreement">
         <div class="action-tile-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
@@ -136,11 +146,13 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
             + Create First Deal
           </button>
         </div>
-      ` : agreements.slice(0, 3).map(agr => `
+      ` : agreements.slice(0, 3).map(agr => {
+        const countdown = getCountdownStatus(agr.deadlineTimestamp, agr.status);
+        return `
         <div class="agreement-card" data-id="${agr.id}">
           <div class="agreement-header">
             <span class="agreement-title">${agr.title}</span>
-            <span class="agreement-badge badge-${agr.status}">${agr.status.replace('_', ' ')}</span>
+            <span class="agreement-badge ${countdown.badgeClass}">${countdown.icon} ${countdown.label}</span>
           </div>
           <p class="agreement-desc">${agr.description}</p>
           <div class="agreement-meta">
@@ -148,11 +160,12 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
               ${agr.currency === 'cNGN' ? `₦${agr.amount.toLocaleString()} cNGN` : `${agr.amount} ${agr.currency}`}
             </span>
             <span style="color: var(--text-muted); font-size: 11px;">
-              ${agr.status === 'released' ? 'Settled' : `${agr.deadlineHours}h timer`}
+              ${agr.status === 'released' ? 'Settled' : agr.status === 'refunded' ? 'Refunded' : `${agr.deadlineHours}h window`}
             </span>
           </div>
         </div>
-      `).join('')}
+      `;
+      }).join('')}
     </div>
 
     <!-- Ultra-Slick Minimalist Footer (Fonbnk Style) -->
@@ -190,6 +203,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     renderDashboard(container, onNavigate);
   });
   container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
+  container.querySelector('#tile-swap')?.addEventListener('click', () => onNavigate('swap'));
   container.querySelector('#tile-create-agreement')?.addEventListener('click', () => onNavigate('create'));
   container.querySelector('#tile-cashout')?.addEventListener('click', () => onNavigate('cashout'));
   container.querySelector('#tile-deals')?.addEventListener('click', () => onNavigate('deals'));

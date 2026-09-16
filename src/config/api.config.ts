@@ -12,7 +12,7 @@ export function getPaymentApiUrl(): string {
     if (proc.env.VITE_PAYMENT_API_URL) return String(proc.env.VITE_PAYMENT_API_URL).replace(/\/+$/, '');
     if (proc.env.PAYMENT_API_URL) return String(proc.env.PAYMENT_API_URL).replace(/\/+$/, '');
   }
-  return 'https://api.sivantech.online';
+  throw new Error('VITE_PAYMENT_API_URL is required.');
 }
 
 export function getTextileApiUrl(): string {
@@ -24,5 +24,5 @@ export function getTextileApiUrl(): string {
     if (proc.env.VITE_TEXTILE_API_URL) return String(proc.env.VITE_TEXTILE_API_URL).replace(/\/+$/, '');
     if (proc.env.TEXTILE_API_URL) return String(proc.env.TEXTILE_API_URL).replace(/\/+$/, '');
   }
-  return 'https://api.textilecredit.com';
+  throw new Error('VITE_TEXTILE_API_URL is required.');
 }
