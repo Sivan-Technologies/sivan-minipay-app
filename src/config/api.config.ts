@@ -4,15 +4,37 @@
  */
 
 export function getPaymentApiUrl(): string {
+  let raw = '';
   if (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PAYMENT_API_URL) {
-    return String(import.meta.env.VITE_PAYMENT_API_URL).replace(/\/+$/, '');
+    raw = String(import.meta.env.VITE_PAYMENT_API_URL).trim();
+  } else {
+    const proc = (globalThis as any).process;
+    if (proc && proc.env) {
+      raw = String(proc.env.VITE_PAYMENT_API_URL || proc.env.PAYMENT_API_URL || '').trim();
+    }
   }
-  const proc = (globalThis as any).process;
-  if (proc && proc.env) {
-    if (proc.env.VITE_PAYMENT_API_URL) return String(proc.env.VITE_PAYMENT_API_URL).replace(/\/+$/, '');
-    if (proc.env.PAYMENT_API_URL) return String(proc.env.PAYMENT_API_URL).replace(/\/+$/, '');
+
+  if (!raw) {
+    throw new Error('VITE_PAYMENT_API_URL is required.');
   }
-  throw new Error('VITE_PAYMENT_API_URL is required.');
+
+  const cleanUrl = raw.replace(/\/+$/, '');
+  try {
+    const parsed = new URL(cleanUrl);
+    const host = parsed.host.toLowerCase();
+    const path = parsed.pathname.replace(/\/+$/, '');
+
+    // Cloudflare gateway route normalization:
+    // When pointing to the gateway root (api.sivantech.online or api-staging.sivantech.online),
+    // ensure calls route to the payments microservice (/api/payment) rather than hitting the default root.
+    if ((host === 'api.sivantech.online' || host === 'api-staging.sivantech.online') && (path === '' || path === '/')) {
+      return `${parsed.origin}/api/payment`;
+    }
+  } catch {
+    // preserve cleanUrl if not valid absolute URL
+  }
+
+  return cleanUrl;
 }
 
 export function getTextileApiUrl(): string {

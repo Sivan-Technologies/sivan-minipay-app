@@ -17,6 +17,11 @@ interface CachedRate {
   rate: number;
   source: string;
   fetchedAt: number;
+  depositAddress?: string;
+  quoteId?: string;
+  grossNgn?: number;
+  sivanFeeNgn?: number;
+  netNgn?: number;
 }
 
 export function getBankLogoUrl(bankName: string): string {
@@ -139,64 +144,152 @@ export class FXQuotesService {
   /**
    * Fetches real-time FX rate for token against corridor destination fiat.
    */
-  public async fetchLiveRate(
+  public async fetchLiveCashoutQuote(
     token: 'USDC' | 'USDT' | 'cNGN' | 'cUSD',
     amount: number = 10,
-    countryCode?: string
-  ): Promise<{ rate: number; source: string }> {
+    countryCode?: string,
+    bankAccount?: string,
+    bankCode?: string
+  ): Promise<{
+    rate: number;
+    source: string;
+    depositAddress?: string;
+    quoteId?: string;
+    grossNgn?: number;
+    sivanFeeNgn?: number;
+    netNgn?: number;
+  }> {
     const country = countryCode 
       ? (SUPPORTED_COUNTRIES[countryCode] || countryService.getActiveCountry())
       : countryService.getActiveCountry();
 
     // Global Corridor: Pure 1:1 USD Parity
     if (country.code === 'GLOBAL') {
-      if (token === 'cNGN') return { rate: 1.0 / 1485.5, source: 'cNGN Peg' };
       return { rate: 1.0, source: '1:1 USD Parity' };
     }
 
     // Nigeria cNGN Parity
     if (token === 'cNGN' && country.code === 'NG') {
-      return { rate: 1.0, source: 'cNGN 1:1 Parity' };
+      const gross = amount;
+      const fee = Math.round(gross * 0.01 * 100) / 100;
+      return {
+        rate: 1.0,
+        source: 'cNGN 1:1 Parity',
+        grossNgn: gross,
+        sivanFeeNgn: fee,
+        netNgn: Math.round((gross - fee) * 100) / 100,
+      };
     }
 
-    const cacheKey = `${token}_${country.code}`;
+    const cacheKey = `${token}_${country.code}_${amount}`;
     const cached = this.rateCache[cacheKey];
     if (cached && Date.now() - cached.fetchedAt < this.CACHE_TTL_MS) {
-      return { rate: cached.rate, source: cached.source };
+      return {
+        rate: cached.rate,
+        source: cached.source,
+        depositAddress: cached.depositAddress,
+        quoteId: cached.quoteId,
+        grossNgn: cached.grossNgn,
+        sivanFeeNgn: cached.sivanFeeNgn,
+        netNgn: cached.netNgn,
+      };
     }
 
     const apiBase = getPaymentApiUrl();
     const queryParams = new URLSearchParams({
       sourceCurrency: token,
-      token: token,
+      token,
       targetCurrency: country.currency,
       amount: amount.toString(),
       countryCode: country.code,
     });
+    if (bankAccount) queryParams.set('bankAccount', bankAccount);
+    if (bankCode) queryParams.set('bankCode', bankCode);
 
     try {
-      const res = await fetch(`${apiBase}/api/v1/cashout/quote?${queryParams.toString()}`, { signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${apiBase}/api/v1/cashout/quote?${queryParams.toString()}`, {
+        signal: AbortSignal.timeout(8000),
+      });
       if (res.ok) {
         const json = await res.json();
         const rate = json.rate || json.exchangeRate;
-        if (rate && typeof rate === 'number') {
-          this.rateCache[cacheKey] = {
+        if (rate && typeof rate === 'number' && rate > 0) {
+          const quoteData = {
             rate,
-            source: json.source || `${country.name} Liquidity`,
+            source: json.source || (json.quoteType === 'firm' ? 'Textile Firm Quote' : 'Textile Credit RFQ'),
+            depositAddress: json.depositAddress,
+            quoteId: json.quoteId,
+            grossNgn: json.grossNgn,
+            sivanFeeNgn: json.sivanFeeNgn,
+            netNgn: json.netNgn,
             fetchedAt: Date.now(),
           };
-          return { rate, source: json.source || `${country.name} Liquidity` };
+          this.rateCache[cacheKey] = quoteData;
+          this.rateCache[`${token}_${country.code}`] = quoteData;
+          return quoteData;
         }
       }
     } catch {
-      // fallback
+      // network fallback to cached value if present
     }
 
-    // Dynamic calibrated rate
+    const lastCached = this.rateCache[`${token}_${country.code}`];
+    if (lastCached && lastCached.rate > 0) {
+      return {
+        rate: lastCached.rate,
+        source: lastCached.source,
+        depositAddress: lastCached.depositAddress,
+        quoteId: lastCached.quoteId,
+      };
+    }
+
     const rate = this.getLatestRate(token, country.code);
     const source = `${country.name} Liquidity`;
-    this.rateCache[cacheKey] = { rate, source, fetchedAt: Date.now() };
     return { rate, source };
+  }
+
+  /**
+   * Fetches real-time FX rate for token against corridor destination fiat.
+   */
+  public async fetchLiveRate(
+    token: 'USDC' | 'USDT' | 'cNGN' | 'cUSD',
+    amount: number = 10,
+    countryCode?: string
+  ): Promise<{ rate: number; source: string; depositAddress?: string; quoteId?: string }> {
+    return await this.fetchLiveCashoutQuote(token, amount, countryCode);
+  }
+
+  /**
+   * Submits completed Celo transaction hash to Sivan payment backend to execute fiat payout via NIBSS/Textile.
+   */
+  public async executeCashout(params: {
+    quoteId?: string;
+    celoTxHash: string;
+    token: string;
+    amount: number;
+    bankAccount: string;
+    bankCode: string;
+    senderAddress?: string;
+  }): Promise<{
+    status: string;
+    redemptionId: string;
+    celoTxHash: string;
+    eta?: string;
+  }> {
+    const apiBase = getPaymentApiUrl();
+    const res = await fetch(`${apiBase}/api/v1/cashout/execute`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!res.ok) {
+      const errJson = await res.json().catch(() => ({}));
+      throw new Error(errJson.error || `Server responded with ${res.status}`);
+    }
+
+    return await res.json();
   }
 
   /**
@@ -323,17 +416,37 @@ export class FXQuotesService {
   }
 
   /**
-   * Helper to get calibrated base rate for token in corridor.
+   * Helper to get latest rate for token in corridor.
+   * Prioritizes live rates fetched from the server.
    */
   public getLatestRate(sourceCurrency: 'USDC' | 'USDT' | 'cNGN' | 'cUSD', countryCode: string = 'NG'): number {
     const country = SUPPORTED_COUNTRIES[countryCode] || SUPPORTED_COUNTRIES.GLOBAL;
+    const cachedLive = this.rateCache[`${sourceCurrency}_${country.code}`]?.rate;
+    if (cachedLive && cachedLive > 0) {
+      return cachedLive;
+    }
+
     if (country.code === 'GLOBAL') {
-      if (sourceCurrency === 'cNGN') return 1.0 / 1485.5;
+      if (sourceCurrency === 'cNGN') {
+        const cachedNg = this.rateCache[`USDC_NG`]?.rate;
+        return cachedNg && cachedNg > 0 ? 1.0 / cachedNg : 0;
+      }
       return 1.0;
     }
-    if (sourceCurrency === 'cNGN') return countryCode === 'NG' ? 1.0 : 1.0 / 1485.5;
-    if (sourceCurrency === 'cUSD') return country.defaultUsdRate * 0.998;
-    return country.defaultUsdRate;
+
+    if (sourceCurrency === 'cNGN') {
+      if (countryCode === 'NG') return 1.0;
+      const cachedNg = this.rateCache[`USDC_NG`]?.rate;
+      return cachedNg && cachedNg > 0 ? 1.0 / cachedNg : 0;
+    }
+
+    if (sourceCurrency === 'cUSD') {
+      const usdcCached = this.rateCache[`USDC_${country.code}`]?.rate;
+      if (usdcCached && usdcCached > 0) return usdcCached * 0.998;
+      return 0;
+    }
+
+    return 0;
   }
 
   /**

@@ -68,11 +68,6 @@ class TextileRfqService {
     }
 
     const network = getActiveNetwork();
-    let rate = 1.0;
-    let source = 'Textile Credit RFQ';
-
-    const isFromUsd = fromToken === 'USDT' || fromToken === 'USDC' || fromToken === 'cUSD';
-    const isToUsd = toToken === 'USDT' || toToken === 'USDC' || toToken === 'cUSD';
 
     // 1. Primary: Query secure Sivan Payment backend gateway (keeps API key secure on server)
     const apiBase = getPaymentApiUrl();
@@ -84,12 +79,12 @@ class TextileRfqService {
       });
       const res = await fetch(`${apiBase}/api/v1/cashout/swap-quote?${qParams.toString()}`, {
         headers: { 'Accept': 'application/json' },
-        signal: AbortSignal.timeout(4000),
+        signal: AbortSignal.timeout(8000),
       }).catch(() => null);
 
       if (res && res.ok) {
         const data = await res.json();
-        if (data?.rate && typeof data.rate === 'number') {
+        if (data?.rate && typeof data.rate === 'number' && data.rate > 0) {
           const result: SwapQuoteResult = {
             fromToken,
             toToken,
@@ -101,55 +96,23 @@ class TextileRfqService {
             protocolFee: data.protocolFee || 0,
             minimumReceived: data.minimumReceived || (data.outputAmount * 0.995),
             expiresInSeconds: 60,
-            source: data.source || 'Textile Credit RFQ (Server Authenticated)',
+            source: data.source || 'Textile Credit RFQ (Live Backend)',
             depositAddress: data.depositAddress || network.agentWallet,
           };
           this.quoteCache.set(cacheKey, { quote: result, fetchedAt: Date.now() });
           return result;
         }
       }
-    } catch {
-      // fallback to resilient local pricing below
+    } catch (err) {
+      // ignore
     }
 
-    // 2. Resilient live benchmark if RFQ preview is pending or offline
-    if (rate === 1.0) {
-      if (isFromUsd && toToken === 'cNGN') {
-        // e.g. 1 USDT = 1,485.50 cNGN
-        rate = 1485.50;
-      } else if (fromToken === 'cNGN' && isToUsd) {
-        // e.g. 1 cNGN = 0.000673 USDT
-        rate = 1.0 / 1485.50;
-      } else if (isFromUsd && isToUsd) {
-        // e.g. 1 USDC = 1 USDT
-        rate = 1.0;
-      }
+    // If server RFQ is pending or network was interrupted, check cached live quote
+    if (cached) {
+      return cached.quote;
     }
 
-    const rawOutput = amount * rate;
-    // 0.3% protocol liquidity buffer
-    const protocolFee = rawOutput * 0.003;
-    const outputAmount = rawOutput - protocolFee;
-    // 0.5% max slippage guarantee
-    const minimumReceived = outputAmount * 0.995;
-
-    const result: SwapQuoteResult = {
-      fromToken,
-      toToken,
-      inputAmount: amount,
-      outputAmount,
-      rate,
-      inverseRate: rate > 0 ? 1 / rate : 0,
-      priceImpactBps: 15, // ~0.15% typical on Celo Mainnet
-      protocolFee,
-      minimumReceived,
-      expiresInSeconds: 60,
-      source,
-      depositAddress: network.agentWallet,
-    };
-
-    this.quoteCache.set(cacheKey, { quote: result, fetchedAt: Date.now() });
-    return result;
+    throw new Error(`Live RFQ quote unavailable for ${fromToken} to ${toToken}. Please verify network connection.`);
   }
 }
 

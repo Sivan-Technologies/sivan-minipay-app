@@ -558,7 +558,10 @@ export async function renderCashout(
   };
 
   let currentLiveRate: number = fxQuotesService.getLatestRate('USDC', country.code);
-  let currentRateSource: string = `${country.name} Liquidity`;
+  let currentRateSource: string = '';
+  let currentDepositAddress: string = '';
+  let currentQuoteId: string | undefined = undefined;
+  let rateDebounceTimer: any = null;
 
   const updateQuoteDisplay = async () => {
     const amt = parseFloat(amountEl.value) || 0;
@@ -566,12 +569,33 @@ export async function renderCashout(
     const sym = country.currencySymbol;
 
     const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent();
-    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
+
     if (token === 'cNGN' && isNigeria) {
       rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
-    } else {
-      rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource})`;
+      const grossOutput = amt;
+      const protocolFeeAmount = Math.round(grossOutput * liveFeePercent * 100) / 100;
+      const netOutput = Math.max(0, Math.round((grossOutput - protocolFeeAmount) * 100) / 100);
+
+      if (feeLabelEl) {
+        const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
+        feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
+      }
+      grossEl.textContent = `${sym}${grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      feeEl.textContent = `-${sym}${protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      netEl.textContent = `${sym}${netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      return;
     }
+
+    if (currentLiveRate <= 0) {
+      rateEl.textContent = `Fetching live ${token} market rate...`;
+      grossEl.textContent = `${sym}0.00`;
+      feeEl.textContent = `-${sym}0.00`;
+      netEl.textContent = `${sym}0.00`;
+      return;
+    }
+
+    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
+    rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource || 'Live Liquidity'})`;
 
     if (feeLabelEl) {
       const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
@@ -584,6 +608,7 @@ export async function renderCashout(
 
   const fetchAndRefreshRate = async () => {
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const amt = parseFloat(amountEl.value) || 10;
 
     if (token === 'cNGN' && isNigeria) {
       currentLiveRate = 1.0;
@@ -592,10 +617,27 @@ export async function renderCashout(
       return;
     }
 
-    rateEl.textContent = `Fetching live ${token} rate...`;
-    const res = await fxQuotesService.fetchLiveRate(token, 10, country.code);
-    currentLiveRate = res.rate;
-    currentRateSource = res.source;
+    if (currentLiveRate <= 0) {
+      rateEl.textContent = `Fetching live ${token} market rate...`;
+    }
+
+    try {
+      const res = await fxQuotesService.fetchLiveCashoutQuote(
+        token,
+        amt,
+        country.code,
+        acctEl?.value?.trim() || undefined,
+        bankHiddenEl?.value || undefined
+      );
+      if (res.rate > 0) {
+        currentLiveRate = res.rate;
+        currentRateSource = res.source;
+        if (res.depositAddress) currentDepositAddress = res.depositAddress;
+        if (res.quoteId) currentQuoteId = res.quoteId;
+      }
+    } catch {
+      // retain current cached rate if available
+    }
     void updateQuoteDisplay();
   };
 
@@ -636,6 +678,10 @@ export async function renderCashout(
   amountEl?.addEventListener('input', () => {
     void updateQuoteDisplay();
     void updateP2PQuoteDisplay();
+    clearTimeout(rateDebounceTimer);
+    rateDebounceTimer = setTimeout(() => {
+      void fetchAndRefreshRate();
+    }, 400);
   });
 
   updateBalanceDisplay();
@@ -941,13 +987,34 @@ export async function renderCashout(
     }
 
     const bankName = selectedBankName?.textContent || 'Destination Rail';
+    const bankCode = bankHiddenEl.value || '';
 
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
 
     try {
-      // In Fiat Off-ramp mode, send to Sivan's registered agent wallet for NIBSS/MoMo disbursement.
-      const destinationAddress = '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc';
+      // Dynamic deposit address from live quote or registered settlement wallet
+      let targetDepositAddress = currentDepositAddress;
+      let targetQuoteId = currentQuoteId;
+
+      if (!targetDepositAddress) {
+        try {
+          const freshQuote = await fxQuotesService.fetchLiveCashoutQuote(
+            tok as any,
+            amt,
+            country.code,
+            acctNum,
+            bankCode
+          );
+          if (freshQuote.depositAddress) targetDepositAddress = freshQuote.depositAddress;
+          if (freshQuote.quoteId) targetQuoteId = freshQuote.quoteId;
+          if (freshQuote.rate > 0) currentLiveRate = freshQuote.rate;
+        } catch {
+          // ignore
+        }
+      }
+
+      const destinationAddress = (targetDepositAddress || getActiveNetwork().agentWallet) as `0x${string}`;
 
       const txRes = await miniPayService.sendAttributedTransfer({
         to: destinationAddress,
@@ -962,11 +1029,30 @@ export async function renderCashout(
         return;
       }
 
+      submitBtn.innerHTML = '<span>⚡ Dispatching NIBSS Bank Payout...</span>';
+
+      // Live backend execution: Notify Sivan payment gateway to trigger Textile/Busha NIBSS payout
+      try {
+        await fxQuotesService.executeCashout({
+          quoteId: targetQuoteId,
+          celoTxHash: txRes.txHash,
+          token: tok,
+          amount: amt,
+          bankAccount: acctNum,
+          bankCode: bankCode,
+          senderAddress: state.address || undefined,
+        });
+      } catch (execErr: any) {
+        console.warn('Backend payout execution notification logged:', execErr?.message || execErr);
+      }
+
+      const effectiveQuote = fxQuotesService.getQuote(amt, tok as any, currentLiveRate > 0 ? currentLiveRate : undefined, country.code);
+
       // Record transaction into user's persistent Transaction History ledger
       transactionsService.recordCashout({
         sourceAmount: amt,
         sourceToken: tok,
-        targetAmount: amt,
+        targetAmount: effectiveQuote.netOutput,
         targetCurrency: country.currency,
         targetCurrencySymbol: country.currencySymbol,
         recipientAccount: acctNum,
