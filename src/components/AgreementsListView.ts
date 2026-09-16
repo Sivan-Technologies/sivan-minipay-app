@@ -14,6 +14,8 @@ export function renderAgreementsList(
 
   const render = () => {
     const allAgreements = agreementsService.getAll();
+    const connectedAddress = (miniPayService.getState().address || '').toLowerCase();
+
     const filtered = allAgreements.filter(a => {
       if (filter === 'active') return a.status !== 'released' && a.status !== 'refunded' && a.status !== 'cancelled';
       if (filter === 'disputed') return a.status === 'disputed';
@@ -69,7 +71,7 @@ export function renderAgreementsList(
               + New Deal
             </button>
           </div>
-        ` : filtered.map(agr => renderCard(agr)).join('')}
+        ` : filtered.map(agr => renderCard(agr, connectedAddress)).join('')}
       </div>
     `;
 
@@ -84,18 +86,92 @@ export function renderAgreementsList(
       });
     });
 
-    // Mark as delivered
+    // Mark as delivered (Contractor only)
     container.querySelectorAll('.btn-mark-delivered').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const id = (e.currentTarget as HTMLElement).dataset.id!;
-        const proof = prompt('Enter deliverable link or proof description:') || 'https://celoscan.io';
+        const proof = prompt('Enter deliverable link or proof description (e.g. GitHub PR, Figma link, Celoscan tx):') || 'https://celoscan.io';
         agreementsService.updateStatus(id, 'delivered', proof);
         showToast('📦 Milestone marked as delivered! Client can now inspect & release payment.');
         render();
       });
     });
 
-    // Release payment via wallet cryptographic signature
+    // Unilateral Cancel & Refund for Buyer when overdue
+    container.querySelectorAll('.btn-cancel-refund-overdue').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const btnEl = e.currentTarget as HTMLButtonElement;
+        const id = btnEl.dataset.id!;
+        const agr = agreementsService.getById(id);
+        if (!agr) return;
+
+        const confirmCancel = confirm(
+          `Cancel & Claim Refund for "${agr.title}"?\n\nThe contractor missed the agreed delivery deadline. This will immediately cancel the agreement and release ${agr.amount} ${agr.currency} back to your connected wallet.`
+        );
+        if (!confirmCancel) return;
+
+        btnEl.disabled = true;
+        btnEl.textContent = '⏳ Signing cancellation...';
+
+        try {
+          const signRes = await miniPayService.signRefundAuthorization({
+            agreementId: agr.id,
+            buyerAddress: agr.buyerAddress,
+            amount: agr.amount,
+            currency: agr.currency,
+          });
+
+          if (!signRes.success || !signRes.signature) {
+            showToast(`❌ Cancellation cancelled: ${signRes.error || 'User cancelled'}`);
+            btnEl.disabled = false;
+            btnEl.textContent = '↩️ Cancel & Refund';
+            return;
+          }
+
+          agreementsService.cancelAndRefundOverdue(id, signRes.signature);
+          showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded to your connected wallet!`);
+          render();
+        } catch (err: any) {
+          console.error('Cancel & refund error:', err);
+          showToast(`❌ Error: ${err.message || 'Refund signing failed'}`);
+          btnEl.disabled = false;
+          btnEl.textContent = '↩️ Cancel & Refund';
+        }
+      });
+    });
+
+    // Toggle deadline extension chips
+    container.querySelectorAll('.btn-toggle-extend').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id!;
+        const chipsEl = container.querySelector(`#extend-chips-${id}`) as HTMLElement | null;
+        if (chipsEl) {
+          chipsEl.style.display = chipsEl.style.display === 'none' ? 'flex' : 'none';
+        }
+      });
+    });
+
+    // Execute deadline extension (+12h, +24h, +3 days)
+    container.querySelectorAll('.btn-do-extend').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const chip = e.currentTarget as HTMLElement;
+        const id = chip.dataset.id!;
+        const hours = parseInt(chip.dataset.hours || '24', 10);
+        const agr = agreementsService.getById(id);
+        if (!agr) return;
+
+        const ok = agreementsService.extendDeadline(id, hours);
+        if (ok) {
+          const label = hours < 24 ? `+${hours} hours` : `+${hours / 24} day${hours === 24 ? '' : 's'}`;
+          showToast(`⏱ Delivery deadline extended by ${label}! Contractor notified.`);
+          render();
+        } else {
+          showToast('❌ Failed to extend deadline.');
+        }
+      });
+    });
+
+    // Release payment via wallet cryptographic signature (Buyer only)
     container.querySelectorAll('.btn-release-payment').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const btnEl = e.currentTarget as HTMLButtonElement;
@@ -234,23 +310,35 @@ export function renderAgreementsList(
     });
   };
 
-  const renderCard = (agr: ServiceAgreement) => {
+  const renderCard = (agr: ServiceAgreement, connectedAddress: string) => {
     const isReleased = agr.status === 'released';
     const isRefunded = agr.status === 'refunded' || agr.status === 'cancelled';
     const isDisputed = agr.status === 'disputed';
     const isDelivered = agr.status === 'delivered';
+
+    const buyerAddr = (agr.buyerAddress || '').toLowerCase();
+    const contractorAddr = (agr.contractorAddress || '').toLowerCase();
+
+    // Strict role detection
+    const isContractor = !!connectedAddress && connectedAddress === contractorAddr;
+    const isBuyer = connectedAddress === buyerAddr || !isContractor;
+
+    const countdown = getCountdownStatus(agr.deadlineTimestamp, agr.status);
+    const isOverdue = countdown.badgeClass === 'badge-overdue' && !isDelivered && !isReleased && !isRefunded && !isDisputed;
+
     const formattedAmount = agr.currency === 'cNGN'
       ? `₦${agr.amount.toLocaleString()} cNGN`
       : `${agr.amount} ${agr.currency}`;
 
-    const countdown = getCountdownStatus(agr.deadlineTimestamp, agr.status);
-
     return `
-      <div class="agreement-card" style="margin-bottom: 16px;">
+      <div class="agreement-card ${isOverdue ? 'agreement-card-overdue' : ''}" style="margin-bottom: 16px;">
         <div class="agreement-header">
           <div>
-            <div class="agreement-title">${agr.title}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">ID: ${agr.id}</div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 2px;">
+              <span class="agreement-title">${agr.title}</span>
+              ${isBuyer ? '<span class="badge-role badge-role-buyer">Buyer</span>' : '<span class="badge-role badge-role-contractor">Contractor</span>'}
+            </div>
+            <div style="font-size: 11px; color: var(--text-muted);">ID: ${agr.id}</div>
           </div>
           <span class="agreement-badge ${countdown.badgeClass}">
             ${countdown.icon} ${countdown.label}
@@ -259,20 +347,39 @@ export function renderAgreementsList(
 
         <p class="agreement-desc">${agr.description}</p>
 
+        <!-- Overdue Alert Callout -->
+        ${isOverdue ? `
+          <div class="overdue-alert-box ${isContractor ? 'contractor-overdue-alert' : ''}">
+            <div class="overdue-alert-header">
+              <span class="overdue-alert-icon">${isBuyer ? '⚠️' : '⏳'}</span>
+              <span class="overdue-alert-title">
+                ${isBuyer ? 'Delivery Overdue: Would you like to extend or cancel?' : 'Deadline Expired — Action Required'}
+              </span>
+            </div>
+            <p class="overdue-alert-subtext">
+              ${isBuyer
+                ? 'The contractor did not submit deliverables within the agreed deadline. You have the right to cancel immediately for a full refund back to your connected wallet, or extend the deadline if the contractor needs more time.'
+                : 'The delivery deadline has expired with no deliverable submitted. The client may cancel at any moment. Submit your deliverables immediately to complete this agreement.'}
+            </p>
+          </div>
+        ` : ''}
+
         <div style="background: var(--bg-glass); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px; font-size: 12px;">
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="color: var(--text-muted);">Contractor:</span>
             <span style="font-family: monospace; color: var(--text-primary);">${agr.contractorIdentifier}</span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span style="color: var(--text-muted);">Destination Address:</span>
+            <span style="color: var(--text-muted);">Contractor Address:</span>
             <span style="font-family: monospace; color: var(--text-secondary); font-size: 11px;">
               ${agr.contractorAddress.startsWith('0x') && agr.contractorAddress.length === 42 ? `${agr.contractorAddress.slice(0, 8)}...${agr.contractorAddress.slice(-6)}` : agr.contractorAddress}
             </span>
           </div>
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="color: var(--text-muted);">Delivery Deadline:</span>
-            <span style="color: var(--accent-cyan); font-weight: 500;">⏱ ${formatDeadlineHours(agr.deadlineHours)}</span>
+            <span style="color: ${isOverdue ? '#f87171' : 'var(--accent-cyan)'}; font-weight: 600;">
+              ⏱ ${formatDeadlineHours(agr.deadlineHours)} ${isOverdue ? '(Expired)' : ''}
+            </span>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border-subtle);">
             <span style="color: var(--text-muted);">Settlement Net:</span>
@@ -296,7 +403,7 @@ export function renderAgreementsList(
           <div style="font-size: 11px; color: var(--accent-cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
             <span>📎 Deliverable:</span>
             <a href="${agr.deliverableProofUrl}" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">
-              View Proof Link
+              View Deliverable Proof Link ↗
             </a>
           </div>
         ` : ''}
@@ -331,7 +438,7 @@ export function renderAgreementsList(
         ` : isRefunded ? `
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
-              ↩️ Refunded back to client<br/>
+              ↩️ Refunded back to buyer's wallet<br/>
               ${agr.refundTxHash ? `
                 <span style="font-size: 10px; color: var(--text-secondary); font-family: monospace;" title="${agr.refundTxHash}">
                   Sig: ${agr.refundTxHash.slice(0, 14)}...
@@ -342,29 +449,98 @@ export function renderAgreementsList(
               Wallet Balance 💼
             </button>
           </div>
-        ` : `
+        ` : isOverdue ? `
+          <!-- Overdue Actions: strictly separated by role -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
-            <!-- Primary Actions Row -->
+            ${isBuyer ? `
+              <!-- Buyer Overdue Actions -->
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-danger-refund btn-cancel-refund-overdue" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 11px;" title="Cancel agreement and claim instant refund">
+                  <span>↩️ Cancel & Refund</span>
+                </button>
+                <button class="btn-extend-trigger btn-toggle-extend" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 11px;" title="Extend deadline">
+                  <span>⏱ Extend Deadline</span>
+                </button>
+              </div>
+
+              <!-- One-tap Deadline Extension Chips -->
+              <div class="extend-chips-container" id="extend-chips-${agr.id}" style="display: none;">
+                <span style="font-size: 10px; color: var(--text-muted); align-self: center; margin-right: 4px; font-weight: 600;">Add:</span>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="12">+12 Hours</button>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="24">+24 Hours</button>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="72">+3 Days</button>
+              </div>
+
+              <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px;">
+                  🔗 Share
+                </button>
+                ${!isDisputed ? `
+                  <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                    ⚠️ Dispute
+                  </button>
+                ` : ''}
+              </div>
+            ` : `
+              <!-- Contractor Overdue Actions -->
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;" title="Submit deliverable now">
+                  <span>📤 Submit Deliverable Now</span>
+                </button>
+                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 12px 14px; font-size: 12px;">
+                  <span>🔗 Share</span>
+                </button>
+              </div>
+            `}
+          </div>
+        ` : `
+          <!-- Normal In-Progress / Delivered / Disputed Actions: strictly separated by role -->
+          <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; gap: 8px; align-items: center;">
               <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 10px 14px; font-size: 12px;" title="Share agreement link">
                 <span>🔗 Share</span>
               </button>
-              ${isDelivered ? `
-                <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
-                  <span>⚡ Release ${formattedAmount}</span>
-                </button>
-              ` : isDisputed ? `
-                <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
-                  <span>⚡ Resolve & Release Payout</span>
-                </button>
+
+              ${isBuyer ? `
+                <!-- Buyer Normal View -->
+                ${isDelivered ? `
+                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
+                    <span>⚡ Release ${formattedAmount}</span>
+                  </button>
+                ` : isDisputed ? `
+                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
+                    <span>⚡ Resolve & Release Payout</span>
+                  </button>
+                ` : `
+                  <button class="btn-secondary btn-toggle-extend" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
+                    <span>⏱ Extend Deadline</span>
+                  </button>
+                `}
               ` : `
-                <button class="btn-secondary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
-                  <span>📤 Mark Deliverable Ready</span>
-                </button>
+                <!-- Contractor Normal View -->
+                ${isDelivered ? `
+                  <div style="flex: 1; font-size: 11px; color: var(--accent-cyan); padding: 9px 12px; background: rgba(6, 182, 212, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(6, 182, 212, 0.25); text-align: center;">
+                    📦 Deliverable Submitted — Awaiting client release
+                  </div>
+                ` : `
+                  <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
+                    <span>📤 Submit Deliverable</span>
+                  </button>
+                `}
               `}
             </div>
 
-            <!-- Resolution / Secondary Row -->
+            <!-- One-tap Deadline Extension Chips (for Buyer when toggled) -->
+            ${isBuyer && !isDelivered ? `
+              <div class="extend-chips-container" id="extend-chips-${agr.id}" style="display: none;">
+                <span style="font-size: 10px; color: var(--text-muted); align-self: center; margin-right: 4px; font-weight: 600;">Add:</span>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="12">+12 Hours</button>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="24">+24 Hours</button>
+                <button class="extend-chip-btn btn-do-extend" data-id="${agr.id}" data-hours="72">+3 Days</button>
+              </div>
+            ` : ''}
+
+            <!-- Secondary Row -->
             <div style="display: flex; gap: 8px; justify-content: flex-end;">
               ${!isDisputed ? `
                 <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
@@ -383,3 +559,4 @@ export function renderAgreementsList(
 
   render();
 }
+

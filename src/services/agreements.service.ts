@@ -189,6 +189,51 @@ class AgreementsService {
     return this.updateStatus(id, 'refunded', undefined, undefined, undefined, refundSignature);
   }
 
+  public extendDeadline(id: string, additionalHours: number): boolean {
+    const agreement = this.agreements.find(a => a.id === id);
+    if (!agreement) return false;
+
+    const baseTimestamp = Math.max(Date.now(), agreement.deadlineTimestamp || Date.now());
+    const addedMs = Math.max(1, additionalHours) * 3600 * 1000;
+    agreement.deadlineTimestamp = baseTimestamp + addedMs;
+    agreement.deadlineHours = (agreement.deadlineHours || 0) + additionalHours;
+
+    if (agreement.status !== 'released' && agreement.status !== 'refunded') {
+      agreement.status = 'funded';
+    }
+
+    this.saveAgreements();
+
+    // Sync extension to backend gateway
+    fetch(`${this.apiBase}/api/agreements/${agreement.id}/extend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ additionalHours }),
+    }).catch(err => console.warn('[AgreementsService.extendDeadline] backend sync note:', err));
+
+    return true;
+  }
+
+  public cancelAndRefundOverdue(id: string, refundSignature?: string): boolean {
+    const agreement = this.agreements.find(a => a.id === id);
+    if (!agreement) return false;
+
+    agreement.status = 'refunded';
+    if (refundSignature) {
+      agreement.refundTxHash = refundSignature;
+    }
+
+    this.saveAgreements();
+
+    // Notify backend cancel endpoint to release hold and mark cancelled
+    fetch(`${this.apiBase}/api/agreements/${agreement.id}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(err => console.warn('[AgreementsService.cancelAndRefundOverdue] backend cancel note:', err));
+
+    return true;
+  }
+
   public subscribe(fn: (agreements: ServiceAgreement[]) => void) {
     this.listeners.push(fn);
     fn(this.agreements);
