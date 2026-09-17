@@ -4,6 +4,7 @@ import { miniPayService } from '../services/minipay.service';
 import { openShareModal } from './ShareAgreementModal';
 import { getCountdownStatus, formatDeadlineHours } from '../utils/deadline';
 import { getNetworkExplorer } from '../utils/explorers';
+import { showConfirmModal, showPromptModal } from './ConfirmModal';
 
 export function renderAgreementsList(
   container: HTMLElement,
@@ -88,10 +89,19 @@ export function renderAgreementsList(
 
     // Mark as delivered (Contractor only)
     container.querySelectorAll('.btn-mark-delivered').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', async (e) => {
         const id = (e.currentTarget as HTMLElement).dataset.id!;
-        const proof = prompt('Enter deliverable link or proof description (e.g. GitHub PR, Figma link, Celoscan tx):') || 'https://celoscan.io';
-        agreementsService.updateStatus(id, 'delivered', proof);
+        const agr = agreementsService.getById(id);
+        const proof = await showPromptModal({
+          title: 'Mark Milestone as Delivered',
+          subtitle: `Deal: "${agr?.title || 'Service Agreement'}"`,
+          placeholder: 'Enter deliverable link or proof description (e.g. GitHub PR, Figma link, Celoscan tx)...',
+          defaultValue: 'https://',
+          confirmText: 'Submit Deliverable',
+          cancelText: 'Cancel',
+        });
+        if (!proof || !proof.trim() || proof.trim() === 'https://') return;
+        agreementsService.updateStatus(id, 'delivered', proof.trim());
         showToast('📦 Milestone marked as delivered! Client can now inspect & release payment.');
         render();
       });
@@ -105,10 +115,17 @@ export function renderAgreementsList(
         const agr = agreementsService.getById(id);
         if (!agr) return;
 
-        const confirmCancel = confirm(
-          `Cancel & Claim Refund for "${agr.title}"?\n\nThe contractor missed the agreed delivery deadline. This will immediately cancel the agreement and release ${agr.amount} ${agr.currency} back to your connected wallet.`
-        );
-        if (!confirmCancel) return;
+        const confirmed = await showConfirmModal({
+          title: 'Cancel & Claim Refund',
+          subtitle: `Deal: "${agr.title}"`,
+          message: `The contractor missed the agreed delivery deadline. This will immediately cancel the agreement and release ${agr.amount} ${agr.currency} back to your connected wallet.`,
+          badgeText: `Refund: ${agr.amount} ${agr.currency}`,
+          badgeColor: 'rgba(239, 68, 68, 0.2)',
+          confirmText: 'Confirm & Claim Refund',
+          cancelText: 'Keep Agreement',
+          variant: 'danger',
+        });
+        if (!confirmed) return;
 
         btnEl.disabled = true;
         btnEl.textContent = '⏳ Signing cancellation...';
@@ -218,11 +235,15 @@ export function renderAgreementsList(
         const agr = agreementsService.getById(id);
         if (!agr) return;
 
-        const reason = prompt('Please describe why deliverables do not meet agreement criteria:');
-        if (!reason || !reason.trim()) {
-          showToast('⚠️ Dispute filing requires a valid explanation.');
-          return;
-        }
+        const reason = await showPromptModal({
+          title: 'Raise Formal Dispute',
+          subtitle: `Deal: "${agr.title}"`,
+          placeholder: 'Please describe why deliverables do not meet agreement criteria...',
+          multiline: true,
+          confirmText: 'Submit Dispute',
+          cancelText: 'Cancel',
+        });
+        if (!reason || !reason.trim()) return;
 
         btnEl.disabled = true;
         btnEl.textContent = '⏳ Signing dispute...';
@@ -260,8 +281,17 @@ export function renderAgreementsList(
         const agr = agreementsService.getById(id);
         if (!agr) return;
 
-        const confirmRefund = confirm(`Confirm mutual refund of ${agr.amount} ${agr.currency} back to client? This returns locked funds to buyer.`);
-        if (!confirmRefund) return;
+        const confirmed = await showConfirmModal({
+          title: 'Authorize Client Refund',
+          subtitle: `Deal: "${agr.title}"`,
+          message: `Confirm mutual refund of ${agr.amount} ${agr.currency} back to the client. This immediately returns locked funds to the buyer wallet.`,
+          badgeText: `${agr.amount} ${agr.currency}`,
+          badgeColor: 'rgba(245, 158, 11, 0.2)',
+          confirmText: 'Confirm Refund',
+          cancelText: 'Cancel',
+          variant: 'warning',
+        });
+        if (!confirmed) return;
 
         btnEl.disabled = true;
         btnEl.textContent = '⏳ Signing refund...';
