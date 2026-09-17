@@ -2,73 +2,57 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/mcp",
-      "destination": "https://payment.sivantech.online/mcp"
+      "src": "/mcp",
+      "dest": "https://payment.sivantech.online/mcp"
     },
     {
-      "source": "/api/v1/agent/invoke",
-      "destination": "https://payment.sivantech.online/api/v1/agent/invoke"
+      "src": "/api/v1/agent/invoke",
+      "dest": "https://payment.sivantech.online/api/v1/agent/invoke"
     },
     {
-      "source": "/api/v1/agent/capabilities",
-      "destination": "https://payment.sivantech.online/api/v1/agent/capabilities"
+      "src": "/api/v1/agent/capabilities",
+      "dest": "https://payment.sivantech.online/api/v1/agent/capabilities"
     },
     {
-      "source": "/api/v1/developer/transfers",
-      "destination": "https://payment.sivantech.online/api/v1/developer/transfers"
+      "src": "/api/v1/developer/transfers",
+      "dest": "https://payment.sivantech.online/api/v1/developer/transfers"
     },
     {
-      "source": "/api/v1/developer/capabilities",
-      "destination": "https://payment.sivantech.online/api/v1/developer/capabilities"
+      "src": "/api/v1/developer/capabilities",
+      "dest": "https://payment.sivantech.online/api/v1/developer/capabilities"
     },
     {
-      "source": "/api/v1/cashout/resolve-account",
-      "destination": "https://payment.sivantech.online/api/v1/cashout/resolve-account"
+      "src": "/api/v1/cashout/resolve-account",
+      "dest": "https://payment.sivantech.online/api/v1/cashout/resolve-account"
     },
     {
-      "source": "/api/v1/cashout/banks",
-      "destination": "https://payment.sivantech.online/api/v1/cashout/banks"
+      "src": "/api/v1/cashout/banks",
+      "dest": "https://payment.sivantech.online/api/v1/cashout/banks"
     },
     {
-      "source": "/api/v1/cashout/transfer-fee",
-      "destination": "https://payment.sivantech.online/api/v1/cashout/transfer-fee"
+      "src": "/api/v1/cashout/transfer-fee",
+      "dest": "https://payment.sivantech.online/api/v1/cashout/transfer-fee"
     },
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://payment.sivantech.online/api/v1/:path*"
+      "src": "/api/v1/(.*)",
+      "dest": "https://payment.sivantech.online/api/v1/$1"
     },
     {
-      "source": "/api/:path*",
-      "destination": "https://payment.sivantech.online/api/:path*"
-    }
-  ],
-  "headers": [
+      "src": "/api/(.*)",
+      "dest": "https://payment.sivantech.online/api/$1"
+    },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "ALLOWALL"
-        },
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, OPTIONS, HEAD, PUT, DELETE"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, x-api-key, x-idempotency-key"
-        }
-      ]
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
