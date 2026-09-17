@@ -50,7 +50,7 @@ export class FXQuotesService {
    * Dynamically fetches live off-ramp fee policy from Sivan Payment API.
    * Zero hardcoded fees.
    */
-  public async fetchLiveOfframpFeePercent(): Promise<number> {
+  public async fetchLiveOfframpFeePercent(currency: string = 'NGN'): Promise<number> {
     const now = Date.now();
     if (this.dynamicOfframpFeePercent !== null && now - this.offrampFeeFetchedAt < this.CACHE_TTL_MS) {
       return this.dynamicOfframpFeePercent;
@@ -58,14 +58,14 @@ export class FXQuotesService {
 
     const apiBase = getPaymentApiUrl();
     try {
-      const res = await fetch(`${apiBase}/api/fees/offramp`, {
+      const res = await fetch(`${apiBase}/api/fees/offramp?currency=${encodeURIComponent(currency)}`, {
         headers: { 'x-sivan-target-service': 'payments' },
         signal: AbortSignal.timeout(4500),
       });
       if (res.ok) {
         const json = await res.json();
         const pct = parseFloat(json?.data?.percent);
-        if (Number.isFinite(pct) && pct > 0) {
+        if (Number.isFinite(pct) && pct >= 0) {
           this.dynamicOfframpFeePercent = pct / 100;
           this.offrampFeeFetchedAt = now;
           return this.dynamicOfframpFeePercent;
@@ -166,19 +166,6 @@ export class FXQuotesService {
     // Global Corridor: Pure 1:1 USD Parity
     if (country.code === 'GLOBAL') {
       return { rate: 1.0, source: '1:1 USD Parity' };
-    }
-
-    // Nigeria cNGN Parity
-    if (token === 'cNGN' && country.code === 'NG') {
-      const gross = amount;
-      const fee = Math.round(gross * 0.01 * 100) / 100;
-      return {
-        rate: 1.0,
-        source: 'cNGN 1:1 Parity',
-        grossNgn: gross,
-        sivanFeeNgn: fee,
-        netNgn: Math.round((gross - fee) * 100) / 100,
-      };
     }
 
     const cacheKey = `${token}_${country.code}_${amount}`;

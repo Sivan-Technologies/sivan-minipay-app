@@ -164,7 +164,7 @@ export async function renderCashout(
             <span id="q-gross">${country.currencySymbol}0.00</span>
           </div>
           <div class="quote-row">
-            <span id="q-fee-label">Sivan Protocol Fee (1%):</span>
+            <span id="q-fee-label">Sivan Off-Ramp Fee (0.1%):</span>
             <span id="q-fee">-${country.currencySymbol}0.00</span>
           </div>
           <div class="quote-row">
@@ -572,6 +572,9 @@ export async function renderCashout(
   let currentRateSource: string = isNigeria ? 'Parity' : '';
   let currentDepositAddress: string = '';
   let currentQuoteId: string | undefined = undefined;
+  let currentGrossNgn: number | undefined = undefined;
+  let currentSivanFeeNgn: number | undefined = undefined;
+  let currentNetNgn: number | undefined = undefined;
   let rateDebounceTimer: any = null;
 
   const updateQuoteDisplay = async () => {
@@ -579,17 +582,21 @@ export async function renderCashout(
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
     const sym = country.currencySymbol;
 
-    const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent();
+    const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent('NGN');
 
     if (token === 'cNGN' && isNigeria) {
       rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
       const grossOutput = amt;
-      const protocolFeeAmount = Math.round(grossOutput * liveFeePercent * 100) / 100;
-      const netOutput = Math.max(0, Math.round((grossOutput - protocolFeeAmount) * 100) / 100);
+      let protocolFeeAmount = currentSivanFeeNgn !== undefined 
+        ? currentSivanFeeNgn 
+        : Math.round(grossOutput * liveFeePercent * 100) / 100;
+      let netOutput = currentNetNgn !== undefined 
+        ? currentNetNgn 
+        : Math.max(0, Math.round((grossOutput - protocolFeeAmount) * 100) / 100);
 
       if (feeLabelEl) {
         const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
-        feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
+        feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
       }
       grossEl.textContent = `${sym}${grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
       feeEl.textContent = `-${sym}${protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
@@ -610,25 +617,22 @@ export async function renderCashout(
 
     if (feeLabelEl) {
       const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
-      feeLabelEl.textContent = `Sivan Protocol Fee (${pctLabel}%):`;
+      feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
     }
-    grossEl.textContent = `${sym}${quote.grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    feeEl.textContent = `-${sym}${quote.protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    netEl.textContent = `${sym}${quote.netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    const grossDisplay = currentGrossNgn ?? quote.grossOutput;
+    const feeDisplay = currentSivanFeeNgn ?? quote.protocolFeeAmount;
+    const netDisplay = currentNetNgn ?? quote.netOutput;
+
+    grossEl.textContent = `${sym}${grossDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    feeEl.textContent = `-${sym}${feeDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    netEl.textContent = `${sym}${netDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   };
 
   const fetchAndRefreshRate = async () => {
     const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const amt = parseFloat(amountEl.value) || 10;
+    const amt = parseFloat(amountEl.value) || (token === 'cNGN' ? 5000 : 10);
 
-    if (token === 'cNGN' && isNigeria) {
-      currentLiveRate = 1.0;
-      currentRateSource = 'Parity';
-      void updateQuoteDisplay();
-      return;
-    }
-
-    if (currentLiveRate <= 0) {
+    if (currentLiveRate <= 0 && token !== 'cNGN') {
       rateEl.textContent = `Fetching live ${token} market rate...`;
     }
 
@@ -645,6 +649,9 @@ export async function renderCashout(
         currentRateSource = res.source;
         if (res.depositAddress) currentDepositAddress = res.depositAddress;
         if (res.quoteId) currentQuoteId = res.quoteId;
+        if (res.grossNgn !== undefined) currentGrossNgn = res.grossNgn;
+        if (res.sivanFeeNgn !== undefined) currentSivanFeeNgn = res.sivanFeeNgn;
+        if (res.netNgn !== undefined) currentNetNgn = res.netNgn;
       }
     } catch {
       // retain current cached rate if available
