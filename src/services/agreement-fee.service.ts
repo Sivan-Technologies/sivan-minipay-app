@@ -158,7 +158,7 @@ class AgreementFeeService {
           formula = `Admin Rate (${pct}% + ₦${fixed})`;
         }
       } else {
-        const usdcPct = (limits.usdcFeePercent ?? 3.0) / 100;
+        const usdcPct = (limits.usdcFeePercent ?? 1.0) / 100;
         const usdcFixed = limits.usdcFeeFixed ?? 0.50;
         fee = parseFloat((amount * usdcPct + usdcFixed).toFixed(2));
         formula = `Admin Rate (${(usdcPct * 100).toFixed(1)}% + $${usdcFixed.toFixed(2)})`;
@@ -178,13 +178,13 @@ class AgreementFeeService {
     }
 
     // 3. Fallback to default calculation if completely disconnected
-    const fallbackFee = Math.round(amount * 0.03 * 100) / 100;
+    const fallbackFee = parseFloat((amount * 0.01 + 0.50).toFixed(2));
     return {
       amount,
       currency,
       protocolFee: fallbackFee,
-      netAmount: Math.max(0, amount - fallbackFee),
-      feeFormula: 'Dynamic Admin Schedule',
+      netAmount: Math.max(0, parseFloat((amount - fallbackFee).toFixed(2))),
+      feeFormula: 'Dynamic Admin Schedule (1.0% + $0.50)',
       source: 'sivan_offline_fallback',
     };
   }
