@@ -2,6 +2,7 @@ import type { ServiceAgreement, AgreementStatus } from '../types/minipay.types';
 import { CELO_CONFIG } from '../config/celo.config';
 import { agreementFeeService } from './agreement-fee.service';
 import { getPaymentApiUrl } from '../config/api.config';
+import { miniPayService } from './minipay.service';
 
 const STORAGE_KEY = 'sivan_minipay_agreements';
 
@@ -18,8 +19,14 @@ class AgreementsService {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
         const parsed: ServiceAgreement[] = JSON.parse(stored);
-        // Clean out any legacy mock agreements from previous testing
-        this.agreements = parsed.filter(a => !a.id.startsWith('agr_celo_01') && !a.id.startsWith('agr_celo_02') && !a.id.startsWith('agr_celo_03'));
+        // Clean out any legacy mock or orphaned agreements from previous testing without valid identity
+        this.agreements = parsed.filter(a =>
+          !a.id.startsWith('agr_celo_01') &&
+          !a.id.startsWith('agr_celo_02') &&
+          !a.id.startsWith('agr_celo_03') &&
+          a.id !== 'agr_1789488316581' &&
+          a.id !== 'agr_1789508144567'
+        );
         this.saveAgreements();
       } else {
         this.agreements = [];
@@ -106,11 +113,14 @@ class AgreementsService {
 
   public async syncAgreementToBackend(agreement: ServiceAgreement): Promise<boolean> {
     // buyerAddress must be the real connected wallet address — never a placeholder or mock.
-    // If somehow missing (legacy import), log a warning and skip the sync rather than
-    // poisoning the backend with fake identity data.
     if (!agreement.buyerAddress || agreement.buyerAddress.length < 10) {
-      console.warn('[AgreementsService] Refusing to sync agreement without a real buyerAddress:', agreement.id);
-      return false;
+      const connAddr = miniPayService.getState().address;
+      if (connAddr && connAddr.startsWith('0x')) {
+        agreement.buyerAddress = connAddr;
+        this.saveAgreements();
+      } else {
+        return false;
+      }
     }
 
     try {
@@ -333,6 +343,17 @@ class AgreementsService {
     for (const agr of this.agreements) {
       if (agr.status === 'released' && agr.releaseTxHash && agr.releaseTxHash.length === 66) continue;
       if (agr.status === 'refunded' && agr.refundTxHash && agr.refundTxHash.length === 66) continue;
+
+      // Auto-heal missing buyerAddress from connected wallet
+      if ((!agr.buyerAddress || agr.buyerAddress.length < 10) && walletAddress && walletAddress.startsWith('0x')) {
+        agr.buyerAddress = walletAddress;
+        hasChanges = true;
+      }
+
+      // If still missing buyerAddress, skip backend polling to prevent 404 loops
+      if (!agr.buyerAddress || agr.buyerAddress.length < 10) {
+        continue;
+      }
 
       try {
         const res = await fetch(`${this.apiBase}/api/agreements/${encodeURIComponent(agr.id)}`);

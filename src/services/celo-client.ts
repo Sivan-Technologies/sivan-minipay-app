@@ -96,8 +96,7 @@ export async function fetchTokenBalances(address: string | null): Promise<TokenB
         icon: token.icon,
         usdValue: usdVal,
       });
-    } catch (err) {
-      console.warn(`Error reading live balance on Celo for ${token.symbol}:`, err);
+    } catch {
       results.push({
         symbol: sym,
         name: token.name,
