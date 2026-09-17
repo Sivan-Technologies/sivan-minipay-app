@@ -25,19 +25,23 @@
     },
     {
       "source": "/api/v1/cashout/resolve-account",
-      "destination": "/api/resolve-account"
+      "destination": "https://payment.sivantech.online/api/v1/cashout/resolve-account"
     },
     {
       "source": "/api/v1/cashout/banks",
-      "destination": "/api/banks"
+      "destination": "https://payment.sivantech.online/api/v1/cashout/banks"
     },
     {
       "source": "/api/v1/cashout/transfer-fee",
-      "destination": "/api/transfer-fee"
+      "destination": "https://payment.sivantech.online/api/v1/cashout/transfer-fee"
     },
     {
-      "source": "/((?!api|mcp).*)",
-      "destination": "/index.html"
+      "source": "/api/v1/:path*",
+      "destination": "https://payment.sivantech.online/api/v1/:path*"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://payment.sivantech.online/api/:path*"
     }
   ],
   "headers": [
