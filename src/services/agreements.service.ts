@@ -283,6 +283,151 @@ class AgreementsService {
     return { success: true, refundTxHash: agreement.refundTxHash };
   }
 
+  public async releaseAgreement(id: string, releaseSignature?: string): Promise<{ success: boolean; releaseTxHash?: string }> {
+    const agreement = this.agreements.find(a => a.id === id);
+    if (!agreement) return { success: false };
+
+    agreement.status = 'released';
+    if (releaseSignature) {
+      agreement.releaseTxHash = releaseSignature;
+    }
+    this.saveAgreements();
+
+    try {
+      const res = await fetch(`${this.apiBase}/api/agreements/${agreement.id}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: releaseSignature,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.releaseTxHash) {
+          agreement.releaseTxHash = data.releaseTxHash;
+          this.saveAgreements();
+          return { success: true, releaseTxHash: data.releaseTxHash };
+        }
+      }
+    } catch (err) {
+      console.warn('[AgreementsService.releaseAgreement] backend release note:', err);
+    }
+
+    return { success: true, releaseTxHash: agreement.releaseTxHash };
+  }
+
+  private pollInterval: any = null;
+
+  public startAutoSync(getConnectedAddress?: () => string | null) {
+    if (this.pollInterval) return;
+    this.syncWithBackend(getConnectedAddress ? getConnectedAddress() || undefined : undefined);
+    this.pollInterval = setInterval(() => {
+      this.syncWithBackend(getConnectedAddress ? getConnectedAddress() || undefined : undefined);
+    }, 4000);
+  }
+
+  public async syncWithBackend(walletAddress?: string): Promise<void> {
+    let hasChanges = false;
+
+    // 1. Sync live status for each existing active agreement in memory
+    for (const agr of this.agreements) {
+      if (agr.status === 'released' && agr.releaseTxHash && agr.releaseTxHash.length === 66) continue;
+      if (agr.status === 'refunded' && agr.refundTxHash && agr.refundTxHash.length === 66) continue;
+
+      try {
+        const res = await fetch(`${this.apiBase}/api/agreements/${encodeURIComponent(agr.id)}`);
+        if (res.ok) {
+          const backendData = await res.json();
+          const backendStatus: string = (backendData.status || '').toLowerCase();
+
+          let mappedStatus: AgreementStatus = agr.status;
+          if (backendStatus === 'delivered') mappedStatus = 'delivered';
+          else if (backendStatus === 'released') mappedStatus = 'released';
+          else if (backendStatus === 'cancelled' || backendStatus === 'refunded') mappedStatus = 'refunded';
+          else if (backendStatus === 'disputed') mappedStatus = 'disputed';
+          else if (backendStatus === 'funded' || backendStatus === 'in_delivery') mappedStatus = 'funded';
+
+          if (mappedStatus !== agr.status) {
+            agr.status = mappedStatus;
+            hasChanges = true;
+          }
+
+          if (backendData.deliverableProofUrl && backendData.deliverableProofUrl !== agr.deliverableProofUrl) {
+            agr.deliverableProofUrl = backendData.deliverableProofUrl;
+            hasChanges = true;
+          }
+          if (backendData.releaseTxHash && backendData.releaseTxHash !== agr.releaseTxHash) {
+            agr.releaseTxHash = backendData.releaseTxHash;
+            hasChanges = true;
+          }
+          if (backendData.refundTxHash && backendData.refundTxHash !== agr.refundTxHash) {
+            agr.refundTxHash = backendData.refundTxHash;
+            hasChanges = true;
+          }
+          if (backendData.disputeReason && backendData.disputeReason !== agr.disputeReason) {
+            agr.disputeReason = backendData.disputeReason;
+            hasChanges = true;
+          }
+        }
+      } catch (err) {
+        // Silently skip if network blip
+      }
+    }
+
+    // 2. Discover counterparty agreements from backend if wallet address is connected
+    if (walletAddress && walletAddress.startsWith('0x')) {
+      try {
+        const res = await fetch(`${this.apiBase}/api/agreements?userId=${encodeURIComponent(walletAddress)}`);
+        if (res.ok) {
+          const list = await res.json();
+          if (Array.isArray(list)) {
+            for (const item of list) {
+              const existing = this.agreements.find(a => a.id === item.id);
+              if (!existing) {
+                const st = String(item.status || 'funded').toLowerCase();
+                const mappedStatus: AgreementStatus =
+                  st === 'delivered' ? 'delivered' :
+                  st === 'released' ? 'released' :
+                  st === 'cancelled' || st === 'refunded' ? 'refunded' :
+                  st === 'disputed' ? 'disputed' : 'funded';
+
+                this.agreements.unshift({
+                  id: item.id,
+                  title: item.title,
+                  description: item.description || '',
+                  contractorIdentifier: item.sellerUserId || item.sellerWalletAddress || 'Contractor',
+                  contractorAddress: item.sellerWalletAddress || item.sellerUserId || '',
+                  buyerAddress: item.buyerWalletAddress || item.buyerUserId || walletAddress,
+                  amount: item.amountUsdc || item.amount || 0,
+                  currency: item.currency || 'USDC',
+                  protocolFee: item.feeAmountUsdc || 0,
+                  netAmount: item.sellerNetAmountUsdc || item.amountUsdc || 0,
+                  status: mappedStatus,
+                  createdAt: item.createdAt || new Date().toISOString(),
+                  deadlineHours: (item.deadlineDays || 1) * 24,
+                  deadlineTimestamp: item.deliveryDueAt ? new Date(item.deliveryDueAt).getTime() : Date.now() + (item.deadlineDays || 1) * 86400000,
+                  fundingTxHash: item.fundingTxHash || undefined,
+                  releaseTxHash: item.releaseTxHash || undefined,
+                  refundTxHash: item.refundTxHash || undefined,
+                  deliverableProofUrl: item.deliverableProofUrl || undefined,
+                  disputeReason: item.disputeReason || undefined,
+                  attributionTag: item.attributionTag || CELO_CONFIG.attributionTag,
+                });
+                hasChanges = true;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // Silently skip if network blip
+      }
+    }
+
+    if (hasChanges) {
+      this.saveAgreements();
+    }
+  }
+
   public subscribe(fn: (agreements: ServiceAgreement[]) => void) {
     this.listeners.push(fn);
     fn(this.agreements);

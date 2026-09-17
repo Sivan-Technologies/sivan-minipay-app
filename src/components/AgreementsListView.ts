@@ -13,6 +13,15 @@ export function renderAgreementsList(
 ) {
   let filter: 'all' | 'active' | 'disputed' | 'released' | 'refunded' = 'all';
 
+  // Start background real-time sync with backend (polls every 4 seconds)
+  agreementsService.startAutoSync(() => miniPayService.getState().address);
+  agreementsService.subscribe(() => {
+    // Only re-render if container is still in DOM
+    if (document.body.contains(container)) {
+      render();
+    }
+  });
+
   const render = () => {
     const allAgreements = agreementsService.getAll();
     const connectedAddress = (miniPayService.getState().address || '').toLowerCase();
@@ -220,8 +229,13 @@ export function renderAgreementsList(
             return;
           }
 
-          agreementsService.updateStatus(id, 'released', undefined, signRes.signature);
-          showToast(`🎉 Milestone payment signed & authorized by client! Sig: ${signRes.signature.slice(0, 10)}...`);
+          btnEl.textContent = '⏳ Processing release...';
+          const relRes = await agreementsService.releaseAgreement(id, signRes.signature);
+          if (relRes?.releaseTxHash && relRes.releaseTxHash.length === 66) {
+            showToast(`🎉 Milestone payment released on-chain to contractor!`);
+          } else {
+            showToast(`🎉 Milestone payment signed & authorized by client! Sig: ${signRes.signature.slice(0, 10)}...`);
+          }
           render();
         } catch (err: any) {
           console.error('Payment release error:', err);
@@ -401,6 +415,29 @@ export function renderAgreementsList(
                 ? 'The contractor did not submit deliverables within the agreed deadline. You have the right to cancel immediately for a full refund back to your connected wallet, or extend the deadline if the contractor needs more time.'
                 : 'The delivery deadline has expired with no deliverable submitted. The client may cancel at any moment. Submit your deliverables immediately to complete this agreement.'}
             </p>
+          </div>
+        ` : ''}
+
+        <!-- Deliverables Submitted Alert Callout -->
+        ${isDelivered ? `
+          <div style="margin-bottom: 12px; padding: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: var(--radius-sm);">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+              <span style="font-size: 16px;">📦</span>
+              <span style="font-weight: 700; color: #34d399; font-size: 13px;">
+                ${isBuyer ? 'Deliverables Submitted — Review & Release Payout' : 'Deliverables Submitted'}
+              </span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-secondary); margin: 0 0 8px 0; line-height: 1.4;">
+              ${isBuyer
+                ? 'The contractor has completed and submitted the milestone. Inspect the deliverable proof below and click "Release" to approve payment to the contractor.'
+                : 'You have submitted deliverables for this agreement. Waiting for the client to review and release funds.'}
+            </p>
+            ${agr.deliverableProofUrl ? `
+              <a href="${agr.deliverableProofUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent-cyan); font-weight: 600; text-decoration: underline; background: rgba(6, 182, 212, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(6, 182, 212, 0.25);">
+                <span>📎 Deliverable Link:</span>
+                <span style="font-family: monospace;">${agr.deliverableProofUrl.length > 36 ? agr.deliverableProofUrl.slice(0, 36) + '...' : agr.deliverableProofUrl} ↗</span>
+              </a>
+            ` : ''}
           </div>
         ` : ''}
 
