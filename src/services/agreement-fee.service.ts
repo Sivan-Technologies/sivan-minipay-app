@@ -132,7 +132,7 @@ class AgreementFeeService {
       }
     }
 
-    // 2. Evaluate from dynamically fetched admin settings if direct quote endpoint timed out
+    // 2. Evaluate from dynamically fetched admin settings from the backend platform settings
     const limits = this.adminLimits || (await this.fetchDynamicLimits());
     if (limits) {
       const isNaira = currency === 'cNGN' || currency === 'NGN' || currency === 'NAIRA';
@@ -145,23 +145,23 @@ class AgreementFeeService {
           if (tier) {
             if (tier.fee !== undefined) {
               fee = tier.fee;
-              formula = `Admin Tier (₦${tier.fee.toLocaleString()})`;
+              formula = `Platform Tier (₦${tier.fee.toLocaleString()})`;
             } else if (tier.rate !== undefined) {
               fee = Math.round((amount * tier.rate) / 100);
-              formula = `Admin Tier (${tier.rate}%)`;
+              formula = `Platform Tier (${tier.rate}%)`;
             }
           }
-        } else {
-          const pct = limits.nairaFeePercent ?? 2.5;
-          const fixed = limits.nairaFeeFixed ?? 50;
+        } else if (limits.nairaFeePercent !== undefined) {
+          const pct = limits.nairaFeePercent;
+          const fixed = limits.nairaFeeFixed ?? 0;
           fee = Math.round((amount * pct) / 100) + fixed;
-          formula = `Admin Rate (${pct}% + ₦${fixed})`;
+          formula = `Platform Rate (${pct}% + ₦${fixed})`;
         }
-      } else {
-        const usdcPct = (limits.usdcFeePercent ?? 1.0) / 100;
-        const usdcFixed = limits.usdcFeeFixed ?? 0.50;
+      } else if (limits.usdcFeePercent !== undefined) {
+        const usdcPct = limits.usdcFeePercent / 100;
+        const usdcFixed = limits.usdcFeeFixed ?? 0;
         fee = parseFloat((amount * usdcPct + usdcFixed).toFixed(2));
-        formula = `Admin Rate (${(usdcPct * 100).toFixed(1)}% + $${usdcFixed.toFixed(2)})`;
+        formula = `Platform Rate (${(usdcPct * 100).toFixed(1)}% + $${usdcFixed.toFixed(2)})`;
       }
 
       const net = Math.max(0, parseFloat((amount - fee).toFixed(2)));
@@ -170,22 +170,21 @@ class AgreementFeeService {
         currency,
         protocolFee: fee,
         netAmount: net,
-        feeFormula: formula,
-        source: 'sivan_cached_admin_limits',
+        feeFormula: formula || 'Dynamic Platform Fee',
+        source: 'sivan_dynamic_platform_settings',
       };
       this.quoteCache.set(cacheKey, { quote: dynamicQuote, timestamp: now });
       return dynamicQuote;
     }
 
-    // 3. Fallback to default calculation if completely disconnected
-    const fallbackFee = parseFloat((amount * 0.01 + 0.50).toFixed(2));
+    // 3. If offline or loading, return zero fee quote with dynamic loading indicator
     return {
       amount,
       currency,
-      protocolFee: fallbackFee,
-      netAmount: Math.max(0, parseFloat((amount - fallbackFee).toFixed(2))),
-      feeFormula: 'Dynamic Admin Schedule (1.0% + $0.50)',
-      source: 'sivan_offline_fallback',
+      protocolFee: 0,
+      netAmount: amount,
+      feeFormula: 'Syncing live platform rate...',
+      source: 'sivan_syncing_live',
     };
   }
 }
