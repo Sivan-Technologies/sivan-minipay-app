@@ -380,21 +380,17 @@ export async function renderBuyCngn(container: HTMLElement) {
       const available = result.providers?.find((item: any) => item.chainIds?.includes(network.chainId) && item.sides?.includes('buy'));
       provider = available?.provider || '';
 
-      // Check live KYC state for Textile compliance banner
-      try {
-        const kycCheck = await request('/api/v1/cashout/kyc/status', await identity()).catch(() => ({ kyc: null }));
-        if (kycCheck?.kyc?.state === 'verified' && kycCheck.kyc.canDeposit === true) {
-          updateKycBanner('verified');
-        } else if (kycCheck?.kyc?.state === 'pending') {
-          updateKycBanner('pending');
-        } else {
-          updateKycBanner('unverified');
-        }
-      } catch {
+      // Check local KYC cache on initial load to prevent unprompted MetaMask signature popup
+      const localKyc = wallet ? textileKycService.getLocalKycState(wallet) : null;
+      if (localKyc?.state === 'verified' && localKyc.canDeposit === true) {
+        updateKycBanner('verified');
+      } else if (localKyc?.state === 'pending') {
+        updateKycBanner('pending');
+      } else {
         updateKycBanner('unverified');
       }
 
-      status.textContent = available ? 'Check your identity verification to continue.' : `No buy provider is currently available on ${network.chainName}. No purchase has been started. You can still recover an existing purchase.`;
+      status.textContent = available ? 'Ready to purchase cNGN with Nigerian Naira.' : `No buy provider is currently available on ${network.chainName}. No purchase has been started. You can still recover an existing purchase.`;
       button(available ? 'Continue →' : 'Recover previous purchase', () => review());
       if (saved?.id && saved.claim) button('Resume saved purchase', async () => {
         const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(saved.id)}`, undefined, saved.claim);
