@@ -1,10 +1,11 @@
 import { miniPayService } from '../services/minipay.service';
-import { fetchTokenBalances } from '../services/celo-client';
+import { fetchTokenBalances, checkTokenAllowance } from '../services/celo-client';
 import { textileRfqService, type SwapToken, type SwapQuoteResult } from '../services/textile-rfq.service';
 import { transactionsService } from '../services/transactions.service';
 import { getTokenIconSvg } from '../utils/token-icons';
-import { getActiveNetwork, type SupportedTokenSymbol } from '../config/celo.config';
+import { getActiveNetwork } from '../config/celo.config';
 import { renderBuyCngn } from './BuyCngnView';
+import { parseUnits } from 'viem';
 
 export async function renderSwap(
   container: HTMLElement,
@@ -362,7 +363,7 @@ export async function renderSwap(
     });
   });
 
-  // Swap Execution
+  // Swap Execution via Textile Credit RFQ Engine
   btnExecute.addEventListener('click', async () => {
     if (!state.address) {
       showToast('⚠️ Please connect your wallet first.');
@@ -382,48 +383,96 @@ export async function renderSwap(
       return;
     }
 
-    if (!currentQuote?.depositAddress) {
-      showToast('⚠️ Liquidity provider swap router unavailable. Please wait for quote.');
-      return;
-    }
-
     btnExecute.disabled = true;
-    btnExecute.innerHTML = '<span>⚡ Signing Swap in MiniPay...</span>';
+    btnExecute.innerHTML = '<span>⏳ Requesting Market Maker Quote...</span>';
 
     try {
-      const targetAddress = currentQuote.depositAddress as `0x${string}`;
+      // 1. Solicit firm executable transaction payload from Textile Market Maker
+      const firmRfq = await textileRfqService.requestFirmSwapRfq(
+        fromToken,
+        toToken,
+        amt,
+        state.address,
+        getActiveNetwork().chainId
+      );
 
-      const txRes = await miniPayService.sendAttributedTransfer({
-        to: targetAddress,
-        amount: amt,
-        currency: fromToken as SupportedTokenSymbol,
+      const approvalTx = firmRfq.transactions?.approval;
+      const swapTx = firmRfq.transactions?.swap;
+
+      if (!swapTx || !swapTx.to || !swapTx.data) {
+        throw new Error('No executable swap transaction received from Textile RFQ.');
+      }
+
+      // 2. Check on-chain allowance if approval transaction definition is present
+      if (approvalTx && approvalTx.to) {
+        const decimals = tokenBal?.decimals || 6;
+        const requiredAmountRaw = parseUnits(amt.toString(), decimals);
+        const currentAllowance = await checkTokenAllowance(
+          approvalTx.to,
+          state.address as `0x${string}`,
+          swapTx.to
+        );
+
+        if (currentAllowance < requiredAmountRaw) {
+          btnExecute.innerHTML = `<span>1/2: Approve ${fromToken} in Wallet...</span>`;
+          const apprRes = await miniPayService.sendRawTransaction({
+            to: approvalTx.to,
+            data: approvalTx.data,
+            value: approvalTx.value,
+            attribution: false,
+          });
+
+          if (!apprRes.success || !apprRes.txHash) {
+            btnExecute.disabled = false;
+            btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
+            showToast(`❌ Approval rejected: ${apprRes.error || 'Cancelled'}`);
+            return;
+          }
+
+          showToast(`⏳ ${fromToken} approval confirmed on Celo. Preparing atomic swap...`);
+          await miniPayService.waitForReceipt(apprRes.txHash);
+        }
+      }
+
+      // 3. Execute atomic swap transaction on LimitOrderReactor
+      btnExecute.innerHTML = `<span>2/2: Confirm Swap in Wallet...</span>`;
+      const swapRes = await miniPayService.sendRawTransaction({
+        to: swapTx.to,
+        data: swapTx.data,
+        value: swapTx.value,
+        attribution: true,
       });
 
-      if (!txRes.success || !txRes.txHash) {
+      if (!swapRes.success || !swapRes.txHash) {
         btnExecute.disabled = false;
         btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
-        showToast(`❌ ${txRes.error || 'Swap cancelled in wallet'}`);
+        showToast(`❌ Swap rejected: ${swapRes.error || 'Cancelled'}`);
         return;
       }
 
-      // Record in transaction history
+      // Record in local transaction history
+      const outFormatted = firmRfq.quote.outputAmount >= 1
+        ? firmRfq.quote.outputAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })
+        : firmRfq.quote.outputAmount.toFixed(4);
+
       transactionsService.recordTransfer({
         amount: amt,
         token: fromToken,
-        feeAmount: currentQuote?.protocolFee || 0,
-        netAmount: currentQuote?.outputAmount || amt,
+        feeAmount: 0,
+        netAmount: firmRfq.quote.outputAmount,
         recipientIdentifier: `Textile RFQ (${toToken})`,
-        recipientAddress: targetAddress,
-        txHash: txRes.txHash,
+        recipientAddress: swapTx.to,
+        txHash: swapRes.txHash,
       });
 
-      btnExecute.innerHTML = '<span>🚀 Swap Executed!</span>';
-      showToast(`🎉 Swap confirmed! Tx: ${txRes.txHash.slice(0, 8)}... Swapped ${amt} ${fromToken} to ${toToken}!`);
+      btnExecute.innerHTML = '<span>🚀 Swap Confirmed!</span>';
+      showToast(`🎉 Swap confirmed! Received ${outFormatted} ${toToken}! Tx: ${swapRes.txHash.slice(0, 8)}...`);
 
       setTimeout(() => {
         onNavigate('history');
       }, 1500);
     } catch (err: any) {
+      console.error('Swap error:', err);
       btnExecute.disabled = false;
       btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
       showToast(`❌ Swap failed: ${err.message || 'Execution error'}`);

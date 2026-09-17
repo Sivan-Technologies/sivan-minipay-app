@@ -33,6 +33,30 @@ export interface SwapQuoteResult {
 
 const CACHE_TTL_MS = 25_000;
 
+export interface RawTransactionDef {
+  to: `0x${string}`;
+  data: `0x${string}`;
+  value?: `0x${string}`;
+}
+
+export interface FirmSwapRfqResult {
+  status: string;
+  rfqId: string;
+  quote: {
+    fromToken: string;
+    toToken: string;
+    inputAmount: number;
+    outputAmount: number;
+    rate: number;
+    reactor: `0x${string}`;
+    expiresAt?: number;
+  };
+  transactions: {
+    approval?: RawTransactionDef;
+    swap: RawTransactionDef;
+  };
+}
+
 class TextileRfqService {
   private quoteCache = new Map<string, { quote: SwapQuoteResult; fetchedAt: number }>();
 
@@ -115,6 +139,43 @@ class TextileRfqService {
 
     throw new Error(`Live RFQ quote unavailable for ${fromToken} to ${toToken}. Please verify network connection.`);
   }
+
+  /**
+   * Requests executable atomic swap transactions (approval + LimitOrderReactor calldata)
+   * from Textile Credit Market Maker on Celo.
+   */
+  public async requestFirmSwapRfq(
+    fromToken: SwapToken,
+    toToken: SwapToken,
+    amount: number,
+    takerAddress: string,
+    chainId = 42220
+  ): Promise<FirmSwapRfqResult> {
+    const apiBase = getPaymentApiUrl();
+    const res = await fetch(`${apiBase}/api/v1/swap/rfq`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        fromToken,
+        toToken,
+        amount,
+        takerAddress,
+        chainId,
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+
+    const data = await res.json();
+    if (!res.ok || !data?.transactions?.swap) {
+      throw new Error(data?.error || 'Failed to obtain executable swap transaction from Textile Credit.');
+    }
+
+    return data as FirmSwapRfqResult;
+  }
 }
 
 export const textileRfqService = new TextileRfqService();
+

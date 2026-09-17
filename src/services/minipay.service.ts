@@ -588,6 +588,77 @@ class MiniPayService {
   }
 
   /**
+   * Broadcasts a raw contract transaction (e.g. ERC-20 approval or LimitOrderReactor swap)
+   * with ERC-8021 hackathon attribution.
+   */
+  public async sendRawTransaction(params: {
+    to: `0x${string}`;
+    data: `0x${string}`;
+    value?: `0x${string}`;
+    attribution?: boolean;
+  }): Promise<{ success: boolean; txHash?: string; error?: string }> {
+    if (!this.state.address) {
+      return { success: false, error: 'Please connect your wallet first' };
+    }
+
+    if (!this.hasInjectedWallet()) {
+      return { success: false, error: 'Web3 provider not available' };
+    }
+
+    const netCheck = await this.ensureCeloNetwork();
+    if (!netCheck.success) {
+      return { success: false, error: netCheck.error };
+    }
+
+    const provider = (window as any).ethereum;
+    try {
+      const finalData = params.attribution !== false ? attachAttributionSuffix(params.data) : params.data;
+
+      let gasHex = '0x493e0'; // 300,000 safe default
+      try {
+        const est = await provider.request({
+          method: 'eth_estimateGas',
+          params: [{
+            from: this.state.address,
+            to: params.to,
+            data: finalData,
+            value: params.value || '0x0',
+          }],
+        });
+        if (est) {
+          const gasVal = typeof est === 'string' ? parseInt(est, 16) : Number(est);
+          if (Number.isFinite(gasVal) && gasVal > 0 && gasVal < 1_500_000) {
+            gasHex = `0x${Math.min(1_500_000, Math.ceil(gasVal * 1.3)).toString(16)}`;
+          }
+        }
+      } catch (estErr) {
+        console.warn('Gas estimation warning; using safe default:', estErr);
+      }
+
+      const txHash: string = await provider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: this.state.address,
+          to: params.to,
+          data: finalData,
+          value: params.value || '0x0',
+          gas: gasHex,
+        }],
+      });
+
+      return { success: true, txHash };
+    } catch (err: any) {
+      console.error('Raw transaction failed:', err);
+      return {
+        success: false,
+        error: err.message?.includes('User rejected') || err.message?.includes('user rejected')
+          ? 'Transaction was rejected in wallet'
+          : (err.message || 'Transaction execution failed on Celo Mainnet'),
+      };
+    }
+  }
+
+  /**
    * Prompts connected wallet (MiniPay or MetaMask) to cryptographically sign
    * the milestone release authorization using personal_sign.
    */

@@ -6,9 +6,31 @@ import { attachAttributionSuffix } from '../config/attribution';
 
 const ERC20_ABI = parseAbi([
   'function balanceOf(address owner) view returns (uint256)',
+  'function allowance(address owner, address spender) view returns (uint256)',
   'function decimals() view returns (uint8)',
   'function transfer(address to, uint256 amount) returns (bool)',
+  'function approve(address spender, uint256 amount) returns (bool)',
 ]);
+
+export async function checkTokenAllowance(
+  tokenAddress: `0x${string}`,
+  owner: `0x${string}`,
+  spender: `0x${string}`
+): Promise<bigint> {
+  const client = getPublicClient();
+  try {
+    const allowance = await client.readContract({
+      address: tokenAddress,
+      abi: ERC20_ABI,
+      functionName: 'allowance',
+      args: [owner, spender],
+    });
+    return allowance;
+  } catch (err) {
+    console.warn('Failed to read allowance:', err);
+    return 0n;
+  }
+}
 
 export function getPublicClient() {
   const network = getActiveNetwork();
