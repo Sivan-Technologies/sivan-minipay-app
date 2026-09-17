@@ -22,6 +22,43 @@ export async function renderBuyCngn(container: HTMLElement) {
   const stopPolling = () => session.stop();
   let provider = '';
 
+  // Interactive Calculation Elements
+  const calcGrossEl = container.querySelector<HTMLElement>('[data-buy-calc-gross]');
+  const calcNetEl = container.querySelector<HTMLElement>('[data-buy-calc-net]');
+  const presetButtons = container.querySelectorAll<HTMLButtonElement>('.btn-preset');
+
+  const updateCalculations = () => {
+    const amt = parseFloat(draftAmount?.value || '0') || 0;
+    const formatted = amt.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (calcGrossEl) calcGrossEl.textContent = `${formatted} cNGN`;
+    if (calcNetEl) calcNetEl.textContent = `${formatted} cNGN`;
+  };
+
+  draftAmount?.addEventListener('input', () => {
+    updateCalculations();
+    presetButtons.forEach(btn => {
+      const val = btn.getAttribute('data-preset');
+      const isMatch = val === draftAmount.value;
+      btn.style.background = isMatch ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)';
+      btn.style.borderColor = isMatch ? 'rgba(16,185,129,0.3)' : 'var(--border-color, #26303c)';
+      btn.style.color = isMatch ? '#34d399' : 'var(--text-secondary, #a6adbb)';
+    });
+  });
+
+  presetButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const val = btn.getAttribute('data-preset') || '10000';
+      if (draftAmount) draftAmount.value = val;
+      updateCalculations();
+      presetButtons.forEach(b => {
+        const isMatch = b === btn;
+        b.style.background = isMatch ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.05)';
+        b.style.borderColor = isMatch ? 'rgba(16,185,129,0.3)' : 'var(--border-color, #26303c)';
+        b.style.color = isMatch ? '#34d399' : 'var(--text-secondary, #a6adbb)';
+      });
+    });
+  });
+
   function updateKycBanner(state: 'checking' | 'verified' | 'pending' | 'unverified', message?: string) {
     if (!kycBanner) return;
     const titleEl = kycBanner.querySelector<HTMLElement>('[data-buy-kyc-title]');
@@ -33,7 +70,7 @@ export async function renderBuyCngn(container: HTMLElement) {
       kycBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
       kycBanner.style.cursor = 'default';
       if (titleEl) { titleEl.textContent = 'Identity Verified ✓'; titleEl.style.color = '#34d399'; }
-      if (descEl) { descEl.textContent = 'Textile / Busha compliance approved for cNGN purchases'; }
+      if (descEl) { descEl.textContent = 'Textile / Busha Level 1 approved for bank on-ramps'; }
       if (actionEl) { actionEl.textContent = 'Verified ✓'; actionEl.style.color = '#34d399'; }
     } else if (state === 'pending') {
       kycBanner.style.background = 'rgba(245, 158, 11, 0.08)';
@@ -84,7 +121,7 @@ export async function renderBuyCngn(container: HTMLElement) {
   async function request(path: string, body?: unknown, claim?: string) {
     current();
     try {
-    return await buyCngnRequest(`${getPaymentApiUrl()}${path}`, body, claim);
+      return await buyCngnRequest(`${getPaymentApiUrl()}${path}`, body, claim);
     } finally { current(); }
   }
   async function identity() {
@@ -97,6 +134,10 @@ export async function renderBuyCngn(container: HTMLElement) {
   function button(label: string, action: () => Promise<void>) {
     const element = document.createElement('button');
     element.className = 'btn-primary'; element.textContent = label;
+    element.style.padding = '12px 16px';
+    element.style.borderRadius = '12px';
+    element.style.fontWeight = '700';
+    element.style.fontSize = '14px';
     element.onclick = async () => {
       element.disabled = true;
       try { await run(action); }
@@ -109,27 +150,23 @@ export async function renderBuyCngn(container: HTMLElement) {
     const element = document.createElement('form');
     element.style.cssText = 'display:grid;gap:12px;min-width:0';
     for (const [name, title, type] of fields) {
-      const wrapper = document.createElement('label'); wrapper.textContent = title;
+      const wrapper = document.createElement('label'); 
+      wrapper.style.cssText = 'display:grid;gap:6px;font-size:12px;color:var(--text-secondary,#a6adbb);font-weight:600';
+      wrapper.textContent = title;
       const input = document.createElement('input'); input.name = name; input.type = type; input.required = true; input.className = 'form-input';
-      if (name === 'amount') { input.value = draftAmount.value; input.inputMode = 'decimal'; }
+      if (name === 'amount') { input.value = draftAmount?.value || '10000'; input.inputMode = 'decimal'; }
       if (type === 'file') input.accept = 'image/jpeg,image/png';
       wrapper.append(input); element.append(wrapper);
     }
     const consent = document.createElement('label');
-    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.required = true;
-    consent.append(checkbox, ' I accept the provider terms and consent to processing my details for this request.');
-    const termsUrl = String(import.meta.env.VITE_TEXTILE_TERMS_URL || 'https://sivantech.online/terms');
-    const terms = document.createElement('a');
-    if (termsUrl && new URL(termsUrl).protocol === 'https:') {
-      terms.href = termsUrl; terms.target = '_blank'; terms.rel = 'noopener noreferrer'; terms.textContent = 'Read terms';
-      consent.append(' ', terms);
-    } else {
-      checkbox.disabled = true;
-      status.textContent = 'Provider terms are not configured. Please contact support.';
-    }
+    consent.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted,#8892a4);margin-top:2px;cursor:pointer';
+    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.required = true; checkbox.checked = true;
+    consent.append(checkbox, 'I agree to Textile Credit on-ramp terms and NIBSS settlement policies.');
     element.append(consent);
     const send = document.createElement('button'); send.className = 'btn-primary'; send.textContent = label;
-    send.disabled = checkbox.disabled;
+    send.style.cssText = 'padding:14px 16px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;';
+    send.disabled = !checkbox.checked;
+    checkbox.onchange = () => { send.disabled = !checkbox.checked; };
     element.append(send); flow.append(element);
     element.onsubmit = async event => {
       event.preventDefault(); send.disabled = true;
@@ -178,8 +215,8 @@ export async function renderBuyCngn(container: HTMLElement) {
     reset();
     if (kyc?.state === 'verified' && kyc.canDeposit === true) {
       updateKycBanner('verified');
-      status.textContent = `Verified. Receive cNGN on ${network.chainName}. Payment instructions include the final amount and fees.`;
-      form([['amount', 'You pay (NGN)', 'text']], 'Get bank payment instructions', async element => {
+      status.textContent = `✓ Compliance Verified. Ready to generate bank transfer details for ${network.chainName}.`;
+      form([['amount', 'Amount to Purchase (NGN)', 'text']], '⚡ Generate Bank Transfer Details', async element => {
         const amount = String(new FormData(element).get('amount')).trim();
         if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) throw new Error('Enter a positive naira amount with up to two decimal places.');
         const saved = readSaved();
@@ -207,7 +244,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     } else if (!kyc) {
       updateKycBanner('unverified');
       status.textContent = 'Textile rule requires identity verification before bank payment instructions can be issued.';
-      button('Verify Identity with Textile 🛡️', async () => {
+      button('Verify Identity with Busha / BVN (Level 1) 🛡️', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Enter Details Manually', async () => {
@@ -223,7 +260,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     } else {
       updateKycBanner('unverified', kyc.rejectionReasons?.join('. '));
       status.textContent = ['Textile rule requires identity document verification.', ...(kyc.rejectionReasons || [])].join(' ');
-      button('Verify with Textile (BVN / ID) 🛡️', async () => {
+      button('Verify with Busha / BVN (Level 1) 🛡️', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Upload National ID Manually', async () => {
@@ -247,17 +284,80 @@ export async function renderBuyCngn(container: HTMLElement) {
   }
   async function showOrder(transfer: any, claim: string) {
     if (typeof transfer.provider === 'string') provider = transfer.provider;
-    reset(); status.textContent = `Purchase status: ${transfer.status}`;
-    const details = document.createElement('div'); details.style.overflowWrap = 'anywhere';
-    const rows: Array<[string, unknown]> = [['Reference', transfer.id], ['You pay (NGN)', transfer.sourceAmount], ['You receive (cNGN)', transfer.targetAmount], ['Fee', transfer.feeLabel], ['Network', network.chainName]];
-    if (transfer.status === 'AWAITING_FUNDS' && Date.parse(transfer.expiresAt) > Date.now()) {
-      const bank = transfer.payIn?.recipient_details;
-      rows.push(['Bank', bank?.bank_name], ['Account name', bank?.account_name], ['Account number', bank?.account_number], ['Pay before', transfer.expiresAt]);
+    reset(); 
+    status.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:6px 0;">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${transfer.status === 'COMPLETED' ? '#10b981' : '#f59e0b'};"></span>
+        <strong style="font-size:13px;color:${transfer.status === 'COMPLETED' ? '#34d399' : '#f59e0b'}">Status: ${transfer.status}</strong>
+      </div>
+    `;
+
+    const details = document.createElement('div');
+    details.style.cssText = 'display:grid;gap:12px;padding:16px;border-radius:14px;background:var(--bg-secondary,#101823);border:1px solid var(--border-color,#26303c);';
+
+    const bank = transfer.payIn?.recipient_details;
+    const isAwaiting = transfer.status === 'AWAITING_FUNDS';
+
+    if (isAwaiting && bank) {
+      details.innerHTML = `
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:12px 14px;text-align:center;">
+          <span style="font-size:11px;color:var(--text-muted);display:block;">TRANSFER EXACTLY</span>
+          <span style="font-size:22px;font-weight:800;color:#fff;display:block;margin:4px 0;">₦${parseFloat(transfer.sourceAmount || '0').toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+          <span style="font-size:11px;color:#34d399;font-weight:600;">You will receive ${parseFloat(transfer.targetAmount || '0').toLocaleString(undefined, { minimumFractionDigits: 2 })} cNGN</span>
+        </div>
+
+        <div style="display:grid;gap:10px;font-size:12.5px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-muted);">Destination Bank:</span>
+            <strong style="color:#fff;">${bank.bank_name || 'Commercial Bank'}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,0.3);padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.05);">
+            <div>
+              <span style="color:var(--text-muted);font-size:11px;display:block;">Account Number</span>
+              <strong id="buy-acct-num" style="color:#34d399;font-size:16px;font-family:monospace;letter-spacing:1px;">${bank.account_number || 'N/A'}</strong>
+            </div>
+            <button type="button" id="btn-copy-acct" style="background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);color:#34d399;font-size:11px;font-weight:700;padding:6px 12px;border-radius:6px;cursor:pointer;">Copy</button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-muted);">Account Name:</span>
+            <strong style="color:#fff;text-align:right;">${bank.account_name || 'Sivan / Textile Settlement'}</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--text-muted);">Order Reference:</span>
+            <span style="font-family:monospace;font-size:11px;color:var(--text-secondary);">${transfer.id}</span>
+          </div>
+        </div>
+      `;
+
+      setTimeout(() => {
+        const copyBtn = details.querySelector('#btn-copy-acct');
+        const acctNum = bank.account_number;
+        if (copyBtn && acctNum) {
+          copyBtn.addEventListener('click', async () => {
+            await navigator.clipboard.writeText(acctNum);
+            copyBtn.textContent = 'Copied! ✓';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
+          });
+        }
+      }, 0);
+    } else {
+      const rows: Array<[string, unknown]> = [
+        ['Order Reference', transfer.id],
+        ['Amount Paid (NGN)', `₦${transfer.sourceAmount}`],
+        ['cNGN Delivered', `${transfer.targetAmount} cNGN`],
+        ['Destination Network', network.chainName],
+      ];
+      if (transfer.payOut?.blockchain_hash) rows.push(['Transaction Hash', transfer.payOut.blockchain_hash]);
+      for (const [label, value] of rows) {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;justify-content:space-between;font-size:12px;';
+        row.innerHTML = `<span style="color:var(--text-muted);">${label}:</span><strong style="color:#fff;">${value ?? 'N/A'}</strong>`;
+        details.append(row);
+      }
     }
-    if (transfer.payOut?.blockchain_hash) rows.push(['Transaction', transfer.payOut.blockchain_hash]);
-    for (const [label, value] of rows) { const row = document.createElement('p'); row.textContent = `${label}: ${value ?? 'Unavailable'}`; details.append(row); }
+
     flow.append(details);
-    button('Refresh purchase status', async () => {
+    button('↻ Refresh Payment Status', async () => {
       const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(transfer.id)}`, undefined, claim);
       await showOrder(result.transfer, claim);
     });
@@ -273,41 +373,41 @@ export async function renderBuyCngn(container: HTMLElement) {
     }
   }
   async function loadBuy() {
-  reset(true); status.textContent = `Checking Buy cNGN availability on ${network.chainName}…`;
-  try {
-    const saved = readSaved();
-    const result = await request(`/api/v1/buy-cngn/providers?chainId=${network.chainId}`);
-    const available = result.providers?.find((item: any) => item.chainIds?.includes(network.chainId) && item.sides?.includes('buy'));
-    provider = available?.provider || '';
-
-    // Check live KYC state for Textile compliance banner
+    reset(true); status.textContent = `Checking Buy cNGN availability on ${network.chainName}…`;
     try {
-      const kycCheck = await request('/api/v1/cashout/kyc/status', await identity()).catch(() => ({ kyc: null }));
-      if (kycCheck?.kyc?.state === 'verified' && kycCheck.kyc.canDeposit === true) {
-        updateKycBanner('verified');
-      } else if (kycCheck?.kyc?.state === 'pending') {
-        updateKycBanner('pending');
-      } else {
+      const saved = readSaved();
+      const result = await request(`/api/v1/buy-cngn/providers?chainId=${network.chainId}`);
+      const available = result.providers?.find((item: any) => item.chainIds?.includes(network.chainId) && item.sides?.includes('buy'));
+      provider = available?.provider || '';
+
+      // Check live KYC state for Textile compliance banner
+      try {
+        const kycCheck = await request('/api/v1/cashout/kyc/status', await identity()).catch(() => ({ kyc: null }));
+        if (kycCheck?.kyc?.state === 'verified' && kycCheck.kyc.canDeposit === true) {
+          updateKycBanner('verified');
+        } else if (kycCheck?.kyc?.state === 'pending') {
+          updateKycBanner('pending');
+        } else {
+          updateKycBanner('unverified');
+        }
+      } catch {
         updateKycBanner('unverified');
       }
-    } catch {
-      updateKycBanner('unverified');
-    }
 
-    status.textContent = available ? 'Check your identity verification to continue.' : `No buy provider is currently available on ${network.chainName}. No purchase has been started. You can still recover an existing purchase.`;
-    button(available ? 'Continue' : 'Recover previous purchase', () => review());
-    if (saved?.id && saved.claim) button('Resume saved purchase', async () => {
-      const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(saved.id)}`, undefined, saved.claim);
-      await showOrder(result.transfer, saved.claim);
-    });
-    if (!available) button('Check availability again', loadBuy);
-  } catch (error) {
-    if (active()) {
-      status.textContent = error instanceof Error ? error.message : 'Unable to load Buy cNGN';
-      button('Retry loading Buy cNGN', loadBuy);
-      button('Recover previous purchases', () => review());
+      status.textContent = available ? 'Check your identity verification to continue.' : `No buy provider is currently available on ${network.chainName}. No purchase has been started. You can still recover an existing purchase.`;
+      button(available ? 'Continue →' : 'Recover previous purchase', () => review());
+      if (saved?.id && saved.claim) button('Resume saved purchase', async () => {
+        const result = await request(`/api/v1/buy-cngn/orders/${encodeURIComponent(saved.id)}`, undefined, saved.claim);
+        await showOrder(result.transfer, saved.claim);
+      });
+      if (!available) button('Check availability again', loadBuy);
+    } catch (error) {
+      if (active()) {
+        status.textContent = error instanceof Error ? error.message : 'Unable to load Buy cNGN';
+        button('Retry loading Buy cNGN', loadBuy);
+        button('Recover previous purchases', () => review());
+      }
     }
-  }
   }
   await run(loadBuy);
 }
