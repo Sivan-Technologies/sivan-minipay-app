@@ -34,6 +34,14 @@ export function getSivanFeeWallet(): string {
   return '0xd62D8aD1EE242745959221b5d020FAf20b41d14A';
 }
 
+export function getSivanAgentWallet(): string {
+  const envAgentWallet = (import.meta as any).env?.VITE_CELO_AGENT_ADDRESS || (import.meta as any).env?.VITE_CELO_RELAY_AGENT_ADDRESS;
+  if (envAgentWallet && /^0x[a-fA-F0-9]{40}$/.test(envAgentWallet.trim())) {
+    return envAgentWallet.trim();
+  }
+  return '0x83ecb9f40BFAC6Cca29A6a96CAB928fa32599878';
+}
+
 export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
   mainnet: {
     mode: 'mainnet',
@@ -44,7 +52,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
     fallbackRpcUrl: 'https://forno.celo.org',
     blockExplorerUrl: 'https://celoscan.io',
     agentId: 9827,
-    agentWallet: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+    agentWallet: getSivanAgentWallet(),
     feeWallet: getSivanFeeWallet(),
     attributionTag: 'celo_bafcc2e56bd7',
     tokens: {
@@ -94,7 +102,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
     fallbackRpcUrl: 'https://celo-sepolia.drpc.org',
     blockExplorerUrl: 'https://sepolia.celoscan.io',
     agentId: 9827,
-    agentWallet: '0x4a1A9cf30A86b2b333D1a743181aAE71a50BAFBc',
+    agentWallet: getSivanAgentWallet(),
     feeWallet: getSivanFeeWallet(),
     attributionTag: 'celo_bafcc2e56bd7',
     tokens: {
