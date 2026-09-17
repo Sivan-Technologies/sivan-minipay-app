@@ -80,7 +80,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         ${hasCusd ? `
           <div class="mini-token-pill">
             <span class="pill-dot">${getTokenIconSvg('cUSD', 14)}</span>
-            <span class="pill-val">${cusdBal} cUSD</span>
+            <span class="pill-val">${cusdBal} USDm</span>
           </div>
         ` : ''}
         ${country.code === 'NG' ? `

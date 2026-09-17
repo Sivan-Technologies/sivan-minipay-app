@@ -73,7 +73,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
       cUSD: {
         address: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
         symbol: 'cUSD',
-        name: 'Celo Dollar',
+        name: 'USDm (Mento Dollar)',
         decimals: 18,
         icon: '💲',
       },
@@ -123,7 +123,7 @@ export const NETWORKS: Record<NetworkMode, CeloNetworkDefinition> = {
       cUSD: {
         address: '0xEF4d55D6dE8e8d73232827Cd1e9b2F2dBb45bC80',
         symbol: 'cUSD',
-        name: 'Celo Dollar (Celo Sepolia)',
+        name: 'USDm (Celo Sepolia)',
         decimals: 18,
         icon: '💲',
       },

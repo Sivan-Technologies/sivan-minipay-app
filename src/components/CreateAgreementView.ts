@@ -65,7 +65,7 @@ export async function renderCreateAgreement(
                 ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
               </div>
               <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
+                ${getTokenIconSvg('cUSD', 16)} <span>USDm (Celo)</span>
               </div>
             </div>
             <input type="hidden" id="deal-currency" value="USDC" />

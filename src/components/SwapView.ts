@@ -85,7 +85,7 @@ export async function renderSwap(
                 ${getTokenIconSvg('USDC', 16)} <span>USDC</span>
               </div>
               <div class="custom-select-item ${isFrom('cUSD')}" data-token="cUSD">
-                ${getTokenIconSvg('cUSD', 16)} <span>cUSD</span>
+                ${getTokenIconSvg('cUSD', 16)} <span>USDm</span>
               </div>
               <div class="custom-select-item ${isFrom('cNGN')}" data-token="cNGN">
                 ${getTokenIconSvg('cNGN', 16)} <span>cNGN</span>
@@ -126,7 +126,7 @@ export async function renderSwap(
           <div class="custom-select-wrap" id="to-token-wrap">
             <div class="custom-select-trigger" id="to-token-trigger" style="padding: 10px 12px;">
               <span id="to-token-display" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">
-                ${getTokenIconSvg(toToken, 18)} <span>${toToken}</span>
+                ${getTokenIconSvg(toToken, 18)} <span>${(toToken as string) === 'cUSD' ? 'USDm' : toToken}</span>
               </span>
               <span class="chevron">▾</span>
             </div>
@@ -141,7 +141,7 @@ export async function renderSwap(
                 ${getTokenIconSvg('USDC', 16)} <span>USDC</span>
               </div>
               <div class="custom-select-item ${isTo('cUSD')}" data-token="cUSD">
-                ${getTokenIconSvg('cUSD', 16)} <span>cUSD</span>
+                ${getTokenIconSvg('cUSD', 16)} <span>USDm</span>
               </div>
             </div>
           </div>

@@ -46,7 +46,7 @@ export function getZeroBalances(): TokenBalance[] {
   return [
     { symbol: 'USDT', name: 'Tether USD', balanceFormatted: '0.00', balanceRaw: 0n, decimals: 6, icon: '🟢', usdValue: 0 },
     { symbol: 'USDC', name: 'USD Coin', balanceFormatted: '0.00', balanceRaw: 0n, decimals: 6, icon: '💵', usdValue: 0 },
-    { symbol: 'cUSD', name: 'Celo Dollar', balanceFormatted: '0.00', balanceRaw: 0n, decimals: 18, icon: '💲', usdValue: 0 },
+    { symbol: 'cUSD', name: 'USDm (Mento Dollar)', balanceFormatted: '0.00', balanceRaw: 0n, decimals: 18, icon: '💲', usdValue: 0 },
     { symbol: 'cNGN', name: 'Compliant Naira', balanceFormatted: '0.00', balanceRaw: 0n, decimals: 6, icon: '🇳🇬', usdValue: 0 },
   ];
 }
