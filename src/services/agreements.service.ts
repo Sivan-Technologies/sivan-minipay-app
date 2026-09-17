@@ -368,6 +368,9 @@ class AgreementsService {
             agr.disputeReason = backendData.disputeReason;
             hasChanges = true;
           }
+        } else if (res.status === 404 && (agr.status === 'funded' || Boolean(agr.fundingTxHash))) {
+          // If agreement exists in local storage with on-chain funding but missing on backend, sync it
+          this.syncAgreementToBackend(agr).catch(() => {});
         }
       } catch (err) {
         // Silently skip if network blip

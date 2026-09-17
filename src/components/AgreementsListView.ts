@@ -13,15 +13,6 @@ export function renderAgreementsList(
 ) {
   let filter: 'all' | 'active' | 'disputed' | 'released' | 'refunded' = 'all';
 
-  // Start background real-time sync with backend (polls every 4 seconds)
-  agreementsService.startAutoSync(() => miniPayService.getState().address);
-  agreementsService.subscribe(() => {
-    // Only re-render if container is still in DOM
-    if (document.body.contains(container)) {
-      render();
-    }
-  });
-
   const render = () => {
     const allAgreements = agreementsService.getAll();
     const connectedAddress = (miniPayService.getState().address || '').toLowerCase();
@@ -639,5 +630,14 @@ export function renderAgreementsList(
   };
 
   render();
+
+  // Start background real-time sync with backend (polls every 4 seconds)
+  agreementsService.startAutoSync(() => miniPayService.getState().address);
+  agreementsService.subscribe(() => {
+    // Only re-render if container is still in DOM
+    if (document.body.contains(container)) {
+      render();
+    }
+  });
 }
 
