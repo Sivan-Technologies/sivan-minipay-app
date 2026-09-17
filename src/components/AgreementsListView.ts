@@ -145,8 +145,13 @@ export function renderAgreementsList(
             return;
           }
 
-          agreementsService.cancelAndRefundOverdue(id, signRes.signature);
-          showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded to your connected wallet!`);
+          btnEl.textContent = '⏳ Processing refund...';
+          const refundRes = await agreementsService.cancelAndRefundOverdue(id, signRes.signature, agr.buyerAddress);
+          if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
+            showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded on-chain!`);
+          } else {
+            showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded to your connected wallet!`);
+          }
           render();
         } catch (err: any) {
           console.error('Cancel & refund error:', err);
@@ -311,8 +316,13 @@ export function renderAgreementsList(
             return;
           }
 
-          agreementsService.refundAgreement(id, signRes.signature);
-          showToast(`↩️ Mutual refund executed! Funds credited back to client. Sig: ${signRes.signature.slice(0, 10)}...`);
+          btnEl.textContent = '⏳ Processing refund...';
+          const refundRes = await agreementsService.refundAgreement(id, signRes.signature, agr.buyerAddress);
+          if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
+            showToast(`↩️ Mutual refund executed! Funds refunded on-chain to client.`);
+          } else {
+            showToast(`↩️ Mutual refund executed! Funds credited back to client. Sig: ${signRes.signature.slice(0, 10)}...`);
+          }
           render();
         } catch (err: any) {
           console.error('Refund signing error:', err);
@@ -469,11 +479,15 @@ export function renderAgreementsList(
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
               ↩️ Refunded back to buyer's wallet<br/>
-              ${agr.refundTxHash ? `
+              ${agr.refundTxHash ? (agr.refundTxHash.length <= 66 ? `
+                <a href="${getNetworkExplorer('celo', agr.refundTxHash).url}" target="_blank" rel="noopener noreferrer" style="font-size: 10px; color: var(--accent-cyan); text-decoration: none;" title="${agr.refundTxHash}">
+                  Refund Tx: ${agr.refundTxHash.slice(0, 10)}...${agr.refundTxHash.slice(-6)} ↗
+                </a>
+              ` : `
                 <span style="font-size: 10px; color: var(--text-secondary); font-family: monospace;" title="${agr.refundTxHash}">
                   Sig: ${agr.refundTxHash.slice(0, 14)}...
                 </span>
-              ` : ''}
+              `) : ''}
             </div>
             <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
               Wallet Balance 💼

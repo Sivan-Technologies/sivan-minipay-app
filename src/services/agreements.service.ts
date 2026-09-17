@@ -185,8 +185,40 @@ class AgreementsService {
     return this.updateStatus(id, 'disputed', undefined, undefined, reason, disputeSignature);
   }
 
-  public refundAgreement(id: string, refundSignature?: string): boolean {
-    return this.updateStatus(id, 'refunded', undefined, undefined, undefined, refundSignature);
+  public async refundAgreement(id: string, refundSignature?: string, buyerAddress?: string): Promise<{ success: boolean; refundTxHash?: string }> {
+    const agreement = this.agreements.find(a => a.id === id);
+    if (!agreement) return { success: false };
+
+    agreement.status = 'refunded';
+    if (refundSignature) {
+      agreement.refundTxHash = refundSignature;
+    }
+    this.saveAgreements();
+
+    try {
+      const res = await fetch(`${this.apiBase}/api/agreements/${agreement.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: refundSignature,
+          buyerAddress: buyerAddress || agreement.buyerAddress,
+          amount: agreement.amount,
+          currency: agreement.currency,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.refundTxHash) {
+          agreement.refundTxHash = data.refundTxHash;
+          this.saveAgreements();
+          return { success: true, refundTxHash: data.refundTxHash };
+        }
+      }
+    } catch (err) {
+      console.warn('[AgreementsService.refundAgreement] backend cancel note:', err);
+    }
+
+    return { success: true, refundTxHash: agreement.refundTxHash };
   }
 
   public extendDeadline(id: string, additionalHours: number): boolean {
@@ -214,9 +246,9 @@ class AgreementsService {
     return true;
   }
 
-  public cancelAndRefundOverdue(id: string, refundSignature?: string): boolean {
+  public async cancelAndRefundOverdue(id: string, refundSignature?: string, buyerAddress?: string): Promise<{ success: boolean; refundTxHash?: string }> {
     const agreement = this.agreements.find(a => a.id === id);
-    if (!agreement) return false;
+    if (!agreement) return { success: false };
 
     agreement.status = 'refunded';
     if (refundSignature) {
@@ -225,13 +257,30 @@ class AgreementsService {
 
     this.saveAgreements();
 
-    // Notify backend cancel endpoint to release hold and mark cancelled
-    fetch(`${this.apiBase}/api/agreements/${agreement.id}/cancel`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    }).catch(err => console.warn('[AgreementsService.cancelAndRefundOverdue] backend cancel note:', err));
+    try {
+      const res = await fetch(`${this.apiBase}/api/agreements/${agreement.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          signature: refundSignature,
+          buyerAddress: buyerAddress || agreement.buyerAddress,
+          amount: agreement.amount,
+          currency: agreement.currency,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.refundTxHash) {
+          agreement.refundTxHash = data.refundTxHash;
+          this.saveAgreements();
+          return { success: true, refundTxHash: data.refundTxHash };
+        }
+      }
+    } catch (err) {
+      console.warn('[AgreementsService.cancelAndRefundOverdue] backend cancel note:', err);
+    }
 
-    return true;
+    return { success: true, refundTxHash: agreement.refundTxHash };
   }
 
   public subscribe(fn: (agreements: ServiceAgreement[]) => void) {
