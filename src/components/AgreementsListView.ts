@@ -338,6 +338,58 @@ export function renderAgreementsList(
       });
     });
 
+    // Cancel deal before delivery (immediate refund back to buyer)
+    container.querySelectorAll('.btn-cancel-deal').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const btnEl = e.currentTarget as HTMLButtonElement;
+        const id = btnEl.dataset.id!;
+        const agr = agreementsService.getById(id);
+        if (!agr) return;
+
+        const confirmed = await showConfirmModal({
+          title: 'Cancel Service Agreement',
+          subtitle: `Deal: "${agr.title}"`,
+          message: `Are you sure you want to cancel this agreement? All locked funds (${agr.amount} ${agr.currency}) will be immediately refunded back to the client.`,
+          badgeText: `${agr.amount} ${agr.currency}`,
+          badgeColor: 'rgba(245, 158, 11, 0.2)',
+          confirmText: 'Yes, Cancel & Refund',
+          cancelText: 'Keep Active',
+          variant: 'warning',
+        });
+        if (!confirmed) return;
+
+        btnEl.disabled = true;
+        btnEl.textContent = '⏳ Cancelling...';
+
+        try {
+          const signRes = await miniPayService.signRefundAuthorization({
+            agreementId: agr.id,
+            buyerAddress: agr.contractorAddress,
+            amount: agr.amount,
+            currency: agr.currency,
+          });
+
+          const refundRes = await agreementsService.refundAgreement(
+            id,
+            signRes.success ? signRes.signature : undefined,
+            agr.buyerAddress
+          );
+
+          if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
+            showToast(`🚫 Agreement cancelled! Funds returned on-chain to client.`);
+          } else {
+            showToast(`🚫 Agreement cancelled! Funds refunded to client.`);
+          }
+          render();
+        } catch (err: any) {
+          console.error('Cancel agreement error:', err);
+          showToast(`❌ Error: ${err.message || 'Cancellation failed'}`);
+          btnEl.disabled = false;
+          btnEl.textContent = '🚫 Cancel';
+        }
+      });
+    });
+
     // Cash out shortcut
     container.querySelectorAll('.btn-cashout-shortcut').forEach(btn => {
       btn.addEventListener('click', () => onNavigate('cashout'));
@@ -613,13 +665,18 @@ export function renderAgreementsList(
             ` : ''}
 
             <!-- Secondary Row -->
-            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+            <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
               ${!isDisputed ? `
-                <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
+                <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
                   ⚠️ Dispute
                 </button>
               ` : ''}
-              <button class="btn-secondary btn-refund-buyer" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: var(--text-secondary);">
+              ${!isDelivered && !isDisputed ? `
+                <button class="btn-secondary btn-cancel-deal" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">
+                  🚫 Cancel
+                </button>
+              ` : ''}
+              <button class="btn-secondary btn-refund-buyer" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: var(--text-secondary);">
                 ↩️ Mutual Refund
               </button>
             </div>
