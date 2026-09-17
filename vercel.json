@@ -5,23 +5,23 @@
   "rewrites": [
     {
       "source": "/mcp",
-      "destination": "/api/mcp"
+      "destination": "https://payment.sivantech.online/mcp"
     },
     {
       "source": "/api/v1/agent/invoke",
-      "destination": "/api/agent-invoke"
+      "destination": "https://payment.sivantech.online/api/v1/agent/invoke"
     },
     {
       "source": "/api/v1/agent/capabilities",
-      "destination": "/api/agent-invoke"
+      "destination": "https://payment.sivantech.online/api/v1/agent/capabilities"
     },
     {
       "source": "/api/v1/developer/transfers",
-      "destination": "/api/developer-transfers"
+      "destination": "https://payment.sivantech.online/api/v1/developer/transfers"
     },
     {
       "source": "/api/v1/developer/capabilities",
-      "destination": "/api/agent-invoke"
+      "destination": "https://payment.sivantech.online/api/v1/developer/capabilities"
     },
     {
       "source": "/api/v1/cashout/resolve-account",
@@ -36,7 +36,7 @@
       "destination": "/api/transfer-fee"
     },
     {
-      "source": "/((?!api/|mcp).*)",
+      "source": "/((?!api|mcp).*)",
       "destination": "/index.html"
     }
   ],

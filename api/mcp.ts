@@ -1,85 +1,63 @@
-export const config = {
-  runtime: 'edge',
-};
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const PAYMENT_BACKEND_URL = 'https://payment.sivantech.online';
+const BACKEND_URL = 'https://payment.sivantech.online';
 
-export default async function handler(req: Request) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-api-key, x-idempotency-key');
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key, x-idempotency-key',
-      },
-    });
+    return res.status(200).end();
   }
 
   try {
-    const url = new URL(req.url);
-    const backendUrl = `${PAYMENT_BACKEND_URL}/mcp${url.search}`;
-
-    const headers: Record<string, string> = {
-      'Accept': req.headers.get('Accept') || '*/*',
-      'Content-Type': req.headers.get('Content-Type') || 'application/json',
-    };
-
-    if (req.headers.get('authorization')) {
-      headers['authorization'] = req.headers.get('authorization')!;
-    }
-    if (req.headers.get('x-api-key')) {
-      headers['x-api-key'] = req.headers.get('x-api-key')!;
-    }
-
     const fetchOptions: RequestInit = {
       method: req.method,
-      headers,
+      headers: {
+        'Accept': (req.headers['accept'] as string) || 'application/json',
+        'Content-Type': (req.headers['content-type'] as string) || 'application/json',
+        ...(req.headers['authorization'] ? { 'authorization': req.headers['authorization'] as string } : {}),
+        ...(req.headers['x-api-key'] ? { 'x-api-key': req.headers['x-api-key'] as string } : {}),
+      },
     };
 
     if (req.method === 'POST') {
-      fetchOptions.body = await req.text();
+      fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {});
     }
 
-    const response = await fetch(backendUrl, fetchOptions);
+    const response = await fetch(`${BACKEND_URL}/mcp`, fetchOptions);
+    const contentType = response.headers.get('content-type') || '';
 
-    // Pass back streaming SSE or JSON responses
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set('Access-Control-Allow-Origin', '*');
-    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    if (contentType.includes('text/event-stream')) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      const text = await response.text();
+      return res.status(200).send(text);
+    }
 
-    return new Response(response.body, {
-      status: response.status,
-      headers: responseHeaders,
-    });
+    const data = await response.json().catch(() => ({}));
+    return res.status(response.status).json(data);
   } catch {
-    // Fallback: If backend is briefly reconnecting, return MCP info JSON
-    return new Response(
-      JSON.stringify({
-        jsonrpc: '2.0',
-        result: {
-          serverInfo: {
-            name: 'sivan-mcp-server',
-            version: '1.0.0',
-            description: 'Sivan Payment AI Autonomous Multi-Chain MCP Engine',
-          },
-          tools: [
-            'sivan_create_payment_link',
-            'sivan_initiate_service_agreement',
-            'sivan_verify_milestone_and_release',
-            'sivan_resolve_bank_account',
-            'sivan_fiat_bank_cashout',
-            'sivan_get_balance',
-          ],
+    return res.status(200).json({
+      jsonrpc: '2.0',
+      result: {
+        serverInfo: {
+          name: 'sivan-mcp-server',
+          version: '1.0.0',
+          description: 'Sivan Payment AI Autonomous Multi-Chain Settlement MCP Server',
+          attributionTag: 'celo_bafcc2e56bd7',
         },
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-      }
-    );
+        tools: [
+          'sivan_create_payment_link',
+          'sivan_initiate_service_agreement',
+          'sivan_verify_milestone_and_release',
+          'sivan_resolve_bank_account',
+          'sivan_fiat_bank_cashout',
+          'sivan_get_balance',
+        ],
+      },
+    });
   }
 }
