@@ -46,7 +46,39 @@ class AgreementsService {
   }
 
   public getAll(): ServiceAgreement[] {
-    return [...this.agreements];
+    return [...this.agreements].sort((a, b) => {
+      // Priority 1: Action Required and Active deals stay at the very top
+      const getPriority = (status: AgreementStatus): number => {
+        switch (status) {
+          case 'delivered': // Deliverables submitted, awaiting review/release
+            return 1;
+          case 'in_progress':
+          case 'funded': // Active deal in progress
+            return 2;
+          case 'disputed':
+            return 3;
+          case 'released': // Settled
+            return 4;
+          case 'refunded':
+          case 'cancelled': // Refunded/Cancelled
+            return 5;
+          default:
+            return 6;
+        }
+      };
+
+      const pA = getPriority(a.status);
+      const pB = getPriority(b.status);
+
+      if (pA !== pB) {
+        return pA - pB;
+      }
+
+      // Priority 2: Recency (most recent timestamp / ID first)
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (parseInt(a.id.replace(/\D/g, '')) || 0);
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (parseInt(b.id.replace(/\D/g, '')) || 0);
+      return timeB - timeA;
+    });
   }
 
   public getById(id: string): ServiceAgreement | undefined {
