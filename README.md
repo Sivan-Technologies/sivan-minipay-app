@@ -75,7 +75,7 @@ sivan-minipay-app/
     │   ├── celo.config.ts      # Celo Mainnet RPC, contracts, and attribution configuration
     │   └── attribution.ts      # ERC-8021 calldata suffix generator (celo_bafcc2e56bd7)
     ├── services/
-    │   ├── celo-client.ts      # Viem public client, live balance reader, and CoinGecko price fetcher
+    │   ├── celo-client.ts      # Viem public client and live balance reader
     │   ├── minipay.service.ts  # MiniPay and MetaMask detection and on-chain transaction execution
     │   ├── agreements.service.ts # Service agreement state management and persistence
     │   └── fx-quotes.service.ts  # Textile RFQ baseline and NUBAN bank account validation
