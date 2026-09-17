@@ -4,6 +4,26 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
+      "source": "/api/v1/agent/invoke",
+      "destination": "/api/agent-invoke"
+    },
+    {
+      "source": "/api/v1/agent/capabilities",
+      "destination": "/api/agent-invoke"
+    },
+    {
+      "source": "/api/v1/developer/transfers",
+      "destination": "/api/developer-transfers"
+    },
+    {
+      "source": "/api/v1/developer/capabilities",
+      "destination": "/api/agent-invoke"
+    },
+    {
       "source": "/api/v1/cashout/resolve-account",
       "destination": "/api/resolve-account"
     },
@@ -16,7 +36,7 @@
       "destination": "/api/transfer-fee"
     },
     {
-      "source": "/((?!api/).*)",
+      "source": "/((?!api/|mcp).*)",
       "destination": "/index.html"
     }
   ],
@@ -31,6 +51,18 @@
         {
           "key": "X-Frame-Options",
           "value": "ALLOWALL"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, OPTIONS, HEAD, PUT, DELETE"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization, x-api-key, x-idempotency-key"
         }
       ]
     }
