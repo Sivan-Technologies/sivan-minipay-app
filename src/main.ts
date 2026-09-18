@@ -125,7 +125,11 @@ class SivanMiniPayApp {
 
     switch (this.currentTab) {
       case 'dashboard':
-        renderDashboard(this.mainContentContainer, (t) => this.navigateTo(t as Tab));
+        renderDashboard(
+          this.mainContentContainer,
+          (t) => this.navigateTo(t as Tab),
+          (msg) => this.showToast(msg)
+        );
         break;
       case 'deals':
         renderAgreementsList(

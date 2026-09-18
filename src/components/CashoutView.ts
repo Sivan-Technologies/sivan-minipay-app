@@ -424,11 +424,24 @@ export async function renderCashout(
     if (/^0x[a-fA-F0-9]{40}$/.test(rawVal)) {
       resolvedP2PAddress = rawVal;
       resolvedP2PDisplayName = `${rawVal.slice(0, 6)}...${rawVal.slice(-4)}`;
-      walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
-      walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+      walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.35)';
       walletRecipientStatus.innerHTML = `
-        <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-          <span>✓</span> <span>Valid Celo Address: ${resolvedP2PDisplayName}</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 14px;">✅</span>
+            <div>
+              <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px;">
+                Valid Celo Address
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                Direct On-Chain · <span style="font-family: monospace; color: var(--accent-cyan);">${resolvedP2PDisplayName}</span>
+              </div>
+            </div>
+          </div>
+          <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); padding: 3px 8px; border-radius: 12px; font-weight: 700;">
+            Celo Native
+          </span>
         </div>
       `;
       return;
@@ -436,7 +449,12 @@ export async function renderCashout(
 
     walletRecipientStatus.style.background = 'rgba(6, 182, 212, 0.08)';
     walletRecipientStatus.style.borderColor = 'rgba(6, 182, 212, 0.25)';
-    walletRecipientStatus.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan);">Resolving Sivan identity...</span>';
+    walletRecipientStatus.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="pulse-dot"></span>
+        <span style="color: var(--accent-cyan); font-size: 12px; font-weight: 600;">Resolving Sivan identity...</span>
+      </div>
+    `;
 
     p2pLookupTimeout = setTimeout(async () => {
       try {
@@ -448,11 +466,24 @@ export async function renderCashout(
           if (celoWallet) {
             resolvedP2PAddress = celoWallet;
             resolvedP2PDisplayName = res.user.username ? `@${res.user.username.replace(/^@/, '')}` : res.user.displayName || rawVal;
-            walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
-            walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+            walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.35)';
             walletRecipientStatus.innerHTML = `
-              <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                <span>✓</span> <span>Verified Sivan User: ${resolvedP2PDisplayName} (${celoWallet.slice(0, 6)}...${celoWallet.slice(-4)})</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 14px;">✅</span>
+                  <div>
+                    <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px;">
+                      Resolved: <span style="font-family: monospace;">${resolvedP2PDisplayName}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                      Verified Sivan User · <span style="font-family: monospace; color: var(--accent-cyan);">${celoWallet.slice(0, 6)}...${celoWallet.slice(-4)}</span>
+                    </div>
+                  </div>
+                </div>
+                <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); padding: 3px 8px; border-radius: 12px; font-weight: 700;">
+                  Sub-Second
+                </span>
               </div>
             `;
             return;
@@ -460,11 +491,11 @@ export async function renderCashout(
         }
         walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
         walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Sivan handle not found. Please verify handle or enter a 0x address.</span>';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Sivan handle not found. Please verify handle or enter a 0x address.</span>';
       } catch {
         walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
         walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Identity resolution unavailable right now.</span>';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Identity resolution unavailable right now.</span>';
       }
     }, 350);
   });

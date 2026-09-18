@@ -20,23 +20,10 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     const isConnected = !!state.address;
     const isTestnet = activeNet.mode === 'testnet';
 
+    const savedUsername = identityService.getSavedUsername();
     const shortAddr = state.address 
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
       : 'Connect';
-
-    let pillLabel = 'Connect';
-    let pillColor = 'var(--text-muted)';
-    let dotClass = 'pulse-dot-red';
-
-    if (isLiveMiniPay) {
-      pillLabel = 'MiniPay';
-      pillColor = 'var(--accent-emerald)';
-      dotClass = 'pulse-dot';
-    } else if (isMetaMask) {
-      pillLabel = 'MetaMask';
-      pillColor = 'var(--accent-cyan)';
-      dotClass = 'pulse-dot';
-    }
 
     const netBadgeLabel = isTestnet ? 'Celo Sepolia' : 'Celo Mainnet';
     const netBadgeColor = isTestnet ? '#f59e0b' : 'var(--accent-emerald)';
@@ -61,18 +48,20 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             <span style="font-weight: 600;">${isTestnet ? 'Celo Sepolia' : 'Celo Mainnet'}</span>
           </button>
 
-          <!-- Wallet Status Pill (Tap to Copy Address when connected) -->
-          <button class="header-status-pill ${isCopied ? 'copied' : ''}" id="btn-wallet-modal" title="${isConnected ? 'Tap to copy wallet address' : 'Connect wallet'}" style="user-select: none;">
+          <!-- Status Pill: [ 🟢 @samson 📋 ] or [ 🟢 0x46ef...2345 📋 ] -->
+          <button class="header-status-pill ${isCopied ? 'copied' : ''}" id="btn-wallet-modal" title="${isConnected ? (savedUsername ? `Tap to copy ${savedUsername}` : 'Tap to copy wallet address') : 'Connect wallet'}" style="user-select: none;">
             ${isCopied ? `
               <span style="color: var(--accent-emerald); font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px;">
                 <span>✓</span>
                 <span>Copied!</span>
               </span>
+            ` : isConnected ? `
+              <span class="pulse-dot"></span>
+              <span style="color: ${savedUsername ? 'var(--accent-emerald)' : 'var(--text-primary)'}; font-weight: 700; font-size: 12px; font-family: monospace;">${savedUsername || shortAddr}</span>
+              <span style="font-size: 11px; opacity: 0.7; margin-left: 1px;">📋</span>
             ` : `
-              <span class="${dotClass}"></span>
-              <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
-              ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
-              ${isConnected ? `<span style="font-size: 10px; opacity: 0.6; margin-left: 2px;">📋</span>` : ''}
+              <span class="pulse-dot-red"></span>
+              <span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Connect</span>
             `}
           </button>
         </div>
@@ -164,7 +153,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
                 <span style="color: var(--text-muted);">Status:</span>
-                <strong style="color: ${pillColor};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask Connected' : 'Disconnected'}</strong>
+                <strong style="color: ${isConnected ? 'var(--accent-emerald)' : 'var(--text-muted)'};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask Connected' : 'Disconnected'}</strong>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
                 <span style="color: var(--text-muted);">RPC URL:</span>
@@ -278,13 +267,18 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
         return;
       }
 
-      // Tap-to-copy wallet address
-      const ok = await copyToClipboard(state.address);
+      // Tap-to-copy handle or wallet address
+      const copyText = savedUsername || state.address;
+      const ok = await copyToClipboard(copyText);
       if (ok) {
         isCopied = true;
         update(miniPayService.getState());
         if (onToast) {
-          onToast(`Wallet address copied: ${shortAddr}`);
+          if (savedUsername) {
+            onToast(`Sivan handle copied: ${savedUsername}`);
+          } else {
+            onToast(`Wallet address copied: ${shortAddr}`);
+          }
         }
         if (copyTimeout) clearTimeout(copyTimeout);
         copyTimeout = setTimeout(() => {
@@ -293,7 +287,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
         }, 2000);
       } else {
         if (onToast) {
-          onToast('Unable to copy address');
+          onToast('Unable to copy');
         }
       }
     });
