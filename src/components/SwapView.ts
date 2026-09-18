@@ -450,6 +450,11 @@ export async function renderSwap(
         return;
       }
 
+      // 4. Submit broadcasted transaction hash to Textile RFQ engine for settlement registration
+      if (firmRfq.rfqId && swapRes.txHash) {
+        void textileRfqService.submitSwapTx(firmRfq.rfqId, swapRes.txHash);
+      }
+
       // Record in local transaction history
       const outFormatted = firmRfq.quote.outputAmount >= 1
         ? firmRfq.quote.outputAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })

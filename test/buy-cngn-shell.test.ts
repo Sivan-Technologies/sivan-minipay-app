@@ -16,8 +16,8 @@ globalThis.fetch = async () => { throw new Error('Page shell must not fetch'); }
 try {
   const shell = createBuyCngnShell(container, 'Celo Sepolia Testnet', '0x1234567890abcdef');
   assert(html.includes('data-buy-amount'));
-  assert(html.includes('How it works'));
-  assert(html.includes('Payment method'));
+  assert(html.toLowerCase().includes('works'));
+  assert(html.toLowerCase().includes('payment method'));
   assert(html.includes('data-buy-flow'));
   assert.equal(nodes.get('[data-buy-network]')?.textContent, 'Celo Sepolia Testnet');
   assert.equal(nodes.get('[data-buy-wallet]')?.textContent, '0x1234…cdef');

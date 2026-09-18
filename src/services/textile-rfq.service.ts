@@ -175,6 +175,26 @@ class TextileRfqService {
 
     return data as FirmSwapRfqResult;
   }
+
+  /**
+   * Submits the broadcasted on-chain swap transaction hash to Textile RFQ engine.
+   */
+  public async submitSwapTx(rfqId: string, txHash: string): Promise<void> {
+    try {
+      const apiBase = getPaymentApiUrl();
+      await fetch(`${apiBase}/api/v1/swap/rfq/${encodeURIComponent(rfqId)}/submit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({ txHash }),
+        signal: AbortSignal.timeout(8000),
+      });
+    } catch (err) {
+      console.warn('Textile RFQ submit notification warning (non-fatal):', err);
+    }
+  }
 }
 
 export const textileRfqService = new TextileRfqService();

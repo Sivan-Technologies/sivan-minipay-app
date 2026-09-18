@@ -20,11 +20,11 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
       <div style="display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--border-color, #26303c); border-radius: 14px; background: var(--bg-secondary, #101823);">
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Destination Network</span>
-          <strong data-buy-network style="color: #fff; font-weight: 600;">${network}</strong>
+          <strong data-buy-network style="color: #fff; font-weight: 600;"></strong>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Receive Wallet</span>
-          <strong data-buy-wallet style="color: #34d399; font-family: monospace; font-size: 11.5px; overflow-wrap: anywhere;">${wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'Connect wallet'}</strong>
+          <strong data-buy-wallet style="color: #34d399; font-family: monospace; font-size: 11.5px; overflow-wrap: anywhere;"></strong>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Payment Method</span>
@@ -101,6 +101,11 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
         </ol>
       </div>
     </section>`;
+
+  const networkEl = container.querySelector<HTMLElement>('[data-buy-network]');
+  if (networkEl) networkEl.textContent = network;
+  const walletEl = container.querySelector<HTMLElement>('[data-buy-wallet]');
+  if (walletEl) walletEl.textContent = wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'Connect your wallet';
 
   return {
     flow: container.querySelector<HTMLElement>('[data-buy-flow]')!,

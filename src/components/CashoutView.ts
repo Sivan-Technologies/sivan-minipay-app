@@ -103,23 +103,14 @@ export async function renderCashout(
         <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="token-select-wrap">
-            <div class="custom-select-trigger" id="token-select-trigger">
-              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg(isNigeria ? 'cNGN' : 'USDC', 16)} <span>${isNigeria ? 'cNGN' : 'USDC'}</span></span>
-              <span class="chevron">▾</span>
+            <div class="custom-select-trigger" id="token-select-trigger" ${isNigeria ? 'style="cursor: default;"' : ''}>
+              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg(isNigeria ? 'cNGN' : 'USDC', 16)} <span style="font-weight: 700;">${isNigeria ? 'cNGN' : 'USDC'}</span></span>
+              ${isNigeria ? '' : '<span class="chevron">▾</span>'}
             </div>
             <div class="custom-select-menu" id="token-select-menu">
               ${isNigeria ? `
                 <div class="custom-select-item selected" data-value="cNGN" style="display: flex; align-items: center; gap: 8px;">
                   ${getTokenIconSvg('cNGN', 16)} <span>cNGN (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('cUSD', 16)} <span>USDm (Celo)</span>
                 </div>
               ` : `
                 <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
@@ -146,9 +137,19 @@ export async function renderCashout(
             required 
           />
         </div>
-        <div id="cashout-avail-bal" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 4px;">
-          Available: Loading...
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div id="cashout-avail-bal" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 0;">
+            Available: Loading...
+          </div>
         </div>
+
+        <!-- Quick Swap helper banner for USDT/USDC holders -->
+        ${isNigeria ? `
+          <div id="swap-nudge-box" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.15); font-size: 11px;">
+            <span style="color: var(--text-secondary);">💡 Holding USDT or USDC?</span>
+            <button type="button" id="btn-jump-swap" style="background: none; border: none; color: var(--accent-cyan); font-weight: 700; cursor: pointer; padding: 0; font-size: 11px;">Swap to cNGN →</button>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Bank Mode Fields -->
@@ -662,6 +663,7 @@ export async function renderCashout(
   // Dropdown open/close event
   tokenTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (tokenItems.length <= 1) return;
     const isOpen = tokenMenu.classList.contains('open');
     if (isOpen) {
       tokenMenu.classList.remove('open');
@@ -902,6 +904,7 @@ export async function renderCashout(
 
   acctEl?.addEventListener('input', checkAccount);
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
+  container.querySelector('#btn-jump-swap')?.addEventListener('click', () => onNavigate('swap'));
 
   const form = container.querySelector('#form-cashout') as HTMLFormElement;
   form?.addEventListener('submit', async (e) => {
