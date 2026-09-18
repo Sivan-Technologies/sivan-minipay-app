@@ -35,9 +35,9 @@ export async function renderCashout(
         : '⚡ Celo to PayShap & EFT';
 
   const corridorProvider = isNigeria
-    ? 'Textile Credit RFQ'
+    ? 'Sivan Liquidity Engine (NIBSS)'
     : isGhana
-      ? 'Kotani Pay / Busha GHS'
+      ? 'Sivan Multi-Corridor (GhIPSS)'
       : 'Sivan Multi-Corridor';
 
   // Bank pills dynamically rendered from active country

@@ -29,11 +29,11 @@ export async function renderSwap(
       <span class="section-link" id="btn-back-swap">Back</span>
     </div>
 
-    <!-- Textile RFQ Corridor Banner -->
+    <!-- Sivan Liquidity Corridor Banner -->
     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 700; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
-          <span>⚡ Textile Credit Market Maker RFQ</span>
+          <span>⚡ Sivan Instant Liquidity Routing</span>
         </span>
         <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">${getActiveNetwork().chainName}</span>
       </div>
@@ -156,7 +156,7 @@ export async function renderSwap(
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: var(--text-muted);">Liquidity Provider</span>
-          <span id="quote-source-val" style="color: var(--accent-cyan); font-weight: 500;">Textile Credit RFQ</span>
+          <span id="quote-source-val" style="color: var(--accent-cyan); font-weight: 500;">Sivan Liquidity Routing</span>
         </div>
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: var(--text-muted);">Minimum Received</span>
@@ -465,7 +465,7 @@ export async function renderSwap(
         token: fromToken,
         feeAmount: 0,
         netAmount: firmRfq.quote.outputAmount,
-        recipientIdentifier: `Textile RFQ (${toToken})`,
+        recipientIdentifier: `Sivan RFQ Swap (${toToken})`,
         recipientAddress: swapTx.to,
         txHash: swapRes.txHash,
       });

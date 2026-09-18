@@ -7,7 +7,7 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 18px;">⚡</span>
-            <span style="font-weight: 700; font-size: 13.5px; color: #fff;">Textile Credit Bank On-Ramp</span>
+            <span style="font-weight: 700; font-size: 13.5px; color: #fff;">Sivan Direct Bank Deposit</span>
           </div>
           <span style="font-size: 10.5px; font-weight: 600; color: #34d399; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">Celo Mainnet</span>
         </div>
@@ -32,13 +32,13 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
         </div>
       </div>
 
-      <!-- Textile / Busha Compliance Verification Banner -->
+      <!-- Compliance Verification Banner -->
       <div data-buy-kyc-banner id="buy-cngn-kyc-banner" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; cursor: pointer; transition: all 0.2s ease;">
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 18px;">🛡️</span>
           <div>
             <span data-buy-kyc-title style="font-weight: 700; color: #60a5fa; font-size: 12px; display: block;">Identity Verification</span>
-            <span data-buy-kyc-desc style="color: var(--text-muted, #8892a4); font-size: 11px;">Checking Textile / Busha compliance status...</span>
+            <span data-buy-kyc-desc style="color: var(--text-muted, #8892a4); font-size: 11px;">Checking verification status...</span>
           </div>
         </div>
         <span data-buy-kyc-action style="font-size: 11.5px; color: #60a5fa; font-weight: 700; background: rgba(59, 130, 246, 0.15); padding: 4px 10px; border-radius: 8px;">Verify →</span>
@@ -91,11 +91,11 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
       <!-- How it works guide -->
       <div style="padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); font-size: 11.5px; color: var(--text-muted, #8892a4); line-height: 1.6;">
         <div style="font-weight: 700; color: var(--text-secondary, #a6adbb); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-          <span>ℹ️</span> How Textile Bank On-Ramp Works
+          <span>ℹ️</span> How Sivan Bank Deposit Works
         </div>
         <ol style="margin: 4px 0 0; padding-left: 18px;">
-          <li>Verify identity once via Busha / BVN (Level 1).</li>
-          <li>Click below to get a dedicated NUBAN transfer account.</li>
+          <li>Verify identity once via secure BVN verification.</li>
+          <li>Click below to get your dedicated NUBAN transfer account.</li>
           <li>Transfer the exact amount from any Nigerian bank app.</li>
           <li>cNGN is minted and credited automatically to your Celo wallet.</li>
         </ol>

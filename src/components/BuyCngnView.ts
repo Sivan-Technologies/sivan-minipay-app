@@ -70,28 +70,28 @@ export async function renderBuyCngn(container: HTMLElement) {
       kycBanner.style.borderColor = 'rgba(16, 185, 129, 0.25)';
       kycBanner.style.cursor = 'default';
       if (titleEl) { titleEl.textContent = 'Identity Verified ✓'; titleEl.style.color = '#34d399'; }
-      if (descEl) { descEl.textContent = 'Textile / Busha Level 1 approved for bank on-ramps'; }
+      if (descEl) { descEl.textContent = 'Identity approved for Nigerian bank deposits'; }
       if (actionEl) { actionEl.textContent = 'Verified ✓'; actionEl.style.color = '#34d399'; }
     } else if (state === 'pending') {
       kycBanner.style.background = 'rgba(245, 158, 11, 0.08)';
       kycBanner.style.borderColor = 'rgba(245, 158, 11, 0.25)';
       kycBanner.style.cursor = 'pointer';
       if (titleEl) { titleEl.textContent = 'Verification Under Review ⏳'; titleEl.style.color = '#f59e0b'; }
-      if (descEl) { descEl.textContent = message || 'Details submitted to Busha/Textile. Reviews take 1-5 minutes.'; }
+      if (descEl) { descEl.textContent = message || 'Details submitted for review. Reviews take 1-5 minutes.'; }
       if (actionEl) { actionEl.textContent = 'Check Status ↻'; actionEl.style.color = '#f59e0b'; }
     } else if (state === 'checking') {
       kycBanner.style.background = 'rgba(59, 130, 246, 0.08)';
       kycBanner.style.borderColor = 'rgba(59, 130, 246, 0.2)';
       kycBanner.style.cursor = 'pointer';
       if (titleEl) { titleEl.textContent = 'Identity Verification'; titleEl.style.color = '#60a5fa'; }
-      if (descEl) { descEl.textContent = 'Checking Textile compliance status…'; }
+      if (descEl) { descEl.textContent = 'Checking verification status…'; }
       if (actionEl) { actionEl.textContent = 'Checking…'; actionEl.style.color = '#60a5fa'; }
     } else {
       kycBanner.style.background = 'rgba(239, 68, 68, 0.08)';
       kycBanner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
       kycBanner.style.cursor = 'pointer';
       if (titleEl) { titleEl.textContent = 'Identity Verification Required 🛡️'; titleEl.style.color = '#ef4444'; }
-      if (descEl) { descEl.textContent = message || 'Required by Textile compliance before bank transfer instructions can be issued.'; }
+      if (descEl) { descEl.textContent = message || 'Identity verification required before bank transfer instructions can be issued.'; }
       if (actionEl) { actionEl.textContent = 'Verify Now →'; actionEl.style.color = '#ef4444'; }
     }
   }
@@ -161,7 +161,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     const consent = document.createElement('label');
     consent.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text-muted,#8892a4);margin-top:2px;cursor:pointer';
     const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.required = true; checkbox.checked = true;
-    consent.append(checkbox, 'I agree to Textile Credit on-ramp terms and NIBSS settlement policies.');
+    consent.append(checkbox, 'I agree to Sivan on-ramp terms and NIBSS banking settlement policies.');
     element.append(consent);
     const send = document.createElement('button'); send.className = 'btn-primary'; send.textContent = label;
     send.style.cssText = 'padding:14px 16px;border-radius:12px;font-weight:700;font-size:14px;cursor:pointer;';
@@ -243,13 +243,13 @@ export async function renderBuyCngn(container: HTMLElement) {
       if (kyc.state === 'pending') poll(() => review(false), 15000);
     } else if (!kyc) {
       updateKycBanner('unverified');
-      status.textContent = 'Textile rule requires identity verification before bank payment instructions can be issued.';
-      button('Verify Identity with Busha / BVN (Level 1) 🛡️', async () => {
+      status.textContent = 'Identity verification required before bank payment instructions can be issued.';
+      button('Verify Identity with BVN (Instant) 🛡️', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Enter Details Manually', async () => {
         reset();
-        status.textContent = 'Complete your identity details for Textile compliance.';
+        status.textContent = 'Complete your identity details for banking compliance.';
         form([['firstName','First name','text'],['lastName','Last name','text'],['email','Email','email'],['phone','Phone','tel'],['birthDate','Date of birth','date'],['line1','Residential address','text'],['city','City','text'],['state','State','text'],['postalCode','Postal code','text']], 'Save and continue', async element => {
           const fields = Object.fromEntries(new FormData(element)) as Record<string,string>;
           const result = await request('/api/v1/cashout/kyc/register', { ...await identity(), acceptedTerms: true, firstName: fields.firstName, lastName: fields.lastName, email: fields.email, phone: fields.phone, birthDate: fields.birthDate.split('-').reverse().join('-'), address: { line1: fields.line1, city: fields.city, state: fields.state, postalCode: fields.postalCode } });
@@ -259,8 +259,8 @@ export async function renderBuyCngn(container: HTMLElement) {
       });
     } else {
       updateKycBanner('unverified', kyc.rejectionReasons?.join('. '));
-      status.textContent = ['Textile rule requires identity document verification.', ...(kyc.rejectionReasons || [])].join(' ');
-      button('Verify with Busha / BVN (Level 1) 🛡️', async () => {
+      status.textContent = ['Identity document verification required.', ...(kyc.rejectionReasons || [])].join(' ');
+      button('Verify Identity with BVN (Instant) 🛡️', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Upload National ID Manually', async () => {
@@ -320,7 +320,7 @@ export async function renderBuyCngn(container: HTMLElement) {
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="color:var(--text-muted);">Account Name:</span>
-            <strong style="color:#fff;text-align:right;">${bank.account_name || 'Sivan / Textile Settlement'}</strong>
+            <strong style="color:#fff;text-align:right;">${bank.account_name || 'Sivan Settlement Account'}</strong>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <span style="color:var(--text-muted);">Order Reference:</span>

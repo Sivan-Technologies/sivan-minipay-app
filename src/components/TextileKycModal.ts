@@ -51,9 +51,9 @@ async function renderKycModal() {
             <div>
               <h3 style="font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; color: #fff; letter-spacing: -0.01em;">Identity Verification</h3>
               <div style="display: flex; align-items: center; gap: 6px; margin-top: 1px;">
-                <span style="font-size: 11px; color: var(--text-muted);">Busha / Textile FX</span>
+                <span style="font-size: 11px; color: var(--text-muted);">Sivan Banking Compliance</span>
                 <span style="display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #10b981;"></span>
-                <span style="font-size: 10.5px; color: #34d399; font-weight: 600;">Level 1</span>
+                <span style="font-size: 10.5px; color: #34d399; font-weight: 600;">Tier 1</span>
               </div>
             </div>
           </div>
@@ -123,13 +123,13 @@ function renderVerifiedState(container: HTMLElement, _kyc: TextileKycState) {
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: var(--text-emerald); font-weight: 700;">Account Verified</h4>
       <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px;">
-        Your identity is verified with Busha / Textile. You have full access to Nigerian bank cashouts and cNGN purchases.
+        Your identity is verified for Sivan banking rails. You have full access to Nigerian bank cashouts and cNGN deposits.
       </p>
 
       <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; text-align: left;">
         <div style="display: flex; justify-content: space-between; margin-bottom: 6px;">
           <span style="color: var(--text-muted);">Review State:</span>
-          <span style="color: var(--accent-emerald); font-weight: 600;">Verified (Level 1)</span>
+          <span style="color: var(--accent-emerald); font-weight: 600;">Verified (Tier 1)</span>
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-muted);">Payout Rail:</span>
@@ -157,7 +157,7 @@ function renderPendingState(container: HTMLElement, _kyc: TextileKycState, _wall
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: #f59e0b; font-weight: 700;">Review in Progress</h4>
       <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px;">
-        Your identity documents have been submitted to Busha and are currently under compliance review. Reviews typically complete in 1 to 5 minutes.
+        Your identity details have been submitted and are currently under compliance review. Reviews typically complete in 1 to 5 minutes.
       </p>
 
       <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px; margin-bottom: 20px; font-size: 12px; text-align: left;">
@@ -167,7 +167,7 @@ function renderPendingState(container: HTMLElement, _kyc: TextileKycState, _wall
         </div>
         <div style="display: flex; justify-content: space-between;">
           <span style="color: var(--text-muted);">Provider:</span>
-          <span style="color: var(--text-primary); font-weight: 500;">Busha / Sumsub</span>
+          <span style="color: var(--text-primary); font-weight: 500;">Sivan Compliance / NIBSS</span>
         </div>
       </div>
 
@@ -267,7 +267,7 @@ function renderRegistrationForm(
             <span>⚡ Launch Camera Verification</span>
           </button>
           <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 10px;">
-            Powered by Sumsub & Textile FX · Instant wallet approval
+            Secured via encrypted biometric verification · Instant wallet approval
           </span>
         </div>
       </div>
@@ -332,7 +332,7 @@ function renderRegistrationForm(
           <div style="font-size: 11.5px; color: var(--text-muted); display: flex; align-items: flex-start; gap: 8px; padding: 0 4px;">
             <input type="checkbox" id="kyc-terms" required checked style="margin-top: 3px; accent-color: var(--accent-emerald);" />
             <label for="kyc-terms" style="line-height: 1.4; cursor: pointer;">
-              I confirm provided details are accurate and accept Busha / Textile Ramp terms of service for fiat disbursement.
+              I confirm provided details are accurate and accept Sivan banking terms of service for fiat disbursement.
             </label>
           </div>
 
