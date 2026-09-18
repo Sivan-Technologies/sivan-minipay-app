@@ -1,5 +1,13 @@
 import type { ServiceAgreement } from '../types/minipay.types';
 import { formatDeadlineHours } from '../utils/deadline';
+import {
+  getHandshakeIconSvg,
+  getLockIconSvg,
+  getWhatsAppIconSvg,
+  getTelegramIconSvg,
+  getLinkIconSvg,
+  getCopyIconSvg
+} from '../utils/ui-icons';
 
 let modalRoot: HTMLElement | null = null;
 let activeAgreement: ServiceAgreement | null = null;
@@ -58,22 +66,24 @@ function renderShareModal() {
   const webLink = `${appBase}/?${params.toString()}`;
   const telegramDeepLink = `${telegramBotBase}?start=${agr.id}`;
   
-  const shareText = `🤝 Sivan Service Agreement\nI have funded and locked ${agr.netAmount} ${agr.currency} on Celo for: "${agr.title}".\nReview and accept here: ${webLink}`;
+  const shareText = `Sivan Service Agreement\nI have funded and locked ${agr.netAmount} ${agr.currency} on Celo for: "${agr.title}".\nReview and accept here: ${webLink}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-  const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramDeepLink)}&text=${encodeURIComponent(`🤝 Sivan Service Agreement: I have locked ${agr.netAmount} ${agr.currency} on Celo for: "${agr.title}". Tap to review and accept.`)}`;
+  const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(telegramDeepLink)}&text=${encodeURIComponent(`Sivan Service Agreement: I have locked ${agr.netAmount} ${agr.currency} on Celo for: "${agr.title}". Tap to review and accept.`)}`;
 
   modalRoot.innerHTML = `
     <div id="share-agreement-overlay" class="modal-overlay">
       <div class="modal-card" style="max-height: 90vh; display: flex; flex-direction: column; overflow: hidden;">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 20px;">🤝</span>
+            <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.12); color: var(--accent-emerald);">
+              ${getHandshakeIconSvg(18, 'var(--accent-emerald)')}
+            </div>
             <div>
               <h3 style="font-family: var(--font-display); font-size: 15px; margin: 0; color: var(--text-primary);">Share Service Agreement</h3>
               <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Locked on Celo Mainnet</div>
             </div>
           </div>
-          <button class="btn-close-modal" id="btn-close-share-modal" style="cursor: pointer;">✕</button>
+          <button class="btn-close-modal" id="btn-close-share-modal" style="cursor: pointer; background: rgba(255,255,255,0.06); border: none; width: 28px; height: 28px; border-radius: 50%; color: var(--text-muted); font-size: 14px; display: flex; align-items: center; justify-content: center;">✕</button>
         </div>
 
         <div style="padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
@@ -81,7 +91,7 @@ function renderShareModal() {
           <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 12px;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
               <strong style="font-size: 14px; color: var(--text-primary);">${agr.title}</strong>
-              <span class="agreement-badge badge-funded" style="font-size: 10px;">🔒 Locked</span>
+              <span class="agreement-badge badge-funded" style="font-size: 10px; display: inline-flex; align-items: center; gap: 4px;">${getLockIconSvg(10, 'var(--accent-emerald)')} Locked</span>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 12px;">
@@ -91,7 +101,7 @@ function renderShareModal() {
               </div>
               <div>
                 <span style="color: var(--text-muted); display: block; font-size: 10px;">Deadline</span>
-                <span style="color: var(--text-secondary); font-size: 12px;">⏱ ${formatDeadlineHours(agr.deadlineHours)}</span>
+                <span style="color: var(--text-secondary); font-size: 12px;">${formatDeadlineHours(agr.deadlineHours)}</span>
               </div>
             </div>
 
@@ -117,7 +127,7 @@ function renderShareModal() {
               style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(37, 211, 102, 0.12); border: 1px solid rgba(37, 211, 102, 0.35); border-radius: var(--radius-md); color: #25D366; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s ease;"
             >
               <span style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 18px;">💬</span>
+                ${getWhatsAppIconSvg(18, '#25D366')}
                 <span>Share on WhatsApp</span>
               </span>
               <span style="font-size: 12px; opacity: 0.8;">Open ↗</span>
@@ -132,7 +142,7 @@ function renderShareModal() {
               style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(0, 136, 204, 0.12); border: 1px solid rgba(0, 136, 204, 0.35); border-radius: var(--radius-md); color: #0088cc; text-decoration: none; font-weight: 600; font-size: 13px; transition: all 0.2s ease;"
             >
               <span style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 18px;">✈️</span>
+                ${getTelegramIconSvg(18, '#0088cc')}
                 <span>Share on Telegram</span>
               </span>
               <span style="font-size: 12px; opacity: 0.8;">Open ↗</span>
@@ -145,10 +155,10 @@ function renderShareModal() {
               style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-primary); font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s ease; width: 100%;"
             >
               <span style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 18px;">🔗</span>
+                ${getLinkIconSvg(16, 'var(--accent-cyan)')}
                 <span id="copy-link-label">Copy Web Link</span>
               </span>
-              <span id="copy-link-status" style="font-size: 11px; color: var(--accent-cyan);">Tap to copy</span>
+              <span id="copy-link-status" style="font-size: 11px; color: var(--accent-cyan);">${getCopyIconSvg(12, 'currentColor')} Tap to copy</span>
             </button>
           </div>
 
@@ -185,13 +195,13 @@ function renderShareModal() {
   copyBtn?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(webLink);
-      copyLabel.textContent = 'Link Copied! 📋';
+      copyLabel.textContent = 'Link Copied!';
       copyStatus.textContent = 'Copied!';
       copyStatus.style.color = 'var(--accent-emerald)';
       setTimeout(() => {
         if (copyLabel) copyLabel.textContent = 'Copy Web Link';
         if (copyStatus) {
-          copyStatus.textContent = 'Tap to copy';
+          copyStatus.innerHTML = `${getCopyIconSvg(12, 'currentColor')} Tap to copy`;
           copyStatus.style.color = 'var(--accent-cyan)';
         }
       }, 2500);
@@ -203,13 +213,13 @@ function renderShareModal() {
       input.select();
       document.execCommand('copy');
       document.body.removeChild(input);
-      copyLabel.textContent = 'Link Copied! 📋';
+      copyLabel.textContent = 'Link Copied!';
       copyStatus.textContent = 'Copied!';
       copyStatus.style.color = 'var(--accent-emerald)';
       setTimeout(() => {
         if (copyLabel) copyLabel.textContent = 'Copy Web Link';
         if (copyStatus) {
-          copyStatus.textContent = 'Tap to copy';
+          copyStatus.innerHTML = `${getCopyIconSvg(12, 'currentColor')} Tap to copy`;
           copyStatus.style.color = 'var(--accent-cyan)';
         }
       }, 2500);

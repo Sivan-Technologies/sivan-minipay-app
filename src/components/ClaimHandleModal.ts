@@ -1,18 +1,41 @@
 import { identityService } from '../services/identity.service';
+import {
+  getTagIconSvg,
+  getMailIconSvg,
+  getLinkIconSvg,
+  getCheckCircleSvg,
+  getHourglassIconSvg,
+  getAlertTriangleIconSvg
+} from '../utils/ui-icons';
 
 const MODAL_ID = 'sivan-claim-handle-modal';
 let _resolvePromise: ((username: string | null) => void) | null = null;
 let _debounceTimer: any = null;
+
+export interface OpenClaimHandleModalOptions {
+  walletAddress: string;
+  onSuccess?: (username: string) => void;
+  onToast?: (msg: string) => void;
+}
 
 /**
  * Opens the styled Claim @handle modal.
  * Returns the claimed username (e.g. "@soliame") or null if dismissed.
  */
 export function openClaimHandleModal(
-  walletAddress: string,
+  optsOrAddress: string | OpenClaimHandleModalOptions,
   onSuccess?: (username: string) => void,
   onToast?: (msg: string) => void
 ): Promise<string | null> {
+  const options: OpenClaimHandleModalOptions =
+    typeof optsOrAddress === 'string'
+      ? { walletAddress: optsOrAddress, onSuccess, onToast }
+      : optsOrAddress;
+
+  const walletAddress = options.walletAddress;
+  const successCb = options.onSuccess;
+  const toastCb = options.onToast;
+
   // Destroy any existing instance
   document.getElementById(MODAL_ID)?.remove();
 
@@ -97,25 +120,19 @@ export function openClaimHandleModal(
         #btn-claim-close {
           position: absolute;
           top: 16px; right: 20px;
-          background: rgba(255,255,255,0.08);
+        #btn-claim-skip {
+          background: none;
           border: none;
-          border-radius: 50%;
-          color: #aaa;
-          width: 28px; height: 28px;
-          font-size: 14px;
+          color: var(--text-muted, #8892a4);
+          font-size: 13px;
           cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          transition: background 0.15s;
+          text-decoration: underline;
+          opacity: 0.7;
+          margin-top: 14px;
+          transition: opacity 0.15s;
         }
-        #btn-claim-close:hover { background: rgba(255,255,255,0.14); }
-        #claim-handle-availability {
-          min-height: 20px;
-          font-size: 11.5px;
-          margin-top: 7px;
-          display: flex;
-          align-items: center;
-          gap: 5px;
-          transition: opacity 0.2s;
+        #btn-claim-skip:hover {
+          opacity: 1;
         }
       </style>
 
@@ -130,9 +147,9 @@ export function openClaimHandleModal(
             border: 1.5px solid rgba(52,211,153,0.3);
             border-radius: 16px;
             display: inline-flex; align-items: center; justify-content: center;
-            font-size: 24px;
+            color: var(--accent-emerald);
             margin-bottom: 14px;
-          ">🏷️</div>
+          ">${getTagIconSvg(24, 'var(--accent-emerald)')}</div>
           <h3 style="
             font-family: var(--font-display,'Inter'); font-size: 18px;
             font-weight: 700; color: #fff; margin: 0 0 6px;
@@ -147,10 +164,10 @@ export function openClaimHandleModal(
           display: flex; gap: 8px; margin-bottom: 20px;
         ">
           ${[
-            ['📨', 'Receive deals by name'],
-            ['🔗', 'Share a link, not an address'],
-            ['✅', 'Appears on your deal cards'],
-          ].map(([icon, label]) => `
+            [getMailIconSvg(16, 'var(--accent-emerald)'), 'Receive deals by name'],
+            [getLinkIconSvg(16, 'var(--accent-emerald)'), 'Share a link, not an address'],
+            [getCheckCircleSvg(16, 'var(--accent-emerald)'), 'Appears on your deal cards'],
+          ].map(([iconSvg, label]) => `
             <div style="
               flex: 1;
               background: rgba(52,211,153,0.07);
@@ -162,8 +179,8 @@ export function openClaimHandleModal(
               color: var(--text-secondary,#c4ccd8);
               line-height: 1.4;
             ">
-              <div style="font-size: 16px; margin-bottom: 4px;">${icon}</div>
-              <div>${label}</div>
+              <div style="margin-bottom: 4px; display: flex; justify-content: center;">${iconSvg}</div>
+              <span>${label}</span>
             </div>
           `).join('')}
         </div>
@@ -244,13 +261,13 @@ export function openClaimHandleModal(
       };
       const icons: Record<string, string> = {
         idle: '',
-        checking: '⏳',
-        available: '✓',
-        taken: '✗',
-        invalid: '⚠',
+        checking: getHourglassIconSvg(13, '#8892a4'),
+        available: getCheckCircleSvg(13, '#34d399'),
+        taken: '✕',
+        invalid: getAlertTriangleIconSvg(13, '#f59e0b'),
       };
       availabilityEl.innerHTML = message
-        ? `<span style="color:${colors[state]}">${icons[state]} ${message}</span>`
+        ? `<span style="color:${colors[state]}; display: inline-flex; align-items: center; gap: 4px;">${icons[state]} ${message}</span>`
         : '';
 
       input.classList.remove('error', 'success');
@@ -297,16 +314,17 @@ export function openClaimHandleModal(
       const result = await identityService.claimUsername(raw, walletAddress);
       if (result.success && result.username) {
         overlay.remove();
-        if (onToast) onToast(`🎉 Sivan handle claimed: ${result.username}`);
-        if (onSuccess) onSuccess(result.username);
+        if (toastCb) toastCb(`Sivan handle claimed: ${result.username}`);
+        if (successCb) successCb(result.username);
         if (_resolvePromise) {
           _resolvePromise(result.username);
           _resolvePromise = null;
         }
       } else {
         submitBtn.disabled = false;
-        submitBtn.textContent = 'Claim @handle';
-        setAvailability('taken', result.error || 'Could not claim. Try another handle.');
+        submitBtn.textContent = 'Claim This Handle';
+        setAvailability('taken', result.error || 'Failed to claim. Please try again.');
+        if (toastCb) toastCb(result.error || 'Failed to claim handle.');
       }
     });
 

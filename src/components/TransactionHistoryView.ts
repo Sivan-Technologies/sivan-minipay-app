@@ -1,6 +1,7 @@
 import { transactionsService, type TransactionItem } from '../services/transactions.service';
 import { agreementsService } from '../services/agreements.service';
 import { getActiveNetwork } from '../config/celo.config';
+import { getBankIconSvg, getHandshakeIconSvg, getHistoryIconSvg } from '../utils/ui-icons';
 
 export function renderTransactionHistory(
   container: HTMLElement,
@@ -55,11 +56,13 @@ export function renderTransactionHistory(
         <button type="button" class="history-filter-pill ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">
           All Activity (${items.length})
         </button>
-        <button type="button" class="history-filter-pill ${activeFilter === 'cashouts' ? 'active' : ''}" data-filter="cashouts">
-          🏦 Cash Outs (${items.filter(i => i.type === 'cashout').length})
+        <button type="button" class="history-filter-pill ${activeFilter === 'cashouts' ? 'active' : ''}" data-filter="cashouts" style="display: inline-flex; align-items: center; gap: 5px;">
+          ${getBankIconSvg(13, 'currentColor')}
+          <span>Cash Outs (${items.filter(i => i.type === 'cashout').length})</span>
         </button>
-        <button type="button" class="history-filter-pill ${activeFilter === 'deals' ? 'active' : ''}" data-filter="deals">
-          🤝 Deals (${items.filter(i => i.type !== 'cashout').length})
+        <button type="button" class="history-filter-pill ${activeFilter === 'deals' ? 'active' : ''}" data-filter="deals" style="display: inline-flex; align-items: center; gap: 5px;">
+          ${getHandshakeIconSvg(13, 'currentColor')}
+          <span>Deals (${items.filter(i => i.type !== 'cashout').length})</span>
         </button>
       </div>
 
@@ -67,7 +70,9 @@ export function renderTransactionHistory(
       <div class="tx-history-list">
         ${filtered.length === 0 ? `
           <div class="tx-empty-state">
-            <div style="font-size: 32px; margin-bottom: 8px;">${activeFilter === 'deals' ? '🤝' : activeFilter === 'cashouts' ? '🏦' : '📜'}</div>
+            <div style="display: flex; align-items: center; justify-content: center; width: 54px; height: 54px; margin: 0 auto 12px; border-radius: 14px; background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">
+              ${activeFilter === 'deals' ? getHandshakeIconSvg(28, 'var(--accent-emerald)') : activeFilter === 'cashouts' ? getBankIconSvg(28, 'var(--accent-emerald)') : getHistoryIconSvg(28, 'var(--accent-emerald)')}
+            </div>
             <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">
               ${activeFilter === 'deals' ? 'No deals recorded yet' : activeFilter === 'cashouts' ? 'No cash out records yet' : 'No transactions recorded yet'}
             </div>
@@ -105,7 +110,6 @@ export function renderTransactionHistory(
             minute: '2-digit',
           });
           const isCashout = item.type === 'cashout';
-          const icon = isCashout ? '🏦' : '🤝';
 
           const fiatDisplay = (isCashout && item.targetAmount)
             ? `${item.targetCurrencySymbol || ''}${item.targetAmount.toLocaleString()} ${item.targetCurrency || ''}`
@@ -117,8 +121,8 @@ export function renderTransactionHistory(
 
           return `
             <div class="tx-item-card">
-              <div class="tx-item-icon-wrap">
-                <span style="font-size: 18px;">${icon}</span>
+              <div class="tx-item-icon-wrap" style="display: flex; align-items: center; justify-content: center; color: var(--accent-emerald);">
+                ${isCashout ? getBankIconSvg(18, 'var(--accent-emerald)') : getHandshakeIconSvg(18, 'var(--accent-emerald)')}
               </div>
               <div class="tx-item-main">
                 <div class="tx-item-title">${item.title}</div>
@@ -139,7 +143,7 @@ export function renderTransactionHistory(
                 </div>
                 ${fiatDisplay ? `<div class="tx-amount-fiat">${fiatDisplay}</div>` : ''}
                 <div class="tx-status-badge ${item.status}">
-                  ${item.status === 'completed' ? 'Settled ✓' : item.status}
+                  ${item.status === 'completed' ? 'Settled' : item.status}
                 </div>
               </div>
             </div>

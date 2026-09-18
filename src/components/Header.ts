@@ -5,6 +5,7 @@ import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config'
 import { openLegalModal } from './LegalSupportModal';
 import { identityService } from '../services/identity.service';
 import { openClaimHandleModal } from './ClaimHandleModal';
+import { getCopyIconSvg, getShieldCheckIconSvg } from '../utils/ui-icons';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -58,7 +59,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             ` : isConnected ? `
               <span class="pulse-dot"></span>
               <span style="color: ${savedUsername ? 'var(--accent-emerald)' : 'var(--text-primary)'}; font-weight: 700; font-size: 12px; font-family: monospace;">${savedUsername || shortAddr}</span>
-              <span style="font-size: 11px; opacity: 0.7; margin-left: 1px;">📋</span>
+              <span style="display: inline-flex; align-items: center; opacity: 0.7; margin-left: 2px;">${getCopyIconSvg(11, 'currentColor')}</span>
             ` : `
               <span class="pulse-dot-red"></span>
               <span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Connect</span>
@@ -114,17 +115,19 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
-                <button type="button" class="btn-network-select ${!isTestnet ? 'active' : ''}" id="btn-select-mainnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${!isTestnet ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${!isTestnet ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${!isTestnet ? 'var(--accent-emerald)' : 'var(--text-muted)'}; cursor: pointer;">
-                  🟢 Celo Mainnet (42220)
+                <button type="button" class="btn-network-select ${!isTestnet ? 'active' : ''}" id="btn-select-mainnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${!isTestnet ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${!isTestnet ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${!isTestnet ? 'var(--accent-emerald)' : 'var(--text-muted)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);"></span>
+                  <span>Celo Mainnet</span>
                 </button>
-                <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer;">
-                  🟡 Celo Sepolia (11142220)
+                <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span>
+                  <span>Celo Sepolia</span>
                 </button>
               </div>
 
               ${isLiveMiniPay ? `
                 <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
-                  ℹ️ Opera MiniPay runs natively on Celo Mainnet.
+                  Opera MiniPay runs natively on Celo Mainnet.
                 </div>
               ` : `
                 <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
@@ -144,7 +147,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
               </div>
               ${isMetaMask ? `
                 <button type="button" class="btn-secondary" id="btn-import-usdc" style="width: 100%; font-size: 11px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
-                  <span>🦊 Import USDC to MetaMask</span>
+                  <span>Import USDC to MetaMask</span>
                 </button>
               ` : ''}
             </div>
@@ -174,7 +177,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
                   <span style="color: var(--text-muted);">Address:</span>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <code style="font-size: 11px; color: var(--accent-cyan);">${shortAddr}</code>
-                    <button class="btn-copy-addr" id="btn-copy-address" title="Copy address" style="background: none; border: none; cursor: pointer; color: var(--text-muted);">📋</button>
+                    <button class="btn-copy-addr" id="btn-copy-address" title="Copy address" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">${getCopyIconSvg(13, 'currentColor')}</button>
                   </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
@@ -197,7 +200,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             `}
 
             <button type="button" id="btn-modal-legal-support" style="width: 100%; margin-top: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; font-size: 11px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <span>🛡️</span>
+              ${getShieldCheckIconSvg(14, 'var(--accent-emerald)')}
               <span>Terms of Service, Privacy & 24/7 Support</span>
             </button>
           </div>
@@ -339,14 +342,14 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     container.querySelector('#btn-claim-handle')?.addEventListener('click', async () => {
       isWalletModalOpen = false;
       update(miniPayService.getState());
-      await openClaimHandleModal(
-        state.address || '',
-        (username) => {
-          if (onToast) onToast(`🎉 Sivan handle claimed: ${username}`);
+      await openClaimHandleModal({
+        walletAddress: state.address || '',
+        onSuccess: (username) => {
+          if (onToast) onToast(`Sivan handle claimed: ${username}`);
           update(miniPayService.getState());
         },
         onToast
-      );
+      });
     });
   };
 

@@ -6,6 +6,7 @@ import { getTokenIconSvg } from '../utils/token-icons';
 import { getActiveNetwork } from '../config/celo.config';
 import { renderBuyCngn } from './BuyCngnView';
 import { parseUnits } from 'viem';
+import { getFlashIconSvg, getCardDepositIconSvg } from '../utils/ui-icons';
 
 export async function renderSwap(
   container: HTMLElement,
@@ -33,7 +34,7 @@ export async function renderSwap(
     <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <span style="font-weight: 700; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
-          <span>⚡ Sivan Instant Liquidity Routing</span>
+          ${getFlashIconSvg(14, 'var(--accent-emerald)')} <span>Sivan Instant Liquidity Routing</span>
         </span>
         <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">${getActiveNetwork().chainName}</span>
       </div>
@@ -175,7 +176,7 @@ export async function renderSwap(
         class="btn-primary" 
         style="padding: 16px; font-size: 16px; font-weight: 700; margin-top: 8px; width: 100%; border-radius: var(--radius-md);"
       >
-        <span>⚡ Swap ${fromToken} for ${toToken}</span>
+        <span>Swap ${fromToken} for ${toToken}</span>
       </button>
 
     </div>
@@ -197,7 +198,9 @@ export async function renderSwap(
     tab.type = 'button';
     tab.className = `segmented-tab${label === 'Swap' ? ' active' : ''}`;
     const icon = document.createElement('span');
-    icon.textContent = label === 'Swap' ? '⇄' : '🏦';
+    icon.innerHTML = label === 'Swap' 
+      ? `<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="display:inline-block; vertical-align:middle;"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>` 
+      : getCardDepositIconSvg(15);
     icon.setAttribute('aria-hidden', 'true');
     const text = document.createElement('span');
     text.textContent = label;
@@ -270,7 +273,7 @@ export async function renderSwap(
 
       quoteSourceVal.textContent = currentQuote.source;
       quoteMinVal.textContent = `${currentQuote.minimumReceived.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${toToken}`;
-      btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
+      btnExecute.innerHTML = `<span>Swap ${fromToken} for ${toToken}</span>`;
       btnExecute.disabled = false;
     } catch (err) {
       quoteRateVal.textContent = 'Quote failed';
@@ -366,25 +369,25 @@ export async function renderSwap(
   // Swap Execution via Textile Credit RFQ Engine
   btnExecute.addEventListener('click', async () => {
     if (!state.address) {
-      showToast('⚠️ Please connect your wallet first.');
+      showToast('Please connect your wallet first.');
       return;
     }
 
     const amt = parseFloat(inputAmount.value) || 0;
     if (amt <= 0) {
-      showToast('⚠️ Please enter a valid swap amount.');
+      showToast('Please enter a valid swap amount.');
       return;
     }
 
     const tokenBal = balances.find(b => b.symbol === fromToken);
     const avail = tokenBal ? parseFloat(tokenBal.balanceFormatted.replace(/,/g, '')) : 0;
     if (amt > avail) {
-      showToast(`⚠️ Insufficient ${fromToken} balance. Available: ${avail}`);
+      showToast(`Insufficient ${fromToken} balance. Available: ${avail}`);
       return;
     }
 
     btnExecute.disabled = true;
-    btnExecute.innerHTML = '<span>⏳ Requesting Market Maker Quote...</span>';
+    btnExecute.innerHTML = '<span>Requesting Market Maker Quote...</span>';
 
     try {
       // 1. Solicit firm executable transaction payload from Textile Market Maker
@@ -424,12 +427,12 @@ export async function renderSwap(
 
           if (!apprRes.success || !apprRes.txHash) {
             btnExecute.disabled = false;
-            btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
-            showToast(`❌ Approval rejected: ${apprRes.error || 'Cancelled'}`);
+            btnExecute.innerHTML = `<span>Swap ${fromToken} for ${toToken}</span>`;
+            showToast(`Approval rejected: ${apprRes.error || 'Cancelled'}`);
             return;
           }
 
-          showToast(`⏳ ${fromToken} approval confirmed on Celo. Preparing atomic swap...`);
+          showToast(`${fromToken} approval confirmed on Celo. Preparing atomic swap...`);
           await miniPayService.waitForReceipt(apprRes.txHash);
         }
       }
@@ -445,8 +448,8 @@ export async function renderSwap(
 
       if (!swapRes.success || !swapRes.txHash) {
         btnExecute.disabled = false;
-        btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
-        showToast(`❌ Swap rejected: ${swapRes.error || 'Cancelled'}`);
+        btnExecute.innerHTML = `<span>Swap ${fromToken} for ${toToken}</span>`;
+        showToast(`Swap rejected: ${swapRes.error || 'Cancelled'}`);
         return;
       }
 
@@ -470,8 +473,8 @@ export async function renderSwap(
         txHash: swapRes.txHash,
       });
 
-      btnExecute.innerHTML = '<span>🚀 Swap Confirmed!</span>';
-      showToast(`🎉 Swap confirmed! Received ${outFormatted} ${toToken}! Tx: ${swapRes.txHash.slice(0, 8)}...`);
+      btnExecute.innerHTML = '<span>Swap Confirmed!</span>';
+      showToast(`Swap confirmed! Received ${outFormatted} ${toToken}! Tx: ${swapRes.txHash.slice(0, 8)}...`);
 
       setTimeout(() => {
         onNavigate('history');
@@ -479,8 +482,8 @@ export async function renderSwap(
     } catch (err: any) {
       console.error('Swap error:', err);
       btnExecute.disabled = false;
-      btnExecute.innerHTML = `<span>⚡ Swap ${fromToken} for ${toToken}</span>`;
-      showToast(`❌ Swap failed: ${err.message || 'Execution error'}`);
+      btnExecute.innerHTML = `<span>Swap ${fromToken} for ${toToken}</span>`;
+      showToast(`Swap failed: ${err.message || 'Execution error'}`);
     }
   });
 

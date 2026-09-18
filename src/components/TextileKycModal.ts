@@ -1,5 +1,6 @@
 import { textileKycService, type TextileCustomerProfile, type TextileKycState } from '../services/textile-kyc.service';
 import { miniPayService } from '../services/minipay.service';
+import { getShieldCheckIconSvg, getFlashIconSvg, getDocumentIconSvg, getHourglassIconSvg, getLockIconSvg, getBankIconSvg } from '../utils/ui-icons';
 
 let modalRoot: HTMLElement | null = null;
 let onVerifiedCallback: (() => void) | null = null;
@@ -47,7 +48,9 @@ async function renderKycModal() {
         <div class="modal-drag-handle"></div>
         <div class="modal-header" style="flex-shrink: 0; padding: 12px 18px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <div style="width: 36px; height: 36px; border-radius: 12px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2)); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center; font-size: 18px;">🛡️</div>
+            <div style="width: 36px; height: 36px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; align-items: center; justify-content: center;">
+              ${getShieldCheckIconSvg(18, 'var(--accent-emerald)')}
+            </div>
             <div>
               <h3 style="font-family: var(--font-display); font-size: 15px; margin: 0; font-weight: 700; color: #fff; letter-spacing: -0.01em;">Identity Verification</h3>
               <div style="display: flex; align-items: center; gap: 6px; margin-top: 1px;">
@@ -84,7 +87,7 @@ async function renderKycModal() {
   if (!walletAddress) {
     bodyEl.innerHTML = `
       <div style="text-align: center; padding: 20px 0;">
-        <p style="color: #ef4444; font-size: 13px;">⚠️ Please connect your Web3 wallet or MiniPay first.</p>
+        <p style="color: #ef4444; font-size: 13px;">Please connect your Web3 wallet or MiniPay first.</p>
       </div>
     `;
     return;
@@ -118,7 +121,7 @@ async function renderKycModal() {
 function renderVerifiedState(container: HTMLElement, _kyc: TextileKycState) {
   container.innerHTML = `
     <div style="text-align: center; padding: 16px 0;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--accent-emerald); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(16, 185, 129, 0.15); border: 2px solid var(--accent-emerald); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 26px; color: var(--accent-emerald);">
         ✓
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: var(--text-emerald); font-weight: 700;">Account Verified</h4>
@@ -152,8 +155,8 @@ function renderVerifiedState(container: HTMLElement, _kyc: TextileKycState) {
 function renderPendingState(container: HTMLElement, _kyc: TextileKycState, _walletAddress: string) {
   container.innerHTML = `
     <div style="text-align: center; padding: 16px 0;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px;">
-        ⏳
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(245, 158, 11, 0.15); border: 2px solid #f59e0b; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; color: #f59e0b;">
+        ${getHourglassIconSvg(26, '#f59e0b')}
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: #f59e0b; font-weight: 700;">Review in Progress</h4>
       <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px;">
@@ -173,7 +176,7 @@ function renderPendingState(container: HTMLElement, _kyc: TextileKycState, _wall
 
       <div style="display: flex; gap: 10px;">
         <button type="button" class="btn btn-secondary" id="btn-refresh-kyc" style="flex: 1;">
-          ↻ Check Status
+          Check Status
         </button>
         <button type="button" class="btn btn-primary" id="btn-kyc-close" style="flex: 1;">
           Got it
@@ -184,7 +187,7 @@ function renderPendingState(container: HTMLElement, _kyc: TextileKycState, _wall
 
   container.querySelector('#btn-refresh-kyc')?.addEventListener('click', async () => {
     const btn = container.querySelector('#btn-refresh-kyc') as HTMLButtonElement;
-    if (btn) btn.innerHTML = '↻ Checking...';
+    if (btn) btn.innerHTML = 'Checking...';
     await renderKycModal();
   });
 
@@ -203,7 +206,7 @@ function renderRejectedState(
 
   container.innerHTML = `
     <div style="text-align: center; padding: 16px 0;">
-      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px;">
+      <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 24px; color: #ef4444;">
         ✕
       </div>
       <h4 style="font-size: 16px; margin: 0 0 6px; color: #ef4444; font-weight: 700;">Verification Declined</h4>
@@ -231,26 +234,26 @@ function renderRegistrationForm(
     <div>
       <!-- Notice pill -->
       <div style="display: flex; align-items: center; gap: 8px; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 12px; padding: 10px 12px; margin-bottom: 16px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.4;">
-        <span style="font-size: 14px;">🇳🇬</span>
+        <span style="font-weight: 700; color: var(--accent-emerald);">NGN</span>
         <span>One-time compliance required to enable automated Nigerian bank payouts.</span>
       </div>
 
       <!-- Segmented Mode Tabs -->
       <div class="segmented-tabs-wrapper" style="margin-bottom: 18px; padding: 4px; background: rgba(255, 255, 255, 0.04); border-radius: 14px;">
         <button type="button" class="segmented-tab active" id="tab-kyc-fast">
-          <span>⚡ Fast Camera Scan</span>
+          <span style="display: flex; align-items: center; gap: 4px;">${getFlashIconSvg(13, 'currentColor')} Fast Camera Scan</span>
           <span style="font-size: 9.5px; padding: 2px 6px; border-radius: 6px; background: rgba(16, 185, 129, 0.25); color: #34d399; font-weight: 700;">Instant</span>
         </button>
         <button type="button" class="segmented-tab" id="tab-kyc-manual">
-          <span>📝 Enter Details</span>
+          <span style="display: flex; align-items: center; gap: 4px;">${getDocumentIconSvg(13, 'currentColor')} Enter Details</span>
         </button>
       </div>
 
       <!-- Tab 1: Fast Camera Scan (Recommended) -->
       <div id="panel-kyc-fast">
         <div class="kyc-hero-card">
-          <div style="width: 52px; height: 52px; border-radius: 16px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; font-size: 24px; box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);">
-            📸
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: var(--accent-emerald); box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
           </div>
           <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 6px;">Instant AI ID & Face Scan</h4>
           <p style="font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin: 0 0 16px;">
@@ -258,13 +261,14 @@ function renderRegistrationForm(
           </p>
 
           <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px;">
-            <div class="kyc-feature-pill"><span>⚡</span><span>Under 60s</span></div>
-            <div class="kyc-feature-pill"><span>🔒</span><span>Encrypted</span></div>
-            <div class="kyc-feature-pill"><span>🏛️</span><span>NIBSS Approved</span></div>
+            <div class="kyc-feature-pill">${getFlashIconSvg(12, 'var(--accent-emerald)')} Under 60s</div>
+            <div class="kyc-feature-pill">${getLockIconSvg(12, 'var(--accent-emerald)')} Encrypted</div>
+            <div class="kyc-feature-pill">${getBankIconSvg(12, 'var(--accent-emerald)')} NIBSS Approved</div>
           </div>
 
           <button type="button" class="btn-primary" id="btn-open-hosted-kyc" style="height: 48px; border-radius: 14px; font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35); cursor: pointer;">
-            <span>⚡ Launch Camera Verification</span>
+            ${getFlashIconSvg(16, '#000')}
+            <span>Launch Camera Verification</span>
           </button>
           <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 10px;">
             Secured via encrypted biometric verification · Instant wallet approval
@@ -370,7 +374,7 @@ function renderRegistrationForm(
   container.querySelector('#btn-open-hosted-kyc')?.addEventListener('click', async () => {
     const btn = container.querySelector('#btn-open-hosted-kyc') as HTMLButtonElement;
     btn.disabled = true;
-    btn.innerHTML = '<span>⚡ Opening Portal...</span>';
+    btn.innerHTML = '<span>Opening Portal...</span>';
 
     try {
       // Check if profile exists either in form or local storage
@@ -392,7 +396,10 @@ function renderRegistrationForm(
           err.style.display = 'block';
         }
         btn.disabled = false;
-        btn.innerHTML = '<span>⚡ Launch Camera Verification</span>';
+        btn.innerHTML = `
+          ${getFlashIconSvg(16, '#000')}
+          <span>Launch Camera Verification</span>
+        `;
         return;
       }
 
@@ -424,12 +431,18 @@ function renderRegistrationForm(
       } else {
         alert(res.error || 'Please fill in your basic profile details first.');
         btn.disabled = false;
-        btn.innerHTML = '<span>⚡ Launch Camera Verification</span>';
+        btn.innerHTML = `
+          ${getFlashIconSvg(16, '#000')}
+          <span>Launch Camera Verification</span>
+        `;
       }
     } catch (err: any) {
       alert(err.message || 'Could not open verification portal.');
       btn.disabled = false;
-      btn.innerHTML = '<span>⚡ Launch Camera Verification</span>';
+      btn.innerHTML = `
+        ${getFlashIconSvg(16, '#000')}
+        <span>Launch Camera Verification</span>
+      `;
     }
   });
 
@@ -452,7 +465,7 @@ function renderRegistrationForm(
     errorEl.style.display = 'none';
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>⏳ Signing & Registering Profile...</span>';
+    submitBtn.innerHTML = '<span>Signing & Registering Profile...</span>';
 
     try {
       const profile: TextileCustomerProfile = {
@@ -491,7 +504,7 @@ function renderRegistrationForm(
     } catch (err: any) {
       submitBtn.disabled = false;
       submitBtn.innerHTML = '<span>Save Profile & Continue →</span>';
-      errorEl.textContent = `❌ ${err.message || 'Could not complete registration.'}`;
+      errorEl.textContent = err.message || 'Could not complete registration.';
       errorEl.style.display = 'block';
     }
   });

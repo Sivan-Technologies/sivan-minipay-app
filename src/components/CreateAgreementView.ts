@@ -8,6 +8,7 @@ import { openShareModal } from './ShareAgreementModal';
 import { identityService } from '../services/identity.service';
 import { DELIVERY_DEADLINE_PRESETS } from '../utils/deadline';
 import { injectClaimHandleNudge } from './ClaimHandleNudge';
+import { getTagIconSvg, getLockIconSvg, getSearchIconSvg, getCheckCircleSvg } from '../utils/ui-icons';
 
 export async function renderCreateAgreement(
   container: HTMLElement,
@@ -30,27 +31,6 @@ export async function renderCreateAgreement(
           type="text" 
           id="deal-title" 
           class="form-input" 
-          placeholder="e.g. Mobile App UI Design or Smart Contract Review" 
-          required 
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label" for="deal-contractor">Contractor (Phone, @username, or Celo 0x)</label>
-        <input 
-          type="text" 
-          id="deal-contractor" 
-          class="form-input" 
-          placeholder="e.g. +2348012345678, @soliame, or 0x..." 
-          required 
-        />
-        <div id="contractor-resolution-badge" class="form-helper" style="font-size: 11px; margin-top: 4px; display: none;"></div>
-        <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Currency & Amount</label>
-        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="deal-currency-wrap">
             <div class="custom-select-trigger" id="deal-currency-trigger">
@@ -132,14 +112,15 @@ export async function renderCreateAgreement(
           <span>Net Contractor Payout:</span>
           <span id="calc-net">0.00 USDC</span>
         </div>
-        <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px;">
-          <span>🏷️ Official Attribution:</span>
-          <code style="color: var(--accent-cyan);">${CELO_CONFIG.attributionTag}</code>
+        <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+          <span style="display: inline-flex; align-items: center; gap: 4px;">${getTagIconSvg(12, 'var(--text-muted)')} Attribution Tag:</span>
+          <code style="color: var(--accent-cyan); font-family: monospace;">${CELO_CONFIG.attributionTag}</code>
         </div>
       </div>
 
-      <button type="submit" class="btn-primary" id="btn-submit-deal" style="margin-top: 10px;">
-        <span>🔒 Fund & Lock Deal (Celo Mainnet)</span>
+      <button type="submit" class="btn-primary" id="btn-submit-deal" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        ${getLockIconSvg(16, '#000')}
+        <span>Fund & Lock Deal (Celo Mainnet)</span>
       </button>
     </form>
   `;
@@ -150,7 +131,7 @@ export async function renderCreateAgreement(
     insertBefore: formEl,
     onToast: showToast,
     onClaimed: (username) => {
-      showToast(`🎉 Sivan handle set: ${username} — others can now find you by name`);
+      showToast(`Sivan handle set: ${username} — others can now find you by name`);
     },
   });
 
@@ -309,7 +290,7 @@ export async function renderCreateAgreement(
       if (resolutionBadge) {
         resolutionBadge.style.display = 'block';
         resolutionBadge.style.color = 'var(--text-muted)';
-        resolutionBadge.innerHTML = '<span>🔍 Resolving Sivan handle...</span>';
+        resolutionBadge.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px;">${getSearchIconSvg(12, 'var(--text-muted)')} Resolving Sivan handle...</span>`;
       }
 
       resolveTimer = setTimeout(async () => {
@@ -318,12 +299,12 @@ export async function renderCreateAgreement(
           resolvedAddress = res.user.targetAddress;
           if (resolutionBadge) {
             resolutionBadge.style.color = 'var(--accent-emerald)';
-            resolutionBadge.innerHTML = `<span>✅ Verified Sivan User: ${res.user.displayName || val} (${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)})</span>`;
+            resolutionBadge.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px;">${getCheckCircleSvg(12, 'var(--accent-emerald)')} Verified Sivan User: ${res.user.displayName || val} (${resolvedAddress.slice(0, 6)}...${resolvedAddress.slice(-4)})</span>`;
           }
         } else if (res.found && res.user) {
           if (resolutionBadge) {
             resolutionBadge.style.color = 'var(--accent-emerald)';
-            resolutionBadge.innerHTML = `<span>✅ Sivan User: ${res.user.displayName || val}</span>`;
+            resolutionBadge.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 4px;">${getCheckCircleSvg(12, 'var(--accent-emerald)')} Sivan User: ${res.user.displayName || val}</span>`;
           }
         } else {
           if (resolutionBadge) {
@@ -344,7 +325,7 @@ export async function renderCreateAgreement(
     e.preventDefault();
 
     if (!state.address) {
-      showToast('⚠️ Please connect your MetaMask or MiniPay wallet first.');
+      showToast('Please connect your MetaMask or MiniPay wallet first.');
       const res = await miniPayService.connectMetaMask();
       if (!res.success) return;
     }
@@ -357,7 +338,7 @@ export async function renderCreateAgreement(
     const description = (container.querySelector('#deal-desc') as HTMLTextAreaElement).value.trim();
 
     if (!amount || amount <= 0) {
-      showToast('⚠️ Please enter a valid amount.');
+      showToast('Please enter a valid amount.');
       return;
     }
 
@@ -366,12 +347,12 @@ export async function renderCreateAgreement(
     const availableNum = currentBal ? parseFloat(currentBal.balanceFormatted.replace(/,/g, '')) : 0;
 
     if (amount > availableNum) {
-      showToast(`⚠️ Insufficient ${currency} balance. You have ${availableNum} ${currency}.`);
+      showToast(`Insufficient ${currency} balance. You have ${availableNum} ${currency}.`);
       return;
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>⏳ Waiting for wallet confirmation...</span>';
+    submitBtn.innerHTML = '<span>Waiting for wallet confirmation...</span>';
 
     try {
       // Execute genuine on-chain transfer to lock deal under Sivan AI Autonomous Service Agreement
@@ -382,9 +363,12 @@ export async function renderCreateAgreement(
       });
 
       if (!txRes.success || !txRes.txHash) {
-        showToast(`❌ Transaction failed: ${txRes.error || 'User cancelled'}`);
+        showToast(`Transaction failed: ${txRes.error || 'User cancelled'}`);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>🔒 Fund & Lock Deal (Celo Mainnet)</span>';
+        submitBtn.innerHTML = `
+          ${getLockIconSvg(16, '#000')}
+          <span>Fund & Lock Deal (Celo Mainnet)</span>
+        `;
         return;
       }
 
@@ -407,15 +391,18 @@ export async function renderCreateAgreement(
         fundingTxHash: txRes.txHash,
       });
 
-      showToast(`🎉 Deal confirmed on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);
+      showToast(`Deal confirmed on Celo Mainnet. Tx: ${txRes.txHash.slice(0, 10)}...`);
       openShareModal(created, () => {
         onNavigate('deals');
       });
     } catch (err: any) {
       console.error('Deal funding error:', err);
-      showToast(`❌ Error: ${err.message || 'Transaction could not be completed'}`);
+      showToast(`Error: ${err.message || 'Transaction could not be completed'}`);
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>🔒 Fund & Lock Deal (Celo Mainnet)</span>';
+      submitBtn.innerHTML = `
+        ${getLockIconSvg(16, '#000')}
+        <span>Fund & Lock Deal (Celo Mainnet)</span>
+      `;
     }
   });
 }

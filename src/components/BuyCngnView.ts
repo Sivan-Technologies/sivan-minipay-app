@@ -76,7 +76,7 @@ export async function renderBuyCngn(container: HTMLElement) {
       kycBanner.style.background = 'rgba(245, 158, 11, 0.08)';
       kycBanner.style.borderColor = 'rgba(245, 158, 11, 0.25)';
       kycBanner.style.cursor = 'pointer';
-      if (titleEl) { titleEl.textContent = 'Verification Under Review ⏳'; titleEl.style.color = '#f59e0b'; }
+      if (titleEl) { titleEl.textContent = 'Verification Under Review'; titleEl.style.color = '#f59e0b'; }
       if (descEl) { descEl.textContent = message || 'Details submitted for review. Reviews take 1-5 minutes.'; }
       if (actionEl) { actionEl.textContent = 'Check Status ↻'; actionEl.style.color = '#f59e0b'; }
     } else if (state === 'checking') {
@@ -90,7 +90,7 @@ export async function renderBuyCngn(container: HTMLElement) {
       kycBanner.style.background = 'rgba(239, 68, 68, 0.08)';
       kycBanner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
       kycBanner.style.cursor = 'pointer';
-      if (titleEl) { titleEl.textContent = 'Identity Verification Required 🛡️'; titleEl.style.color = '#ef4444'; }
+      if (titleEl) { titleEl.textContent = 'Identity Verification Required'; titleEl.style.color = '#ef4444'; }
       if (descEl) { descEl.textContent = message || 'Identity verification required before bank transfer instructions can be issued.'; }
       if (actionEl) { actionEl.textContent = 'Verify Now →'; actionEl.style.color = '#ef4444'; }
     }
@@ -215,8 +215,8 @@ export async function renderBuyCngn(container: HTMLElement) {
     reset();
     if (kyc?.state === 'verified' && kyc.canDeposit === true) {
       updateKycBanner('verified');
-      status.textContent = `✓ Compliance Verified. Ready to generate bank transfer details for ${network.chainName}.`;
-      form([['amount', 'Amount to Purchase (NGN)', 'text']], '⚡ Generate Bank Transfer Details', async element => {
+      status.textContent = `Compliance Verified. Ready to generate bank transfer details for ${network.chainName}.`;
+      form([['amount', 'Amount to Purchase (NGN)', 'text']], 'Generate Bank Transfer Details', async element => {
         const amount = String(new FormData(element).get('amount')).trim();
         if (!/^\d+(\.\d{1,2})?$/.test(amount) || Number(amount) <= 0) throw new Error('Enter a positive naira amount with up to two decimal places.');
         const saved = readSaved();
@@ -237,14 +237,14 @@ export async function renderBuyCngn(container: HTMLElement) {
       updateKycBanner('pending');
       status.textContent = kyc.state === 'pending' ? 'Your identity is under review. No further submission is needed.' : 'Verified, but deposits are currently unavailable.';
       button('Check review status', () => review(false));
-      button('Open Verification Details 🛡️', async () => {
+      button('Open Verification Details', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       if (kyc.state === 'pending') poll(() => review(false), 15000);
     } else if (!kyc) {
       updateKycBanner('unverified');
       status.textContent = 'Identity verification required before bank payment instructions can be issued.';
-      button('Verify Identity with BVN (Instant) 🛡️', async () => {
+      button('Verify Identity with BVN (Instant)', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Enter Details Manually', async () => {
@@ -260,7 +260,7 @@ export async function renderBuyCngn(container: HTMLElement) {
     } else {
       updateKycBanner('unverified', kyc.rejectionReasons?.join('. '));
       status.textContent = ['Identity document verification required.', ...(kyc.rejectionReasons || [])].join(' ');
-      button('Verify Identity with BVN (Instant) 🛡️', async () => {
+      button('Verify Identity with BVN (Instant)', async () => {
         openTextileKycModal(() => { void run(async () => review(false)); });
       });
       button('Or Upload National ID Manually', async () => {

@@ -5,6 +5,7 @@ import { openShareModal } from './ShareAgreementModal';
 import { getCountdownStatus, formatDeadlineHours } from '../utils/deadline';
 import { getNetworkExplorer } from '../utils/explorers';
 import { showConfirmModal, showPromptModal } from './ConfirmModal';
+import { getHandshakeIconSvg, getLockIconSvg, getAlertTriangleIconSvg, getDocumentIconSvg, getFlashIconSvg, getLinkIconSvg, getBankIconSvg, getCheckCircleSvg, getHourglassIconSvg } from '../utils/ui-icons';
 
 export function renderAgreementsList(
   container: HTMLElement,
@@ -65,7 +66,9 @@ export function renderAgreementsList(
       <div class="agreements-container">
         ${filtered.length === 0 ? `
           <div class="empty-agreements-box">
-            <div class="empty-agreements-icon">🤝</div>
+            <div class="empty-agreements-icon" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 12px; background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">
+              ${getHandshakeIconSvg(24, 'var(--accent-emerald)')}
+            </div>
             <div class="empty-agreements-title">No agreements found</div>
             <div class="empty-agreements-desc">Create a new service agreement to lock milestone funds on Celo.</div>
             <button class="btn-empty-create" id="btn-empty-create-deal">
@@ -102,7 +105,7 @@ export function renderAgreementsList(
         });
         if (!proof || !proof.trim() || proof.trim() === 'https://') return;
         agreementsService.updateStatus(id, 'delivered', proof.trim());
-        showToast('📦 Milestone marked as delivered! Client can now inspect & release payment.');
+        showToast('Milestone marked as delivered. Client can now inspect & release payment.');
         render();
       });
     });
@@ -128,7 +131,7 @@ export function renderAgreementsList(
         if (!confirmed) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Signing cancellation...';
+        btnEl.textContent = 'Signing cancellation...';
 
         try {
           const signRes = await miniPayService.signRefundAuthorization({
@@ -139,25 +142,25 @@ export function renderAgreementsList(
           });
 
           if (!signRes.success || !signRes.signature) {
-            showToast(`❌ Cancellation cancelled: ${signRes.error || 'User cancelled'}`);
+            showToast(`Cancellation cancelled: ${signRes.error || 'User cancelled'}`);
             btnEl.disabled = false;
-            btnEl.textContent = '↩️ Cancel & Refund';
+            btnEl.textContent = 'Cancel & Refund';
             return;
           }
 
-          btnEl.textContent = '⏳ Processing refund...';
+          btnEl.textContent = 'Processing refund...';
           const refundRes = await agreementsService.cancelAndRefundOverdue(id, signRes.signature, agr.buyerAddress);
           if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
-            showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded on-chain!`);
+            showToast(`Agreement cancelled & ${agr.amount} ${agr.currency} refunded on-chain.`);
           } else {
-            showToast(`↩️ Agreement cancelled & ${agr.amount} ${agr.currency} refunded to your connected wallet!`);
+            showToast(`Agreement cancelled & ${agr.amount} ${agr.currency} refunded to your connected wallet.`);
           }
           render();
         } catch (err: any) {
           console.error('Cancel & refund error:', err);
-          showToast(`❌ Error: ${err.message || 'Refund signing failed'}`);
+          showToast(`Error: ${err.message || 'Refund signing failed'}`);
           btnEl.disabled = false;
-          btnEl.textContent = '↩️ Cancel & Refund';
+          btnEl.textContent = 'Cancel & Refund';
         }
       });
     });
@@ -185,10 +188,10 @@ export function renderAgreementsList(
         const ok = agreementsService.extendDeadline(id, hours);
         if (ok) {
           const label = hours < 24 ? `+${hours} hours` : `+${hours / 24} day${hours === 24 ? '' : 's'}`;
-          showToast(`⏱ Delivery deadline extended by ${label}! Contractor notified.`);
+          showToast(`Delivery deadline extended by ${label}. Contractor notified.`);
           render();
         } else {
-          showToast('❌ Failed to extend deadline.');
+          showToast('Failed to extend deadline.');
         }
       });
     });
@@ -202,7 +205,7 @@ export function renderAgreementsList(
         if (!agr) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Waiting for wallet signature...';
+        btnEl.textContent = 'Waiting for wallet signature...';
 
         try {
           // Cryptographically sign the milestone release authorization with the connected wallet
@@ -214,25 +217,31 @@ export function renderAgreementsList(
           });
 
           if (!signRes.success || !signRes.signature) {
-            showToast(`❌ Release signature cancelled: ${signRes.error || 'User cancelled'}`);
+            showToast(`Release signature cancelled: ${signRes.error || 'User cancelled'}`);
             btnEl.disabled = false;
-            btnEl.textContent = '⚡ Release Payment';
+            btnEl.innerHTML = `
+              ${getFlashIconSvg(14, '#000')}
+              <span>Release Payment</span>
+            `;
             return;
           }
 
-          btnEl.textContent = '⏳ Processing release...';
+          btnEl.textContent = 'Processing release...';
           const relRes = await agreementsService.releaseAgreement(id, signRes.signature);
           if (relRes?.releaseTxHash && relRes.releaseTxHash.length === 66) {
-            showToast(`🎉 Milestone payment released on-chain to contractor!`);
+            showToast(`Milestone payment released on-chain to contractor.`);
           } else {
-            showToast(`🎉 Milestone payment signed & authorized by client! Sig: ${signRes.signature.slice(0, 10)}...`);
+            showToast(`Milestone payment signed & authorized by client. Sig: ${signRes.signature.slice(0, 10)}...`);
           }
           render();
         } catch (err: any) {
           console.error('Payment release error:', err);
-          showToast(`❌ Error: ${err.message || 'Signing failed'}`);
+          showToast(`Error: ${err.message || 'Signing failed'}`);
           btnEl.disabled = false;
-          btnEl.textContent = '⚡ Release Payment';
+          btnEl.innerHTML = `
+            ${getFlashIconSvg(14, '#000')}
+            <span>Release Payment</span>
+          `;
         }
       });
     });
@@ -256,7 +265,7 @@ export function renderAgreementsList(
         if (!reason || !reason.trim()) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Signing dispute...';
+        btnEl.textContent = 'Signing dispute...';
 
         try {
           const signRes = await miniPayService.signDisputeFiling({
@@ -265,20 +274,26 @@ export function renderAgreementsList(
           });
 
           if (!signRes.success || !signRes.signature) {
-            showToast(`❌ Dispute signature cancelled: ${signRes.error || 'User cancelled'}`);
+            showToast(`Dispute signature cancelled: ${signRes.error || 'User cancelled'}`);
             btnEl.disabled = false;
-            btnEl.textContent = '⚠️ Raise Dispute';
+            btnEl.innerHTML = `
+              ${getAlertTriangleIconSvg(13, '#f87171')}
+              <span>Dispute</span>
+            `;
             return;
           }
 
           agreementsService.raiseDispute(id, reason.trim(), signRes.signature);
-          showToast(`⚠️ Formal dispute lodged under agreement protocol! Sig: ${signRes.signature.slice(0, 10)}...`);
+          showToast(`Formal dispute lodged under agreement protocol. Sig: ${signRes.signature.slice(0, 10)}...`);
           render();
         } catch (err: any) {
           console.error('Dispute filing error:', err);
-          showToast(`❌ Error: ${err.message || 'Dispute signing failed'}`);
+          showToast(`Error: ${err.message || 'Dispute signing failed'}`);
           btnEl.disabled = false;
-          btnEl.textContent = '⚠️ Raise Dispute';
+          btnEl.innerHTML = `
+            ${getAlertTriangleIconSvg(13, '#f87171')}
+            <span>Dispute</span>
+          `;
         }
       });
     });
@@ -304,7 +319,7 @@ export function renderAgreementsList(
         if (!confirmed) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Signing refund...';
+        btnEl.textContent = 'Signing refund...';
 
         try {
           const signRes = await miniPayService.signRefundAuthorization({
@@ -315,25 +330,25 @@ export function renderAgreementsList(
           });
 
           if (!signRes.success || !signRes.signature) {
-            showToast(`❌ Refund signature cancelled: ${signRes.error || 'User cancelled'}`);
+            showToast(`Refund signature cancelled: ${signRes.error || 'User cancelled'}`);
             btnEl.disabled = false;
-            btnEl.textContent = '↩️ Refund';
+            btnEl.textContent = 'Refund';
             return;
           }
 
-          btnEl.textContent = '⏳ Processing refund...';
+          btnEl.textContent = 'Processing refund...';
           const refundRes = await agreementsService.refundAgreement(id, signRes.signature, agr.buyerAddress);
           if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
-            showToast(`↩️ Mutual refund executed! Funds refunded on-chain to client.`);
+            showToast(`Mutual refund executed. Funds refunded on-chain to client.`);
           } else {
-            showToast(`↩️ Mutual refund executed! Funds credited back to client. Sig: ${signRes.signature.slice(0, 10)}...`);
+            showToast(`Mutual refund executed. Funds credited back to client. Sig: ${signRes.signature.slice(0, 10)}...`);
           }
           render();
         } catch (err: any) {
           console.error('Refund signing error:', err);
-          showToast(`❌ Error: ${err.message || 'Refund signing failed'}`);
+          showToast(`Error: ${err.message || 'Refund signing failed'}`);
           btnEl.disabled = false;
-          btnEl.textContent = '↩️ Refund';
+          btnEl.textContent = 'Refund';
         }
       });
     });
@@ -359,7 +374,7 @@ export function renderAgreementsList(
         if (!confirmed) return;
 
         btnEl.disabled = true;
-        btnEl.textContent = '⏳ Cancelling...';
+        btnEl.textContent = 'Cancelling...';
 
         try {
           const signRes = await miniPayService.signRefundAuthorization({
@@ -376,16 +391,16 @@ export function renderAgreementsList(
           );
 
           if (refundRes?.refundTxHash && refundRes.refundTxHash.length <= 66) {
-            showToast(`🚫 Agreement cancelled! Funds returned on-chain to client.`);
+            showToast(`Agreement cancelled. Funds returned on-chain to client.`);
           } else {
-            showToast(`🚫 Agreement cancelled! Funds refunded to client.`);
+            showToast(`Agreement cancelled. Funds refunded to client.`);
           }
           render();
         } catch (err: any) {
           console.error('Cancel agreement error:', err);
-          showToast(`❌ Error: ${err.message || 'Cancellation failed'}`);
+          showToast(`Error: ${err.message || 'Cancellation failed'}`);
           btnEl.disabled = false;
-          btnEl.textContent = '🚫 Cancel';
+          btnEl.textContent = 'Cancel';
         }
       });
     });
@@ -448,7 +463,7 @@ export function renderAgreementsList(
         ${isOverdue ? `
           <div class="overdue-alert-box ${isContractor ? 'contractor-overdue-alert' : ''}">
             <div class="overdue-alert-header">
-              <span class="overdue-alert-icon">${isBuyer ? '⚠️' : '⏳'}</span>
+              <span class="overdue-alert-icon">${isBuyer ? getAlertTriangleIconSvg(15, '#f59e0b') : getHourglassIconSvg(15, '#f59e0b')}</span>
               <span class="overdue-alert-title">
                 ${isBuyer ? 'Delivery Overdue: Would you like to extend or cancel?' : 'Deadline Expired — Action Required'}
               </span>
@@ -465,7 +480,9 @@ export function renderAgreementsList(
         ${isDelivered ? `
           <div style="margin-bottom: 12px; padding: 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.4); border-radius: var(--radius-sm);">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-              <span style="font-size: 16px;">📦</span>
+              <div style="display: flex; align-items: center; justify-content: center; color: var(--accent-emerald);">
+                ${getDocumentIconSvg(16, 'var(--accent-emerald)')}
+              </div>
               <span style="font-weight: 700; color: #34d399; font-size: 13px;">
                 ${isBuyer ? 'Deliverables Submitted — Review & Release Payout' : 'Deliverables Submitted'}
               </span>
@@ -477,7 +494,7 @@ export function renderAgreementsList(
             </p>
             ${agr.deliverableProofUrl ? `
               <a href="${agr.deliverableProofUrl}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--accent-cyan); font-weight: 600; text-decoration: underline; background: rgba(6, 182, 212, 0.1); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(6, 182, 212, 0.25);">
-                <span>📎 Deliverable Link:</span>
+                <span style="display: inline-flex; align-items: center; gap: 4px;">${getLinkIconSvg(12, 'var(--accent-cyan)')} Deliverable Link:</span>
                 <span style="font-family: monospace;">${agr.deliverableProofUrl.length > 36 ? agr.deliverableProofUrl.slice(0, 36) + '...' : agr.deliverableProofUrl} ↗</span>
               </a>
             ` : ''}
@@ -498,7 +515,7 @@ export function renderAgreementsList(
           <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
             <span style="color: var(--text-muted);">Delivery Deadline:</span>
             <span style="color: ${isOverdue ? '#f87171' : 'var(--accent-cyan)'}; font-weight: 600;">
-              ⏱ ${formatDeadlineHours(agr.deadlineHours)} ${isOverdue ? '(Expired)' : ''}
+              ${formatDeadlineHours(agr.deadlineHours)} ${isOverdue ? '(Expired)' : ''}
             </span>
           </div>
           <div style="display: flex; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border-subtle);">
@@ -509,7 +526,10 @@ export function renderAgreementsList(
 
         ${isDisputed ? `
           <div style="font-size: 12px; color: #f87171; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 12px;">
-            <div style="font-weight: 700; margin-bottom: 4px;">⚠️ Active Dispute Lodged</div>
+            <div style="font-weight: 700; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+              ${getAlertTriangleIconSvg(14, '#f87171')}
+              <span>Active Dispute Lodged</span>
+            </div>
             <div style="color: var(--text-secondary); font-size: 11px;">${agr.disputeReason || 'Dispute lodged regarding deliverables criteria.'}</div>
             ${agr.disputeTxHash ? `
               <div style="font-size: 10px; font-family: monospace; margin-top: 6px; color: var(--text-muted);">
@@ -521,7 +541,7 @@ export function renderAgreementsList(
 
         ${agr.deliverableProofUrl ? `
           <div style="font-size: 11px; color: var(--accent-cyan); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
-            <span>📎 Deliverable:</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px;">${getLinkIconSvg(12, 'var(--accent-cyan)')} Deliverable:</span>
             <a href="${agr.deliverableProofUrl}" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">
               View Deliverable Proof Link ↗
             </a>
@@ -530,7 +550,7 @@ export function renderAgreementsList(
 
         ${agr.fundingTxHash ? `
           <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; gap: 4px;">
-            <span>🔒 Funding Tx:</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px;">${getLockIconSvg(12, 'var(--text-muted)')} Funding Tx:</span>
             <a href="${getNetworkExplorer('celo', agr.fundingTxHash).url}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
               ${agr.fundingTxHash.slice(0, 12)}... ↗
             </a>
@@ -540,7 +560,7 @@ export function renderAgreementsList(
         ${isReleased ? `
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
-              ✅ Settled on Celo Mainnet<br/>
+              <span style="display: inline-flex; align-items: center; gap: 4px; color: var(--accent-emerald);">${getCheckCircleSvg(12, 'var(--accent-emerald)')} Settled on Celo Mainnet</span><br/>
               ${agr.releaseTxHash ? (agr.releaseTxHash.length === 66 ? `
                 <a href="${getNetworkExplorer('celo', agr.releaseTxHash).url}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
                   Tx: ${agr.releaseTxHash.slice(0, 14)}... ↗
@@ -551,14 +571,15 @@ export function renderAgreementsList(
                 </span>
               `) : ''}
             </div>
-            <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
-              Cash Out 🏦
+            <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+              ${getBankIconSvg(14, 'currentColor')}
+              <span>Cash Out</span>
             </button>
           </div>
         ` : isRefunded ? `
           <div style="display: flex; gap: 8px; align-items: center;">
             <div style="flex: 1; font-size: 11px; color: var(--text-muted);">
-              ↩️ Refunded back to buyer's wallet<br/>
+              Refunded back to buyer's wallet<br/>
               ${agr.refundTxHash ? (agr.refundTxHash.length <= 66 ? `
                 <a href="${getNetworkExplorer('celo', agr.refundTxHash).url}" target="_blank" rel="noopener noreferrer" style="font-size: 10px; color: var(--accent-cyan); text-decoration: none;" title="${agr.refundTxHash}">
                   Refund Tx: ${agr.refundTxHash.slice(0, 10)}...${agr.refundTxHash.slice(-6)} ↗
@@ -570,7 +591,7 @@ export function renderAgreementsList(
               `) : ''}
             </div>
             <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px;">
-              Wallet Balance 💼
+              Wallet Balance
             </button>
           </div>
         ` : isOverdue ? `
@@ -580,10 +601,10 @@ export function renderAgreementsList(
               <!-- Buyer Overdue Actions -->
               <div style="display: flex; gap: 8px; align-items: center;">
                 <button class="btn-danger-refund btn-cancel-refund-overdue" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 11px;" title="Cancel agreement and claim instant refund">
-                  <span>↩️ Cancel & Refund</span>
+                  <span>Cancel & Refund</span>
                 </button>
                 <button class="btn-extend-trigger btn-toggle-extend" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 11px;" title="Extend deadline">
-                  <span>⏱ Extend Deadline</span>
+                  <span>Extend Deadline</span>
                 </button>
               </div>
 
@@ -596,23 +617,27 @@ export function renderAgreementsList(
               </div>
 
               <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px;">
-                  🔗 Share
+                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">
+                  ${getLinkIconSvg(12, 'currentColor')}
+                  <span>Share</span>
                 </button>
                 ${!isDisputed ? `
-                  <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
-                    ⚠️ Dispute
+                  <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 6px 10px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                    ${getAlertTriangleIconSvg(12, '#f87171')}
+                    <span>Dispute</span>
                   </button>
                 ` : ''}
               </div>
             ` : `
               <!-- Contractor Overdue Actions -->
               <div style="display: flex; gap: 8px; align-items: center;">
-                <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;" title="Submit deliverable now">
-                  <span>📤 Submit Deliverable Now</span>
+                <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" title="Submit deliverable now">
+                  ${getDocumentIconSvg(15, '#000')}
+                  <span>Submit Deliverable Now</span>
                 </button>
-                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 12px 14px; font-size: 12px;">
-                  <span>🔗 Share</span>
+                <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 12px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;">
+                  ${getLinkIconSvg(14, 'currentColor')}
+                  <span>Share</span>
                 </button>
               </div>
             `}
@@ -621,34 +646,39 @@ export function renderAgreementsList(
           <!-- Normal In-Progress / Delivered / Disputed Actions: strictly separated by role -->
           <div style="display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; gap: 8px; align-items: center;">
-              <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 10px 14px; font-size: 12px;" title="Share agreement link">
-                <span>🔗 Share</span>
+              <button class="btn-secondary btn-share-deal" data-id="${agr.id}" style="width: auto; padding: 10px 14px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px;" title="Share agreement link">
+                ${getLinkIconSvg(14, 'currentColor')}
+                <span>Share</span>
               </button>
 
               ${isBuyer ? `
                 <!-- Buyer Normal View -->
                 ${isDelivered ? `
-                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
-                    <span>⚡ Release ${formattedAmount}</span>
+                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    ${getFlashIconSvg(15, '#000')}
+                    <span>Release ${formattedAmount}</span>
                   </button>
                 ` : isDisputed ? `
-                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px;">
-                    <span>⚡ Resolve & Release Payout</span>
+                  <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    ${getFlashIconSvg(15, '#000')}
+                    <span>Resolve & Release Payout</span>
                   </button>
                 ` : `
                   <button class="btn-secondary btn-toggle-extend" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
-                    <span>⏱ Extend Deadline</span>
+                    <span>Extend Deadline</span>
                   </button>
                 `}
               ` : `
                 <!-- Contractor Normal View -->
                 ${isDelivered ? `
-                  <div style="flex: 1; font-size: 11px; color: var(--accent-cyan); padding: 9px 12px; background: rgba(6, 182, 212, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(6, 182, 212, 0.25); text-align: center;">
-                    📦 Deliverable Submitted — Awaiting client release
+                  <div style="flex: 1; font-size: 11px; color: var(--accent-cyan); padding: 9px 12px; background: rgba(6, 182, 212, 0.1); border-radius: var(--radius-sm); border: 1px solid rgba(6, 182, 212, 0.25); text-align: center; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    ${getDocumentIconSvg(14, 'var(--accent-cyan)')}
+                    <span>Deliverable Submitted — Awaiting client release</span>
                   </div>
                 ` : `
-                  <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px;">
-                    <span>📤 Submit Deliverable</span>
+                  <button class="btn-primary btn-mark-delivered" data-id="${agr.id}" style="flex: 1; font-size: 12px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
+                    ${getDocumentIconSvg(14, '#000')}
+                    <span>Submit Deliverable</span>
                   </button>
                 `}
               `}
@@ -667,17 +697,18 @@ export function renderAgreementsList(
             <!-- Secondary Row -->
             <div style="display: flex; gap: 6px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
               ${!isDisputed ? `
-                <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3);">
-                  ⚠️ Dispute
+                <button class="btn-secondary btn-raise-dispute" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: #f87171; border-color: rgba(239, 68, 68, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                  ${getAlertTriangleIconSvg(12, '#f87171')}
+                  <span>Dispute</span>
                 </button>
               ` : ''}
               ${!isDelivered && !isDisputed ? `
                 <button class="btn-secondary btn-cancel-deal" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: #fbbf24; border-color: rgba(245, 158, 11, 0.35);">
-                  🚫 Cancel
+                  Cancel
                 </button>
               ` : ''}
               <button class="btn-secondary btn-refund-buyer" data-id="${agr.id}" style="width: auto; padding: 5px 9px; font-size: 11px; color: var(--text-secondary);">
-                ↩️ Mutual Refund
+                Mutual Refund
               </button>
             </div>
           </div>

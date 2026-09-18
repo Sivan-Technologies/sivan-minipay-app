@@ -2,6 +2,7 @@ import { miniPayService } from '../services/minipay.service';
 import { identityService } from '../services/identity.service';
 import { openClaimHandleModal } from './ClaimHandleModal';
 import { getTokenIconSvg } from '../utils/token-icons';
+import { getFlashIconSvg, getSparkleIconSvg } from '../utils/ui-icons';
 
 const MODAL_ID = 'sivan-receive-modal';
 
@@ -92,8 +93,8 @@ export function openReceiveModal(onToast?: (msg: string) => void) {
     <div id="receive-modal-card">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; gap: 8px;">
-          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); display: flex; align-items: center; justify-content: center; font-size: 16px;">
-            📥
+          <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); display: flex; align-items: center; justify-content: center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           </div>
           <div>
             <h3 style="font-family: var(--font-display); font-size: 17px; font-weight: 700; color: var(--text-primary); margin: 0;">Receive & Deposit</h3>
@@ -110,14 +111,14 @@ export function openReceiveModal(onToast?: (msg: string) => void) {
 
         ${savedUsername ? `
           <div class="receive-handle-badge" id="btn-copy-handle" title="Tap to copy Sivan handle">
-            <span style="font-size: 14px;">✨</span>
+            <span>${getSparkleIconSvg(14, 'var(--accent-emerald)')}</span>
             <span style="font-family: monospace; font-size: 16px; font-weight: 700; color: var(--accent-emerald); letter-spacing: 0.3px;">${savedUsername}</span>
             <span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); padding: 2px 8px; border-radius: 12px; font-weight: 600;">Tap to Copy</span>
           </div>
         ` : `
           <div style="margin: 12px 0 16px;">
             <button type="button" id="btn-modal-claim-handle" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2)); border: 1.5px solid var(--accent-emerald); border-radius: 24px; padding: 10px 18px; color: var(--accent-emerald); font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
-              <span>✨</span>
+              <span>${getSparkleIconSvg(14, 'var(--accent-emerald)')}</span>
               <span>Claim Your Universal @handle</span>
               <span>→</span>
             </button>
@@ -138,14 +139,14 @@ export function openReceiveModal(onToast?: (msg: string) => void) {
             </div>
           </div>
           <button id="btn-copy-receive-address" style="background: rgba(6, 182, 212, 0.12); border: 1px solid var(--accent-cyan); border-radius: 8px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--accent-cyan); cursor: pointer; white-space: nowrap;">
-            📋 Copy
+            Copy
           </button>
         </div>
 
         <!-- Universal Cross-Chain Explanatory Callout -->
         <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; padding: 12px 14px; text-align: left; margin-bottom: 16px;">
           <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-            <span style="color: var(--accent-emerald); font-size: 13px;">⚡</span>
+            <span style="color: var(--accent-emerald); display: flex; align-items: center;">${getFlashIconSvg(13, 'var(--accent-emerald)')}</span>
             <span style="color: var(--accent-emerald); font-weight: 700; font-size: 12px;">Zero-Gas Sivan Handle Transfers</span>
           </div>
           <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.45; margin: 0;">

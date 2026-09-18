@@ -7,6 +7,12 @@
  * - Clear publisher ownership: Sivan Technology (Abuja, Nigeria)
  */
 
+import {
+  getTelegramIconSvg,
+  getMailIconSvg,
+  getFlashIconSvg
+} from '../utils/ui-icons';
+
 type LegalTab = 'terms' | 'privacy' | 'support';
 
 let currentTab: LegalTab = 'terms';
@@ -105,48 +111,43 @@ function getTabContent(tab: LegalTab): string {
   switch (tab) {
     case 'terms':
       return `
-        <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 8px; font-size: 13px;">Terms of Service</h4>
+        <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 8px; font-size: 13px;">Sivan Autonomous Protocol Terms of Service</h4>
         <p style="margin-bottom: 10px;">
-          Last updated: September 2026. By accessing Sivan Ai inside Opera MiniPay or online, you agree to these Terms of Service.
+          Welcome to Sivan. By accessing or interacting with the Sivan MiniPay mini-app, you agree to be bound by these terms. Sivan Technologies provides autonomous milestone-based smart contracts, ERC-8021 transactional attribution, and liquidity settlement rails on the Celo network.
         </p>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">1. Protocol Nature & Autonomous Agreements</strong>
-          Sivan Ai is an autonomous decentralized smart payment protocol enabling peer-to-peer digital dollar transfers, milestone-based service agreements, and local currency bank settlement on the Celo network. Sivan Ai is non-custodial; all funds remain locked in on-chain service agreements until mutual release, milestone delivery, or dispute resolution.
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">2. MiniPay & Opera Non-Affiliation Disclosure</strong>
-          Sivan Ai is developed and operated independently by Sivan Technologies. Sivan Ai is not operated by, affiliated with, sponsored by, or an agent of Opera Software, Opera Mini, or MiniPay. MiniPay provides the in-app Web3 runtime browser environment.
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">3. Protocol Fees & Transparent Settlement</strong>
-          All direct transfers and service agreement settlements are subjected to transparent network rules displayed prior to signing. Local bank payouts are executed via licensed corridor rails (e.g. Textile Credit / Busha NIBSS network).
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">4. User Responsibilities</strong>
-          Users are responsible for ensuring accurate beneficiary wallet addresses and bank account numbers. Blockchain transactions on Celo Mainnet are immutable once confirmed.
+        <p style="margin-bottom: 10px;">
+          <strong>1. Decentralized & Self-Custodial:</strong> You maintain full control over your cryptographic private keys. Sivan does not take custody of user funds outside of the immutable parameters programmed into open smart contracts.
+        </p>
+        <p style="margin-bottom: 10px;">
+          <strong>2. Service Agreements & Settlement:</strong> Milestone deals locked on Celo Mainnet are released upon mutual milestone verification or buyer cryptographic authorization. All transactions are final and settled directly on-chain.
+        </p>
+        <p style="margin-bottom: 10px;">
+          <strong>3. MiniPay & Opera Non-Affiliation Disclosure:</strong> Sivan Ai is developed and operated independently by Sivan Technologies. Sivan Ai is not operated by, affiliated with, sponsored by, or an agent of Opera Software, Opera Mini, or MiniPay. MiniPay provides the in-app Web3 runtime browser environment.
+        </p>
+        <p style="margin-bottom: 10px;">
+          <strong>4. Compliance & Legality:</strong> Users agree not to utilize Sivan rails for prohibited, illicit, or sanctioned transactions under international anti-money laundering regulations.
+        </p>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 14px; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+          Publisher: Sivan Technologies · Global Remote Protocol
         </div>
       `;
 
     case 'privacy':
       return `
-        <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 8px; font-size: 13px;">Privacy Policy</h4>
+        <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 8px; font-size: 13px;">Sivan Global Privacy Policy</h4>
         <p style="margin-bottom: 10px;">
-          Sivan Technologies is committed to strict privacy preservation and minimal data collection principles.
+          Sivan values your digital privacy. We operate on a strict data-minimization architecture:
         </p>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">1. Non-Custodial Architecture</strong>
-          Sivan Ai never has access to your private keys, seed phrases, or wallet credentials. Your identity is managed directly by your MiniPay wallet or injected Web3 provider.
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">2. Zero Tracking & No Ad Telemetry</strong>
-          We do not track browsing history, sell user data, or inject third-party advertising cookies.
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">3. Bank Verification Data</strong>
-          When requesting local currency payouts, bank account numbers and routing codes are transmitted directly via encrypted channels to licensed settlement rails to resolve account holder names for fraud prevention.
-        </div>
-        <div style="margin-bottom: 12px;">
-          <strong style="color: var(--text-primary); display: block; margin-bottom: 4px;">4. Public On-Chain Ledger</strong>
+        <p style="margin-bottom: 10px;">
+          <strong>1. Non-Custodial Data Processing:</strong> We do not store unencrypted financial records, private keys, seed phrases, or sensitive personal data on central servers.
+        </p>
+        <p style="margin-bottom: 10px;">
+          <strong>2. Telemetry & Analytics:</strong> Any diagnostic telemetry collected is strictly anonymous, used purely for network health, RPC latency monitoring, and gas optimization.
+        </p>
+        <p style="margin-bottom: 10px;">
+          <strong>3. Payout Data Retention:</strong> Local bank account numbers used for NIBSS off-ramping are securely passed to licensed settlement partners and never sold to third-party advertisers.
+        </p>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 14px; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
           Public wallet addresses and service agreement states are recorded on the public Celo blockchain as part of standard distributed ledger operation.
         </div>
       `;
@@ -161,7 +162,7 @@ function getTabContent(tab: LegalTab): string {
         <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
           <a href="https://t.me/Sivan_Ai" target="_blank" rel="noopener noreferrer" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text-primary);">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">💬</span>
+              ${getTelegramIconSvg(18, '#229ED9')}
               <div>
                 <div style="font-weight: 600; font-size: 12px;">Official Telegram Support</div>
                 <div style="font-size: 10px; color: var(--text-muted);">t.me/Sivan_Ai • Instant Community & Help</div>
@@ -172,7 +173,7 @@ function getTabContent(tab: LegalTab): string {
 
           <a href="mailto:support@sivantech.online" style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-glass); border: 1px solid var(--border-subtle); padding: 10px 12px; border-radius: 8px; text-decoration: none; color: var(--text-primary);">
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">✉️</span>
+              ${getMailIconSvg(18, 'var(--accent-cyan)')}
               <div>
                 <div style="font-weight: 600; font-size: 12px;">Official Support Email</div>
                 <div style="font-size: 10px; color: var(--text-muted);">support@sivantech.online</div>
@@ -183,7 +184,10 @@ function getTabContent(tab: LegalTab): string {
         </div>
 
         <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; padding: 10px; font-size: 11px;">
-          <strong style="color: var(--accent-emerald); display: block; margin-bottom: 2px;">⚡ MiniPay SLA Guarantee:</strong>
+          <strong style="color: var(--accent-emerald); display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+            ${getFlashIconSvg(13, 'var(--accent-emerald)')}
+            <span>MiniPay SLA Guarantee:</span>
+          </strong>
           Our engineering team guarantees responses to all critical issues and inquiries within <strong>24 hours</strong>.
         </div>
       `;

@@ -1,3 +1,5 @@
+import { getCheckCircleSvg } from './ui-icons';
+
 export interface DeliveryPreset {
   hours: number;
   label: string;
@@ -35,6 +37,12 @@ export interface CountdownResult {
   icon: string;
 }
 
+const SVG_TIMER = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; flex-shrink:0;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+const SVG_REFUND = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; flex-shrink:0;"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>`;
+const SVG_DISPUTE = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; flex-shrink:0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+const SVG_PACKAGE = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; flex-shrink:0;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>`;
+const SVG_OVERDUE = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:-1px; flex-shrink:0;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
 export function getCountdownStatus(
   deadlineTimestamp: number,
   status: string,
@@ -45,7 +53,7 @@ export function getCountdownStatus(
       label: 'Settled & Released',
       urgency: 'terminal',
       badgeClass: 'badge-released',
-      icon: '✅',
+      icon: getCheckCircleSvg(12, 'var(--accent-emerald)'),
     };
   }
 
@@ -54,7 +62,7 @@ export function getCountdownStatus(
       label: 'Refunded to Client',
       urgency: 'terminal',
       badgeClass: 'badge-refunded',
-      icon: '↩️',
+      icon: SVG_REFUND,
     };
   }
 
@@ -63,7 +71,7 @@ export function getCountdownStatus(
       label: 'Dispute Open',
       urgency: 'urgent',
       badgeClass: 'badge-disputed',
-      icon: '⚠️',
+      icon: SVG_DISPUTE,
     };
   }
 
@@ -72,7 +80,7 @@ export function getCountdownStatus(
       label: 'Delivered — Awaiting Release',
       urgency: 'safe',
       badgeClass: 'badge-delivered',
-      icon: '📦',
+      icon: SVG_PACKAGE,
     };
   }
 
@@ -81,7 +89,7 @@ export function getCountdownStatus(
       label: 'Active Deal',
       urgency: 'safe',
       badgeClass: 'badge-in_progress',
-      icon: '⏱',
+      icon: SVG_TIMER,
     };
   }
 
@@ -95,7 +103,7 @@ export function getCountdownStatus(
       label: remHours > 0 ? `${days}d ${remHours}h remaining` : `${days} days remaining`,
       urgency: 'safe',
       badgeClass: 'badge-in_progress',
-      icon: '⏱',
+      icon: SVG_TIMER,
     };
   }
 
@@ -107,14 +115,14 @@ export function getCountdownStatus(
         label: `Due in ${mins}m`,
         urgency: 'urgent',
         badgeClass: 'badge-urgent',
-        icon: '⚠️',
+        icon: SVG_DISPUTE,
       };
     }
     return {
       label: `${hours}h ${mins > 0 ? `${mins}m ` : ''}remaining`,
       urgency: diffHours <= 6 ? 'urgent' : 'warn',
       badgeClass: diffHours <= 6 ? 'badge-urgent' : 'badge-warn',
-      icon: diffHours <= 6 ? '⚠️' : '⏱',
+      icon: diffHours <= 6 ? SVG_DISPUTE : SVG_TIMER,
     };
   }
 
@@ -125,7 +133,7 @@ export function getCountdownStatus(
       label: `Overdue by ${overdueHours}h`,
       urgency: 'urgent',
       badgeClass: 'badge-overdue',
-      icon: '🔴',
+      icon: SVG_OVERDUE,
     };
   }
   const overdueDays = Math.floor(overdueHours / 24);
@@ -133,6 +141,6 @@ export function getCountdownStatus(
     label: `Overdue by ${overdueDays}d`,
     urgency: 'urgent',
     badgeClass: 'badge-overdue',
-    icon: '🔴',
+    icon: SVG_OVERDUE,
   };
 }

@@ -4,6 +4,7 @@ import { CELO_CONFIG } from '../config/celo.config';
 import type { ServiceAgreement } from '../types/minipay.types';
 import { formatDeadlineHours } from '../utils/deadline';
 import { getNetworkExplorer } from '../utils/explorers';
+import { getLockIconSvg, getHandshakeIconSvg } from '../utils/ui-icons';
 
 export interface DealProposalData {
   id: string;
@@ -37,7 +38,7 @@ export function renderAcceptAgreement(
           <div class="agreement-title" style="font-size: 16px;">${deal.title}</div>
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Deal ID: ${deal.id}</div>
         </div>
-        <span class="agreement-badge badge-funded" style="font-size: 11px;">🔒 Funds Locked</span>
+        <span class="agreement-badge badge-funded" style="font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">${getLockIconSvg(11, 'var(--accent-emerald)')} Funds Locked</span>
       </div>
 
       <p class="agreement-desc" style="font-size: 13px; line-height: 1.5; margin: 12px 0;">
@@ -63,13 +64,13 @@ export function renderAcceptAgreement(
         </div>
         <div style="display: flex; justify-content: space-between; margin-top: 6px;">
           <span style="color: var(--text-muted);">Delivery Deadline:</span>
-          <span style="color: var(--accent-cyan); font-weight: 500;">⏱ ${formatDeadlineHours(deal.deadlineHours)}</span>
+          <span style="color: var(--accent-cyan); font-weight: 500;">${formatDeadlineHours(deal.deadlineHours)}</span>
         </div>
       </div>
 
       ${deal.fundingTxHash ? `
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 4px; padding: 8px 10px; background: rgba(16, 185, 129, 0.08); border-radius: var(--radius-sm);">
-          <span>🔒 Verified on Celo Mainnet:</span>
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: rgba(16, 185, 129, 0.08); border-radius: var(--radius-sm);">
+          <span style="display: inline-flex; align-items: center; gap: 4px;">${getLockIconSvg(12, 'var(--accent-emerald)')} Verified on Celo Mainnet:</span>
           <a href="${getNetworkExplorer('celo', deal.fundingTxHash).url}" target="_blank" style="color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
             ${deal.fundingTxHash.slice(0, 12)}... ↗
           </a>
@@ -80,8 +81,9 @@ export function renderAcceptAgreement(
         Funds are already secured on Celo Mainnet under Sivan AI custody. By accepting this deal, you agree to deliver within the specified timeframe.
       </div>
 
-      <button type="button" class="btn-primary" id="btn-accept-deal" style="padding: 14px; font-size: 14px;">
-        <span>🤝 Accept Agreement & Start Work</span>
+      <button type="button" class="btn-primary" id="btn-accept-deal" style="padding: 14px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+        ${getHandshakeIconSvg(16, '#000')}
+        <span>Accept Agreement & Start Work</span>
       </button>
     </div>
   `;
@@ -99,11 +101,11 @@ export function renderAcceptAgreement(
     let currentAddress = miniPayService.getState().address;
 
     if (!currentAddress) {
-      showToast('⚠️ Connecting your MiniPay wallet...');
+      showToast('Connecting your MiniPay wallet...');
       const res = await miniPayService.connectMetaMask();
       currentAddress = miniPayService.getState().address;
       if (!res.success || !currentAddress) {
-        showToast('❌ Wallet connection is required to accept deals.');
+        showToast('Wallet connection is required to accept deals.');
         return;
       }
     }
@@ -111,7 +113,7 @@ export function renderAcceptAgreement(
     const validAddress: string = currentAddress;
 
     acceptBtn.disabled = true;
-    acceptBtn.innerHTML = '<span>⏳ Registering acceptance...</span>';
+    acceptBtn.innerHTML = '<span>Registering acceptance...</span>';
 
     try {
       const newAgreement: ServiceAgreement = {
@@ -138,13 +140,16 @@ export function renderAcceptAgreement(
       // Clean the address bar
       window.history.replaceState({}, document.title, window.location.pathname);
 
-      showToast('🎉 Service agreement accepted! Deliverables can be submitted from My Deals.');
+      showToast('Service agreement accepted. Deliverables can be submitted from My Deals.');
       onNavigate('deals');
     } catch (err: any) {
       console.error('Accept agreement error:', err);
-      showToast(`❌ Error: ${err.message || 'Failed to accept agreement'}`);
+      showToast(`Error: ${err.message || 'Failed to accept agreement'}`);
       acceptBtn.disabled = false;
-      acceptBtn.innerHTML = '<span>🤝 Accept Agreement & Start Work</span>';
+      acceptBtn.innerHTML = `
+        ${getHandshakeIconSvg(16, '#000')}
+        <span>Accept Agreement & Start Work</span>
+      `;
     }
   });
 }

@@ -7,6 +7,7 @@ import { fxQuotesService } from '../services/fx-quotes.service';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openLegalModal } from './LegalSupportModal';
 import { getCountdownStatus } from '../utils/deadline';
+import { getHandshakeIconSvg } from '../utils/ui-icons';
 
 export async function renderDashboard(
   container: HTMLElement,
@@ -136,7 +137,9 @@ export async function renderDashboard(
     <div class="agreements-list">
       ${agreements.length === 0 ? `
         <div class="empty-agreements-box">
-          <div class="empty-agreements-icon">🤝</div>
+          <div class="empty-agreements-icon" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 12px; background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">
+            ${getHandshakeIconSvg(24, 'var(--accent-emerald)')}
+          </div>
           <div class="empty-agreements-title">No active service agreements yet</div>
           <div class="empty-agreements-desc">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
           <button class="btn-empty-create" id="btn-empty-create">
@@ -190,7 +193,7 @@ export async function renderDashboard(
 
       <!-- Subtle Network & Attribution Tag Proof -->
       <div style="font-size: 10px; color: var(--text-muted); opacity: 0.55; letter-spacing: 0.02em;">
-        ⚡ Celo Mainnet · Tag: ${CELO_CONFIG.attributionTag}
+        Celo Mainnet · Tag: ${CELO_CONFIG.attributionTag}
       </div>
     </div>
   `;
