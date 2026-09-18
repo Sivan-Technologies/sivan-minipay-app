@@ -6,7 +6,6 @@ import { countryService } from '../config/countries.config';
 import { fxQuotesService } from '../services/fx-quotes.service';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openLegalModal } from './LegalSupportModal';
-import { openReceiveModal } from './ReceiveModal';
 import { getCountdownStatus } from '../utils/deadline';
 
 export async function renderDashboard(
@@ -95,25 +94,6 @@ export async function renderDashboard(
           </div>
         ` : ''}
       </div>
-    </div>
-
-    <!-- Primary 2-Button Action Bar (Send / Cash Out & Receive) -->
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px;">
-      <button type="button" id="btn-quick-send" class="btn-primary" style="padding: 13px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md); box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25);">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-        <span>Send / Cash Out</span>
-      </button>
-      <button type="button" id="btn-quick-receive" style="background: rgba(6, 182, 212, 0.12); border: 1.5px solid var(--accent-cyan); color: var(--accent-cyan); padding: 13px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s ease;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-          <polyline points="7 10 12 15 17 10"></polyline>
-          <line x1="12" y1="15" x2="12" y2="3"></line>
-        </svg>
-        <span>Receive Handle</span>
-      </button>
     </div>
 
     <!-- Quick Action Grid (Service Agreement Core: New Deal | Deals | Swap) -->
@@ -219,8 +199,6 @@ export async function renderDashboard(
   container.querySelector('#btn-refresh-bal')?.addEventListener('click', () => {
     renderDashboard(container, onNavigate, onToast);
   });
-  container.querySelector('#btn-quick-send')?.addEventListener('click', () => onNavigate('cashout'));
-  container.querySelector('#btn-quick-receive')?.addEventListener('click', () => openReceiveModal(onToast));
   container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
   container.querySelector('#tile-swap')?.addEventListener('click', () => onNavigate('swap'));
   container.querySelector('#tile-create-agreement')?.addEventListener('click', () => onNavigate('create'));
