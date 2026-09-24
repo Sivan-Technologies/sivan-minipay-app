@@ -24,7 +24,7 @@ export async function renderCreateAgreement(
     </div>
 
     <form id="form-create-deal">
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 18px;">
         <label class="form-label" for="deal-title">Deal Title</label>
         <input 
           type="text" 
@@ -35,7 +35,7 @@ export async function renderCreateAgreement(
         />
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 18px;">
         <label class="form-label" for="deal-contractor">Contractor (Phone, @username, or Celo 0x)</label>
         <input 
           type="text" 
@@ -48,49 +48,56 @@ export async function renderCreateAgreement(
         <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Currency & Amount</label>
-        <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
-          <!-- In-DOM Token Selector Dropdown -->
-          <div class="custom-select-wrap" id="deal-currency-wrap">
-            <div class="custom-select-trigger" id="deal-currency-trigger">
-              <span id="deal-currency-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
-              <span class="chevron">▾</span>
+      <div class="form-group" style="margin-bottom: 18px;">
+        <div style="display: grid; grid-template-columns: 145px 1fr; gap: 12px; align-items: flex-start;">
+          <!-- Left Column: Stablecoin Selector -->
+          <div style="min-width: 0;">
+            <label class="form-label" style="margin-bottom: 6px;">Stablecoin</label>
+            <div class="custom-select-wrap" id="deal-currency-wrap">
+              <div class="custom-select-trigger" id="deal-currency-trigger" style="height: 46px; border-radius: var(--radius-md);">
+                <span id="deal-currency-display" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
+                <span class="chevron">▾</span>
+              </div>
+              <div class="custom-select-menu" id="deal-currency-menu">
+                <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
+                </div>
+                <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
+                  ${getTokenIconSvg('cUSD', 16)} <span>USDm (Celo)</span>
+                </div>
+              </div>
+              <input type="hidden" id="deal-currency" value="USDC" />
             </div>
-            <div class="custom-select-menu" id="deal-currency-menu">
-              <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
-              </div>
-              <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
-              </div>
-            </div>
-            <input type="hidden" id="deal-currency" value="USDC" />
           </div>
 
-          <input 
-            type="number" 
-            id="deal-amount" 
-            class="form-input" 
-            placeholder="0.00" 
-            min="0.01" 
-            step="any" 
-            required 
-          />
+          <!-- Right Column: Amount Input -->
+          <div style="min-width: 0;">
+            <label class="form-label" for="deal-amount" style="margin-bottom: 6px;">Amount</label>
+            <input 
+              type="number" 
+              id="deal-amount" 
+              class="form-input" 
+              placeholder="0.00" 
+              min="0.01" 
+              step="any" 
+              style="height: 46px; font-size: 15px; font-weight: 600; box-sizing: border-box;"
+              required 
+            />
+          </div>
         </div>
-        <div id="avail-bal-note" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 4px;">
+        <div id="avail-bal-note" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 8px; font-size: 11.5px;">
           Available: Loading...
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 18px;">
         <label class="form-label">Delivery Deadline</label>
         <input type="hidden" id="deal-deadline" value="48">
         <div class="custom-select-wrap" id="deadline-select-wrap">
-          <div class="custom-select-trigger" id="deadline-select-trigger">
+          <div class="custom-select-trigger" id="deadline-select-trigger" style="height: 46px; border-radius: var(--radius-md);">
             <span id="deadline-display" style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
               48 Hours (2 Days)
@@ -108,12 +115,13 @@ export async function renderCreateAgreement(
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" style="margin-bottom: 20px;">
         <label class="form-label" for="deal-desc">Deliverable Scope & Criteria</label>
         <textarea 
           id="deal-desc" 
           class="form-textarea" 
           placeholder="Describe deliverables and verification requirements before payment is released..." 
+          style="min-height: 80px;"
           required
         ></textarea>
       </div>
