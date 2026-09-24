@@ -66,6 +66,33 @@ export function getCountdownStatus(
     };
   }
 
+  if (status === 'declined') {
+    return {
+      label: 'Declined by Seller',
+      urgency: 'terminal',
+      badgeClass: 'badge-declined',
+      icon: '❌',
+    };
+  }
+
+  if (status === 'pending_seller_acceptance') {
+    return {
+      label: 'Awaiting Seller Acceptance',
+      urgency: 'safe',
+      badgeClass: 'badge-pending_acceptance',
+      icon: '⏳',
+    };
+  }
+
+  if (status === 'pending_payment') {
+    return {
+      label: 'Awaiting Payment',
+      urgency: 'safe',
+      badgeClass: 'badge-pending_payment',
+      icon: '⏳',
+    };
+  }
+
   if (status === 'disputed') {
     return {
       label: 'Dispute Open',
