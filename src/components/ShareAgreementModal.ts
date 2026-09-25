@@ -49,7 +49,7 @@ function renderShareModal() {
 
   const agr = activeAgreement;
   const appBase = (import.meta.env.VITE_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://app.sivantech.online')).replace(/\/$/, '');
-  const telegramBotBase = (import.meta.env.VITE_TELEGRAM_BOT_URL || 'https://t.me/Sivan_Ai').replace(/\/$/, '');
+  const telegramBotBase = (import.meta.env.VITE_TELEGRAM_BOT_URL || 'https://t.me/SivanAi_bot').replace(/\/$/, '');
 
   const params = new URLSearchParams({
     deal: agr.id,
