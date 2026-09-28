@@ -102,7 +102,7 @@ export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) =>
         <div class="explainer-trust-dot">•</div>
         <div class="explainer-trust-item">
           ${getBankIconSvg(13, '#c084fc')}
-          <span>NIBSS Off-Ramp</span>
+          <span>Local Rails</span>
         </div>
       </div>
 
