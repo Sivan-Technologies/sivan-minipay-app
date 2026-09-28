@@ -5,6 +5,7 @@ import { countryService, SUPPORTED_COUNTRIES } from '../config/countries.config'
 import { openLegalModal } from './LegalSupportModal';
 import { identityService } from '../services/identity.service';
 import { openClaimHandleModal } from './ClaimHandleModal';
+import { getCopyIconSvg, getShieldCheckIconSvg } from '../utils/ui-icons';
 
 export function renderHeader(container: HTMLElement, onToast?: (message: string) => void) {
   let isWalletModalOpen = false;
@@ -20,23 +21,10 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     const isConnected = !!state.address;
     const isTestnet = activeNet.mode === 'testnet';
 
+    const savedUsername = identityService.getSavedUsername();
     const shortAddr = state.address 
       ? `${state.address.slice(0, 6)}...${state.address.slice(-4)}`
       : 'Connect';
-
-    let pillLabel = 'Connect';
-    let pillColor = 'var(--text-muted)';
-    let dotClass = 'pulse-dot-red';
-
-    if (isLiveMiniPay) {
-      pillLabel = 'MiniPay';
-      pillColor = 'var(--accent-emerald)';
-      dotClass = 'pulse-dot';
-    } else if (isMetaMask) {
-      pillLabel = 'MetaMask';
-      pillColor = 'var(--accent-cyan)';
-      dotClass = 'pulse-dot';
-    }
 
     const netBadgeLabel = isTestnet ? 'Celo Sepolia' : 'Celo Mainnet';
     const netBadgeColor = isTestnet ? '#f59e0b' : 'var(--accent-emerald)';
@@ -61,18 +49,20 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             <span style="font-weight: 600;">${isTestnet ? 'Celo Sepolia' : 'Celo Mainnet'}</span>
           </button>
 
-          <!-- Wallet Status Pill (Tap to Copy Address when connected) -->
-          <button class="header-status-pill ${isCopied ? 'copied' : ''}" id="btn-wallet-modal" title="${isConnected ? 'Tap to copy wallet address' : 'Connect wallet'}" style="user-select: none;">
+          <!-- Status Pill: [ 🟢 @samson 📋 ] or [ 🟢 0x46ef...2345 📋 ] -->
+          <button class="header-status-pill ${isCopied ? 'copied' : ''}" id="btn-wallet-modal" title="${isConnected ? (savedUsername ? `Tap to copy ${savedUsername}` : 'Tap to copy wallet address') : 'Connect wallet'}" style="user-select: none;">
             ${isCopied ? `
               <span style="color: var(--accent-emerald); font-weight: 600; font-size: 11px; display: flex; align-items: center; gap: 4px;">
                 <span>✓</span>
                 <span>Copied!</span>
               </span>
+            ` : isConnected ? `
+              <span class="pulse-dot"></span>
+              <span style="color: ${savedUsername ? 'var(--accent-emerald)' : 'var(--text-primary)'}; font-weight: 700; font-size: 12px; font-family: monospace;">${savedUsername || shortAddr}</span>
+              <span style="display: inline-flex; align-items: center; opacity: 0.7; margin-left: 2px;">${getCopyIconSvg(11, 'currentColor')}</span>
             ` : `
-              <span class="${dotClass}"></span>
-              <span style="color: ${pillColor}; font-weight: 600;">${pillLabel}</span>
-              ${isConnected ? `<span style="color: var(--text-muted); font-size: 11px;">(${shortAddr})</span>` : ''}
-              ${isConnected ? `<span style="font-size: 10px; opacity: 0.6; margin-left: 2px;">📋</span>` : ''}
+              <span class="pulse-dot-red"></span>
+              <span style="color: var(--text-muted); font-weight: 600; font-size: 12px;">Connect</span>
             `}
           </button>
         </div>
@@ -125,17 +115,19 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
               </div>
 
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
-                <button type="button" class="btn-network-select ${!isTestnet ? 'active' : ''}" id="btn-select-mainnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${!isTestnet ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${!isTestnet ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${!isTestnet ? 'var(--accent-emerald)' : 'var(--text-muted)'}; cursor: pointer;">
-                  🟢 Celo Mainnet (42220)
+                <button type="button" class="btn-network-select ${!isTestnet ? 'active' : ''}" id="btn-select-mainnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${!isTestnet ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${!isTestnet ? 'rgba(16, 185, 129, 0.15)' : 'transparent'}; color: ${!isTestnet ? 'var(--accent-emerald)' : 'var(--text-muted)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-emerald);"></span>
+                  <span>Celo Mainnet</span>
                 </button>
-                <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer;">
-                  🟡 Celo Sepolia (11142220)
+                <button type="button" class="btn-network-select ${isTestnet ? 'active' : ''}" id="btn-select-testnet" style="padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid ${isTestnet ? '#f59e0b' : 'var(--border-subtle)'}; background: ${isTestnet ? 'rgba(245, 158, 11, 0.15)' : 'transparent'}; color: ${isTestnet ? '#f59e0b' : 'var(--text-muted)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                  <span style="display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f59e0b;"></span>
+                  <span>Celo Sepolia</span>
                 </button>
               </div>
 
               ${isLiveMiniPay ? `
                 <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
-                  ℹ️ Opera MiniPay runs natively on Celo Mainnet.
+                  Opera MiniPay runs natively on Celo Mainnet.
                 </div>
               ` : `
                 <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted);">
@@ -155,7 +147,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
               </div>
               ${isMetaMask ? `
                 <button type="button" class="btn-secondary" id="btn-import-usdc" style="width: 100%; font-size: 11px; padding: 6px 10px; display: flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer;">
-                  <span>🦊 Import USDC to MetaMask</span>
+                  <span>Import USDC to MetaMask</span>
                 </button>
               ` : ''}
             </div>
@@ -164,7 +156,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             <div style="background: var(--bg-glass); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
                 <span style="color: var(--text-muted);">Status:</span>
-                <strong style="color: ${pillColor};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask Connected' : 'Disconnected'}</strong>
+                <strong style="color: ${isConnected ? 'var(--accent-emerald)' : 'var(--text-muted)'};">${isLiveMiniPay ? 'Opera MiniPay (Injected)' : isMetaMask ? 'MetaMask Connected' : 'Disconnected'}</strong>
               </div>
               <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px;">
                 <span style="color: var(--text-muted);">RPC URL:</span>
@@ -185,7 +177,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
                   <span style="color: var(--text-muted);">Address:</span>
                   <div style="display: flex; align-items: center; gap: 6px;">
                     <code style="font-size: 11px; color: var(--accent-cyan);">${shortAddr}</code>
-                    <button class="btn-copy-addr" id="btn-copy-address" title="Copy address" style="background: none; border: none; cursor: pointer; color: var(--text-muted);">📋</button>
+                    <button class="btn-copy-addr" id="btn-copy-address" title="Copy address" style="background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center;">${getCopyIconSvg(13, 'currentColor')}</button>
                   </div>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
@@ -208,7 +200,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
             `}
 
             <button type="button" id="btn-modal-legal-support" style="width: 100%; margin-top: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px; font-size: 11px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <span>🛡️</span>
+              ${getShieldCheckIconSvg(14, 'var(--accent-emerald)')}
               <span>Terms of Service, Privacy & 24/7 Support</span>
             </button>
           </div>
@@ -278,13 +270,18 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
         return;
       }
 
-      // Tap-to-copy wallet address
-      const ok = await copyToClipboard(state.address);
+      // Tap-to-copy handle or wallet address
+      const copyText = savedUsername || state.address;
+      const ok = await copyToClipboard(copyText);
       if (ok) {
         isCopied = true;
         update(miniPayService.getState());
         if (onToast) {
-          onToast(`Wallet address copied: ${shortAddr}`);
+          if (savedUsername) {
+            onToast(`Sivan handle copied: ${savedUsername}`);
+          } else {
+            onToast(`Wallet address copied: ${shortAddr}`);
+          }
         }
         if (copyTimeout) clearTimeout(copyTimeout);
         copyTimeout = setTimeout(() => {
@@ -293,7 +290,7 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
         }, 2000);
       } else {
         if (onToast) {
-          onToast('Unable to copy address');
+          onToast('Unable to copy');
         }
       }
     });
@@ -345,14 +342,14 @@ export function renderHeader(container: HTMLElement, onToast?: (message: string)
     container.querySelector('#btn-claim-handle')?.addEventListener('click', async () => {
       isWalletModalOpen = false;
       update(miniPayService.getState());
-      await openClaimHandleModal(
-        state.address || '',
-        (username) => {
-          if (onToast) onToast(`🎉 Sivan handle claimed: ${username}`);
+      await openClaimHandleModal({
+        walletAddress: state.address || '',
+        onSuccess: (username) => {
+          if (onToast) onToast(`Sivan handle claimed: ${username}`);
           update(miniPayService.getState());
         },
         onToast
-      );
+      });
     });
   };
 

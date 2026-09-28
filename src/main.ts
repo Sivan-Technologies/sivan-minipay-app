@@ -12,6 +12,7 @@ import { initLegalModal, openLegalModal } from './components/LegalSupportModal';
 import { initShareModal, openShareModal } from './components/ShareAgreementModal';
 import { renderAcceptAgreement, type DealProposalData } from './components/AcceptAgreementView';
 import { initTextileKycModal } from './components/TextileKycModal';
+import { getFlashIconSvg } from './utils/ui-icons';
 
 type Tab = 'dashboard' | 'deals' | 'create' | 'cashout' | 'swap' | 'history' | 'accept';
 
@@ -105,7 +106,7 @@ class SivanMiniPayApp {
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = `
-      <span style="font-size: 16px;">⚡</span>
+      <span style="display: flex; align-items: center;">${getFlashIconSvg(16, 'var(--accent-cyan)')}</span>
       <div style="line-height: 1.3;">${message}</div>
     `;
     this.toastContainer.appendChild(toast);
@@ -125,7 +126,11 @@ class SivanMiniPayApp {
 
     switch (this.currentTab) {
       case 'dashboard':
-        renderDashboard(this.mainContentContainer, (t) => this.navigateTo(t as Tab));
+        renderDashboard(
+          this.mainContentContainer,
+          (t) => this.navigateTo(t as Tab),
+          (msg) => this.showToast(msg)
+        );
         break;
       case 'deals':
         renderAgreementsList(

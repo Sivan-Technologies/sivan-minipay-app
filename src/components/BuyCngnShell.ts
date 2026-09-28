@@ -1,3 +1,5 @@
+import { getFlashIconSvg, getShieldIconSvg, getInfoIconSvg } from '../utils/ui-icons';
+
 /** Render the Buy page synchronously; provider availability never controls its layout. */
 export function createBuyCngnShell(container: HTMLElement, network: string, wallet?: string | null) {
   container.innerHTML = `
@@ -6,8 +8,8 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
       <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.04)); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 16px; padding: 14px 16px;">
         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 18px;">⚡</span>
-            <span style="font-weight: 700; font-size: 13.5px; color: #fff;">Textile Credit Bank On-Ramp</span>
+            <span>${getFlashIconSvg(15, '#34d399')}</span>
+            <span style="font-weight: 700; font-size: 13.5px; color: #fff;">Sivan Direct Bank Deposit</span>
           </div>
           <span style="font-size: 10.5px; font-weight: 600; color: #34d399; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 20px; border: 1px solid rgba(16, 185, 129, 0.3);">Celo Mainnet</span>
         </div>
@@ -20,11 +22,11 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
       <div style="display: grid; gap: 10px; padding: 14px 16px; border: 1px solid var(--border-color, #26303c); border-radius: 14px; background: var(--bg-secondary, #101823);">
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Destination Network</span>
-          <strong data-buy-network style="color: #fff; font-weight: 600;">${network}</strong>
+          <strong data-buy-network style="color: #fff; font-weight: 600;"></strong>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Receive Wallet</span>
-          <strong data-buy-wallet style="color: #34d399; font-family: monospace; font-size: 11.5px; overflow-wrap: anywhere;">${wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'Connect wallet'}</strong>
+          <strong data-buy-wallet style="color: #34d399; font-family: monospace; font-size: 11.5px; overflow-wrap: anywhere;"></strong>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: var(--text-muted, #8892a4);">Payment Method</span>
@@ -32,13 +34,13 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
         </div>
       </div>
 
-      <!-- Textile / Busha Compliance Verification Banner -->
+      <!-- Compliance Verification Banner -->
       <div data-buy-kyc-banner id="buy-cngn-kyc-banner" style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 12px; cursor: pointer; transition: all 0.2s ease;">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <span style="font-size: 18px;">🛡️</span>
+          <span>${getShieldIconSvg(16, '#60a5fa')}</span>
           <div>
             <span data-buy-kyc-title style="font-weight: 700; color: #60a5fa; font-size: 12px; display: block;">Identity Verification</span>
-            <span data-buy-kyc-desc style="color: var(--text-muted, #8892a4); font-size: 11px;">Checking Textile / Busha compliance status...</span>
+            <span data-buy-kyc-desc style="color: var(--text-muted, #8892a4); font-size: 11px;">Checking verification status...</span>
           </div>
         </div>
         <span data-buy-kyc-action style="font-size: 11.5px; color: #60a5fa; font-weight: 700; background: rgba(59, 130, 246, 0.15); padding: 4px 10px; border-radius: 8px;">Verify →</span>
@@ -91,16 +93,21 @@ export function createBuyCngnShell(container: HTMLElement, network: string, wall
       <!-- How it works guide -->
       <div style="padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); font-size: 11.5px; color: var(--text-muted, #8892a4); line-height: 1.6;">
         <div style="font-weight: 700; color: var(--text-secondary, #a6adbb); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
-          <span>ℹ️</span> How Textile Bank On-Ramp Works
+          <span>${getInfoIconSvg(14, 'var(--text-secondary)')}</span> How Sivan Bank Deposit Works
         </div>
         <ol style="margin: 4px 0 0; padding-left: 18px;">
-          <li>Verify identity once via Busha / BVN (Level 1).</li>
-          <li>Click below to get a dedicated NUBAN transfer account.</li>
+          <li>Verify identity once via secure BVN verification.</li>
+          <li>Click below to get your dedicated NUBAN transfer account.</li>
           <li>Transfer the exact amount from any Nigerian bank app.</li>
           <li>cNGN is minted and credited automatically to your Celo wallet.</li>
         </ol>
       </div>
     </section>`;
+
+  const networkEl = container.querySelector<HTMLElement>('[data-buy-network]');
+  if (networkEl) networkEl.textContent = network;
+  const walletEl = container.querySelector<HTMLElement>('[data-buy-wallet]');
+  if (walletEl) walletEl.textContent = wallet ? `${wallet.slice(0, 6)}…${wallet.slice(-4)}` : 'Connect your wallet';
 
   return {
     flow: container.querySelector<HTMLElement>('[data-buy-flow]')!,

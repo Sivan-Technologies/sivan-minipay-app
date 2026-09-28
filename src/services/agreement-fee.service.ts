@@ -60,25 +60,34 @@ class AgreementFeeService {
     }
 
     const apiBase = getPaymentApiUrl();
-    try {
-      const res = await fetch(`${apiBase}/api/v1/agreement/limits`, { signal: AbortSignal.timeout(3500) }).catch(() => null);
-      if (res && res.ok) {
-        const data = await res.json();
-        if (data && (data.usdcFeePercent !== undefined || data.minNairaAmount !== undefined)) {
-          this.adminLimits = data;
-          this.limitsFetchedAt = now;
-          return this.adminLimits;
+    const gatewayOrigin = apiBase.replace(/\/api\/payment\/?$/, '');
+    const endpoints = [
+      `${gatewayOrigin}/api/settings/limits`,
+      `${apiBase}/api/settings/limits`,
+      `${apiBase}/api/v1/agreement/limits`,
+    ];
+
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url, { signal: AbortSignal.timeout(3500) }).catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && (data.usdcFeePercent !== undefined || data.minNairaAmount !== undefined)) {
+            this.adminLimits = data;
+            this.limitsFetchedAt = now;
+            return this.adminLimits;
+          }
         }
+      } catch {
+        continue;
       }
-    } catch {
-      // ignore
     }
 
     return this.adminLimits;
   }
 
   /**
-   * Fetches dynamic fee directly from the backend admin settings for the given amount and currency.
+   * Fetches dynamic fee directly from the live sivan-escrow-agent platform settings.
    * Zero hardcoded fee math.
    */
   public async getDynamicFeeQuote(amount: number, currency: string): Promise<AgreementFeeQuote> {
@@ -100,39 +109,7 @@ class AgreementFeeService {
       return cached.quote;
     }
 
-    // 1. Query backend dynamic fee quote endpoints
-    const apiBase = getPaymentApiUrl();
-    const quoteEndpoints = [
-      `${apiBase}/api/agreements/quote?amount=${amount}&network=celo`,
-      `${apiBase}/api/v1/agreement/fee?currency=${encodeURIComponent(currency)}&amount=${amount}`,
-    ];
-
-    for (const url of quoteEndpoints) {
-      try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(3500) }).catch(() => null);
-        if (res && res.ok) {
-          const data = await res.json();
-          const fee = typeof data.protocolFee === 'number' ? data.protocolFee : (typeof data.feeAmount === 'number' ? data.feeAmount : null);
-          if (fee !== null && typeof fee === 'number') {
-            const quote: AgreementFeeQuote = {
-              amount,
-              currency,
-              protocolFee: fee,
-              netAmount: data.sellerNetAmount ?? data.netAmount ?? Math.max(0, amount - fee),
-              totalWithFee: data.buyerTotalPayable ?? data.totalWithFee,
-              feeFormula: data.explanation || data.feeFormula || 'Dynamic Admin Fee',
-              source: data.source || 'sivan_payment_api',
-            };
-            this.quoteCache.set(cacheKey, { quote, timestamp: now });
-            return quote;
-          }
-        }
-      } catch {
-        continue;
-      }
-    }
-
-    // 2. Evaluate from dynamically fetched admin settings if direct quote endpoint timed out
+    // Evaluate live platform settings directly from sivan-escrow-agent /api/settings/limits
     const limits = this.adminLimits || (await this.fetchDynamicLimits());
     if (limits) {
       const isNaira = currency === 'cNGN' || currency === 'NGN' || currency === 'NAIRA';
@@ -145,23 +122,23 @@ class AgreementFeeService {
           if (tier) {
             if (tier.fee !== undefined) {
               fee = tier.fee;
-              formula = `Admin Tier (₦${tier.fee.toLocaleString()})`;
+              formula = `Platform Tier (₦${tier.fee.toLocaleString()})`;
             } else if (tier.rate !== undefined) {
               fee = Math.round((amount * tier.rate) / 100);
-              formula = `Admin Tier (${tier.rate}%)`;
+              formula = `Platform Tier (${tier.rate}%)`;
             }
           }
-        } else {
-          const pct = limits.nairaFeePercent ?? 2.5;
-          const fixed = limits.nairaFeeFixed ?? 50;
+        } else if (limits.nairaFeePercent !== undefined) {
+          const pct = limits.nairaFeePercent;
+          const fixed = limits.nairaFeeFixed ?? 0;
           fee = Math.round((amount * pct) / 100) + fixed;
-          formula = `Admin Rate (${pct}% + ₦${fixed})`;
+          formula = `${pct}% + ₦${fixed}`;
         }
-      } else {
-        const usdcPct = (limits.usdcFeePercent ?? 3.0) / 100;
-        const usdcFixed = limits.usdcFeeFixed ?? 0.50;
+      } else if (limits.usdcFeePercent !== undefined) {
+        const usdcPct = limits.usdcFeePercent / 100;
+        const usdcFixed = limits.usdcFeeFixed ?? 0;
         fee = parseFloat((amount * usdcPct + usdcFixed).toFixed(2));
-        formula = `Admin Rate (${(usdcPct * 100).toFixed(1)}% + $${usdcFixed.toFixed(2)})`;
+        formula = `${limits.usdcFeePercent}% + $${usdcFixed.toFixed(2)}`;
       }
 
       const net = Math.max(0, parseFloat((amount - fee).toFixed(2)));
@@ -170,22 +147,21 @@ class AgreementFeeService {
         currency,
         protocolFee: fee,
         netAmount: net,
-        feeFormula: formula,
-        source: 'sivan_cached_admin_limits',
+        feeFormula: formula || 'Live Platform Rate',
+        source: 'sivan_escrow_agent_api',
       };
       this.quoteCache.set(cacheKey, { quote: dynamicQuote, timestamp: now });
       return dynamicQuote;
     }
 
-    // 3. Fallback to default calculation if completely disconnected
-    const fallbackFee = Math.round(amount * 0.03 * 100) / 100;
+    // If offline or connecting, return clean zero state while syncing
     return {
       amount,
       currency,
-      protocolFee: fallbackFee,
-      netAmount: Math.max(0, amount - fallbackFee),
-      feeFormula: 'Dynamic Admin Schedule',
-      source: 'sivan_offline_fallback',
+      protocolFee: 0,
+      netAmount: amount,
+      feeFormula: 'Syncing live platform rate...',
+      source: 'sivan_syncing_live',
     };
   }
 }

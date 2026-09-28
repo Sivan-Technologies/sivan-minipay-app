@@ -8,8 +8,13 @@ import { getTokenIconSvg } from '../utils/token-icons';
 import { openLegalModal } from './LegalSupportModal';
 import { openServiceAgreementExplainerModal } from './ServiceAgreementExplainerModal';
 import { getCountdownStatus } from '../utils/deadline';
+import { getHandshakeIconSvg } from '../utils/ui-icons';
 
-export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
+export async function renderDashboard(
+  container: HTMLElement,
+  onNavigate: (tab: string) => void,
+  onToast?: (msg: string) => void
+) {
   const state = miniPayService.getState();
   const country = countryService.getActiveCountry();
   const isConnected = !!state.address;
@@ -81,7 +86,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
         ${hasCusd ? `
           <div class="mini-token-pill">
             <span class="pill-dot">${getTokenIconSvg('cUSD', 14)}</span>
-            <span class="pill-val">${cusdBal} cUSD</span>
+            <span class="pill-val">${cusdBal} USDm</span>
           </div>
         ` : ''}
         ${country.code === 'NG' ? `
@@ -221,16 +226,25 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
       </div>
     </div>
 
-    <!-- Quick Action Grid -->
+    <!-- Quick Action Grid (Service Agreement Core: New Deal | Deals | Swap) -->
     <div class="actions-grid">
-      <div class="action-tile" id="tile-cashout">
+      <div class="action-tile" id="tile-create-agreement">
         <div class="action-tile-icon">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 1.75L2 6.5v2.25h20V6.5L12 1.75zM4.5 11v6.5h2.8V11H4.5zm5.1 0v6.5h2.8V11H9.6zm5.1 0v6.5h2.8V11h-2.8zM2 19.5v2.25h20V19.5H2z"/>
+            <path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h8l6-6V4c0-1.1-.9-2-2-2H6zm2 5h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2zm6 1v4.5l4.5-4.5H14z"/>
           </svg>
         </div>
-        <span class="action-tile-title">Cash Out</span>
-        <span class="action-tile-badge">${country.currency === 'USD' ? '($) USD' : `(${country.currencySymbol}) ${country.currency}`}</span>
+        <span class="action-tile-title">New Deal</span>
+        <span class="action-tile-badge">Protect Deal</span>
+      </div>
+      <div class="action-tile" id="tile-deals">
+        <div class="action-tile-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M10 2h4c1.1 0 2 .9 2 2v2h4c1.1 0 2 .9 2 2v3c0 .55-.45 1-1 1h-1v7c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-7H1c-.55 0-1-.45-1-1V8c0-1.1.9-2 2-2h4V4c0-1.1.9-2 2-2zm2 2h-2v2h2V4zm-8 8v6h16v-6h-5v1.5c0 .28-.22.5-.5.5h-3a.5.5 0 01-.5-.5V12H4zm7 1.5v1h2v-1h-2z"/>
+          </svg>
+        </div>
+        <span class="action-tile-title">Deals</span>
+        <span class="action-tile-badge">${activeCount > 0 ? `${activeCount} Active` : `${agreements.length} Total`}</span>
       </div>
       <div class="action-tile" id="tile-swap">
         <div class="action-tile-icon">
@@ -239,23 +253,7 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
           </svg>
         </div>
         <span class="action-tile-title">Swap</span>
-        <span class="action-tile-badge">cNGN ⇄ USD</span>
-      </div>
-      <div class="action-tile" id="tile-create-agreement">
-        <div class="action-tile-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h8l6-6V4c0-1.1-.9-2-2-2H6zm2 5h8v2H8V7zm0 4h8v2H8v-2zm0 4h5v2H8v-2zm6 1v4.5l4.5-4.5H14z"/>
-          </svg>
-        </div>
-        <span class="action-tile-title">New Deal</span>
-      </div>
-      <div class="action-tile" id="tile-deals">
-        <div class="action-tile-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M10 2h4c1.1 0 2 .9 2 2v2h4c1.1 0 2 .9 2 2v3c0 .55-.45 1-1 1h-1v7c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2v-7H1c-.55 0-1-.45-1-1V8c0-1.1.9-2 2-2h4V4c0-1.1.9-2 2-2zm2 2h-2v2h2V4zm-8 8v6h16v-6h-5v1.5c0 .28-.22.5-.5.5h-3a.5.5 0 01-.5-.5V12H4zm7 1.5v1h2v-1h-2z"/>
-          </svg>
-        </div>
-        <span class="action-tile-title">Deals (${activeCount})</span>
+        <span class="action-tile-badge">cNGN ⇄ USDm</span>
       </div>
     </div>
 
@@ -268,7 +266,9 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
     <div class="agreements-list">
       ${agreements.length === 0 ? `
         <div class="empty-agreements-box">
-          <div class="empty-agreements-icon">🤝</div>
+          <div class="empty-agreements-icon" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 12px; background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">
+            ${getHandshakeIconSvg(24, 'var(--accent-emerald)')}
+          </div>
           <div class="empty-agreements-title">No active service agreements yet</div>
           <div class="empty-agreements-desc">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
           <button class="btn-empty-create" id="btn-empty-create">
@@ -322,14 +322,14 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
 
       <!-- Subtle Network & Attribution Tag Proof -->
       <div style="font-size: 10px; color: var(--text-muted); opacity: 0.55; letter-spacing: 0.02em;">
-        ⚡ Celo Mainnet · Tag: ${CELO_CONFIG.attributionTag}
+        Celo Mainnet · Tag: ${CELO_CONFIG.attributionTag}
       </div>
     </div>
   `;
 
   // Attach event handlers
   container.querySelector('#btn-refresh-bal')?.addEventListener('click', () => {
-    renderDashboard(container, onNavigate);
+    renderDashboard(container, onNavigate, onToast);
   });
   container.querySelector('#btn-hero-history')?.addEventListener('click', () => onNavigate('history'));
   container.querySelector('#tile-swap')?.addEventListener('click', () => onNavigate('swap'));

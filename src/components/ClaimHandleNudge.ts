@@ -1,6 +1,7 @@
 import { identityService } from '../services/identity.service';
 import { miniPayService } from '../services/minipay.service';
 import { openClaimHandleModal } from './ClaimHandleModal';
+import { getTagIconSvg } from '../utils/ui-icons';
 
 const DISMISSED_KEY = 'sivan_handle_nudge_dismissed_at';
 
@@ -93,8 +94,8 @@ export function injectClaimHandleNudge(
       border: 1px solid rgba(52,211,153,0.25);
       border-radius: 10px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-    ">🏷️</div>
+      color: var(--accent-emerald);
+    ">${getTagIconSvg(18, 'var(--accent-emerald)')}</div>
 
     <!-- Text -->
     <div style="flex: 1; min-width: 0;">
@@ -153,14 +154,14 @@ export function injectClaimHandleNudge(
   });
 
   nudge.querySelector('#nudge-btn-claim')?.addEventListener('click', async () => {
-    const username = await openClaimHandleModal(
-      state.address || '',
-      (claimed) => {
+    const username = await openClaimHandleModal({
+      walletAddress: state.address || '',
+      onSuccess: (claimed: string) => {
         animateOut();
         if (onClaimed) onClaimed(claimed);
       },
       onToast
-    );
+    });
     if (!username) return; // dismissed without claiming
   });
 

@@ -9,6 +9,15 @@ import { getTokenIconSvg } from '../utils/token-icons';
 import { textileKycService } from '../services/textile-kyc.service';
 import { openTextileKycModal } from './TextileKycModal';
 import { injectClaimHandleNudge } from './ClaimHandleNudge';
+import { 
+  getBankIconSvg, 
+  getDirectTransferIconSvg, 
+  getFlashIconSvg, 
+  getHourglassIconSvg, 
+  getShieldIconSvg, 
+  getSparkleIconSvg,
+  getCheckCircleSvg
+} from '../utils/ui-icons';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -27,17 +36,17 @@ export async function renderCashout(
   let activeTab: 'bank' | 'wallet' = 'bank';
 
   const corridorTitle = isNigeria
-    ? '⚡ Celo to NIBSS Off-Ramp'
+    ? 'Celo to NIBSS Off-Ramp'
     : isGhana
-      ? '⚡ Celo to GhIPSS & MoMo Off-Ramp'
+      ? 'Celo to GhIPSS & MoMo Off-Ramp'
       : isKenya
-        ? '⚡ Celo to M-PESA & Pesalink'
-        : '⚡ Celo to PayShap & EFT';
+        ? 'Celo to M-PESA & Pesalink'
+        : 'Celo to PayShap & EFT';
 
   const corridorProvider = isNigeria
-    ? 'Textile Credit RFQ'
+    ? 'Sivan Liquidity Engine (NIBSS)'
     : isGhana
-      ? 'Kotani Pay / Busha GHS'
+      ? 'Sivan Multi-Corridor (GhIPSS)'
       : 'Sivan Multi-Corridor';
 
   // Bank pills dynamically rendered from active country
@@ -53,17 +62,19 @@ export async function renderCashout(
     <!-- 2-Way Segmented Switcher (Bank vs Sivan User/Wallet) -->
     <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs">
       <button type="button" class="segmented-tab active" id="tab-btn-bank">
-        <span>🏦</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : `${country.name} Bank (${country.currency})`}</span>
+        <span>${getBankIconSvg(15)}</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : `${country.name} Bank (${country.currency})`}</span>
       </button>
       <button type="button" class="segmented-tab" id="tab-btn-wallet">
-        <span>⚡</span> <span>To Sivan User / Wallet</span>
+        <span>${getDirectTransferIconSvg(15)}</span> <span>To Sivan User / Wallet</span>
       </button>
     </div>
 
     <!-- Live Corridor Status: Bank Mode -->
     <div id="corridor-banner-bank" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: ${isNigeria ? '10px' : '20px'}; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span style="font-weight: 700; color: var(--text-emerald);">${corridorTitle}</span>
+        <span style="font-weight: 700; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
+          ${getFlashIconSvg(14, 'var(--accent-emerald)')} <span>${corridorTitle}</span>
+        </span>
         <span style="font-size: 11px; color: var(--text-muted);">${corridorProvider}</span>
       </div>
       <div id="corridor-desc" style="color: var(--text-secondary); line-height: 1.4;">
@@ -75,7 +86,7 @@ export async function renderCashout(
     <!-- KYC Compliance Status Banner (Nigeria Only) -->
     <div id="kyc-status-banner" style="margin-bottom: 16px; padding: 10px 12px; border-radius: var(--radius-md); font-size: 12px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); display: flex; align-items: center; justify-content: space-between; gap: 10px; cursor: pointer;">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <span style="font-size: 16px;">⏳</span>
+        <span>${getHourglassIconSvg(16, '#f59e0b')}</span>
         <div>
           <span style="font-weight: 700; color: #f59e0b; font-size: 11px; display: block;">Identity Verification Required</span>
           <span style="color: var(--text-muted); font-size: 11px;">Checking KYC status with Busha...</span>
@@ -88,7 +99,9 @@ export async function renderCashout(
     <!-- Live Corridor Status: Wallet Mode -->
     <div id="corridor-banner-wallet" style="display: none; background: rgba(6, 182, 212, 0.08); border: 1px solid rgba(6, 182, 212, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span style="font-weight: 700; color: var(--accent-cyan);">⚡ Instant Peer-to-Peer Transfer on Celo</span>
+        <span style="font-weight: 700; color: var(--accent-cyan); display: flex; align-items: center; gap: 6px;">
+          ${getFlashIconSvg(14, 'var(--accent-cyan)')} <span>Instant Peer-to-Peer Transfer on Celo</span>
+        </span>
         <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">✓ Sub-Second Finality</span>
       </div>
       <div style="color: var(--text-secondary); line-height: 1.4;">
@@ -103,23 +116,14 @@ export async function renderCashout(
         <div style="display: grid; grid-template-columns: 140px 1fr; gap: 10px;">
           <!-- In-DOM Token Selector Dropdown -->
           <div class="custom-select-wrap" id="token-select-wrap">
-            <div class="custom-select-trigger" id="token-select-trigger">
-              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg(isNigeria ? 'cNGN' : 'USDC', 16)} <span>${isNigeria ? 'cNGN' : 'USDC'}</span></span>
-              <span class="chevron">▾</span>
+            <div class="custom-select-trigger" id="token-select-trigger" ${isNigeria ? 'style="cursor: default;"' : ''}>
+              <span id="selected-token-display" style="display: inline-flex; align-items: center; gap: 6px;">${getTokenIconSvg(isNigeria ? 'cNGN' : 'USDC', 16)} <span style="font-weight: 700;">${isNigeria ? 'cNGN' : 'USDC'}</span></span>
+              ${isNigeria ? '' : '<span class="chevron">▾</span>'}
             </div>
             <div class="custom-select-menu" id="token-select-menu">
               ${isNigeria ? `
                 <div class="custom-select-item selected" data-value="cNGN" style="display: flex; align-items: center; gap: 8px;">
                   ${getTokenIconSvg('cNGN', 16)} <span>cNGN (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="USDT" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('USDC', 16)} <span>USDC (Celo)</span>
-                </div>
-                <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
                 </div>
               ` : `
                 <div class="custom-select-item selected" data-value="USDC" style="display: flex; align-items: center; gap: 8px;">
@@ -129,7 +133,7 @@ export async function renderCashout(
                   ${getTokenIconSvg('USDT', 16)} <span>USDT (Celo)</span>
                 </div>
                 <div class="custom-select-item" data-value="cUSD" style="display: flex; align-items: center; gap: 8px;">
-                  ${getTokenIconSvg('cUSD', 16)} <span>cUSD (Celo)</span>
+                  ${getTokenIconSvg('cUSD', 16)} <span>USDm (Celo)</span>
                 </div>
               `}
             </div>
@@ -146,9 +150,21 @@ export async function renderCashout(
             required 
           />
         </div>
-        <div id="cashout-avail-bal" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 4px;">
-          Available: Loading...
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
+          <div id="cashout-avail-bal" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 0;">
+            Available: Loading...
+          </div>
         </div>
+
+        <!-- Quick Swap helper banner for USDT/USDC holders -->
+        ${isNigeria ? `
+          <div id="swap-nudge-box" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 6px 10px; border-radius: 8px; background: rgba(6, 182, 212, 0.06); border: 1px solid rgba(6, 182, 212, 0.15); font-size: 11px;">
+            <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
+              ${getSparkleIconSvg(13, 'var(--accent-cyan)')} <span>Holding USDT or USDC?</span>
+            </span>
+            <button type="button" id="btn-jump-swap" style="background: none; border: none; color: var(--accent-cyan); font-weight: 700; cursor: pointer; padding: 0; font-size: 11px;">Swap to cNGN →</button>
+          </div>
+        ` : ''}
       </div>
 
       <!-- Bank Mode Fields -->
@@ -203,7 +219,7 @@ export async function renderCashout(
               const pillClass = idx === 0 ? 'class="bank-pill-btn active"' : 'class="bank-pill-btn"';
               return `
                 <button type="button" ${pillClass} data-code="${b.code}" data-name="${b.name}" data-logo="${logo}">
-                  ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : '<span style="font-size: 14px;">📱</span>'}
+                  ${logo ? `<img src="${logo}" alt="${b.name}" class="bank-logo-img" />` : `<span style="display: inline-flex; align-items: center;">${getBankIconSvg(14)}</span>`}
                   <span>${b.name.replace(' Digital Services', '').replace(' Limited', '').replace(' Bank', '')}</span>
                 </button>
               `;
@@ -214,14 +230,14 @@ export async function renderCashout(
           <div class="custom-select-wrap" id="bank-select-wrap" style="position: relative;">
             <div class="custom-select-trigger" id="bank-select-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                ${defaultBank?.logoUrl ? `<img src="${defaultBank.logoUrl}" class="bank-logo-img" id="selected-bank-img" />` : '<span id="selected-bank-icon" style="font-size: 16px;">📱</span>'}
+                ${defaultBank?.logoUrl ? `<img src="${defaultBank.logoUrl}" class="bank-logo-img" id="selected-bank-img" />` : `<span id="selected-bank-icon" style="display: inline-flex; align-items: center;">${getBankIconSvg(15)}</span>`}
                 <span id="selected-bank-name" style="font-weight: 500;">${defaultBank?.name || 'Select Rail'}</span>
               </div>
               <span class="chevron">▾</span>
             </div>
             <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden;">
               <div class="bank-search-box">
-                <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="🔍 Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
+                <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
               </div>
               <div class="bank-items-scroll" id="bank-items-container">
                 <!-- populated dynamically -->
@@ -270,7 +286,7 @@ export async function renderCashout(
       </div>
 
       <button type="submit" class="btn-primary" id="btn-submit-cashout" style="margin-top: 8px;">
-        <span id="submit-btn-text">💸 Confirm Cash Out (Under 1-2 Mins)</span>
+        <span id="submit-btn-text">Confirm Cash Out (Under 1-2 Mins)</span>
       </button>
     </form>
   `;
@@ -281,7 +297,7 @@ export async function renderCashout(
     insertBefore: cashoutFormEl,
     onToast: showToast,
     onClaimed: (username) => {
-      showToast(`🎉 Sivan handle set: ${username} — others can send deals & payments to you by name`);
+      showToast(`Sivan handle set: ${username} — others can send deals & payments to you by name`);
     },
   });
 
@@ -342,7 +358,7 @@ export async function renderCashout(
       if (p2pFeeDisplay) p2pFeeDisplay.textContent = `0.00 ${tok}`;
       if (p2pNetDisplay) p2pNetDisplay.textContent = `0.00 ${tok}`;
       if (p2pSpeedDisplay) p2pSpeedDisplay.textContent = 'Sub-second (Celo Finality)';
-      submitBtnText.textContent = '⚡ Send Instantly on Celo (Attributed)';
+      submitBtnText.textContent = 'Send Instantly on Celo (Attributed)';
       return;
     }
 
@@ -360,7 +376,7 @@ export async function renderCashout(
       if (p2pNetDisplay) {
         p2pNetDisplay.textContent = `${netFormatted} ${tok}`;
       }
-      submitBtnText.textContent = `⚡ Send ${netFormatted} ${tok} on Celo (Attributed)`;
+      submitBtnText.textContent = `Send ${netFormatted} ${tok} on Celo (Attributed)`;
     } catch {
       const fallbackFee = Math.max(0.10, Math.round(amt * 0.01 * 100) / 100);
       const fallbackNet = Math.max(0, amt - fallbackFee);
@@ -370,7 +386,7 @@ export async function renderCashout(
       if (p2pNetDisplay) {
         p2pNetDisplay.textContent = `${fallbackNet.toFixed(2)} ${tok}`;
       }
-      submitBtnText.textContent = `⚡ Send ${fallbackNet.toFixed(2)} ${tok} on Celo (Attributed)`;
+      submitBtnText.textContent = `Send ${fallbackNet.toFixed(2)} ${tok} on Celo (Attributed)`;
     }
   };
 
@@ -384,7 +400,7 @@ export async function renderCashout(
       bannerWallet.style.display = 'none';
       sectionBankFields.style.display = 'block';
       sectionWalletFields.style.display = 'none';
-      submitBtnText.textContent = '💸 Confirm Cash Out (Under 1-2 Mins)';
+      submitBtnText.textContent = 'Confirm Cash Out (Under 1-2 Mins)';
       acctEl.required = true;
       walletRecipientInput.required = false;
       void updateQuoteDisplay();
@@ -395,7 +411,7 @@ export async function renderCashout(
       bannerWallet.style.display = 'block';
       sectionBankFields.style.display = 'none';
       sectionWalletFields.style.display = 'block';
-      submitBtnText.textContent = '⚡ Send Instantly on Celo (Attributed)';
+      submitBtnText.textContent = 'Send Instantly on Celo (Attributed)';
       acctEl.required = false;
       walletRecipientInput.required = true;
       void updateP2PQuoteDisplay();
@@ -423,11 +439,24 @@ export async function renderCashout(
     if (/^0x[a-fA-F0-9]{40}$/.test(rawVal)) {
       resolvedP2PAddress = rawVal;
       resolvedP2PDisplayName = `${rawVal.slice(0, 6)}...${rawVal.slice(-4)}`;
-      walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
-      walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+      walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+      walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.35)';
       walletRecipientStatus.innerHTML = `
-        <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-          <span>✓</span> <span>Valid Celo Address: ${resolvedP2PDisplayName}</span>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="display: flex; align-items: center;">${getCheckCircleSvg(14, 'var(--accent-emerald)')}</span>
+            <div>
+              <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px;">
+                Valid Celo Address
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                Direct On-Chain · <span style="font-family: monospace; color: var(--accent-cyan);">${resolvedP2PDisplayName}</span>
+              </div>
+            </div>
+          </div>
+          <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); padding: 3px 8px; border-radius: 12px; font-weight: 700;">
+            Celo Native
+          </span>
         </div>
       `;
       return;
@@ -435,7 +464,12 @@ export async function renderCashout(
 
     walletRecipientStatus.style.background = 'rgba(6, 182, 212, 0.08)';
     walletRecipientStatus.style.borderColor = 'rgba(6, 182, 212, 0.25)';
-    walletRecipientStatus.innerHTML = '<span class="pulse-dot"></span> <span style="color: var(--accent-cyan);">Resolving Sivan identity...</span>';
+    walletRecipientStatus.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="pulse-dot"></span>
+        <span style="color: var(--accent-cyan); font-size: 12px; font-weight: 600;">Resolving Sivan identity...</span>
+      </div>
+    `;
 
     p2pLookupTimeout = setTimeout(async () => {
       try {
@@ -447,11 +481,24 @@ export async function renderCashout(
           if (celoWallet) {
             resolvedP2PAddress = celoWallet;
             resolvedP2PDisplayName = res.user.username ? `@${res.user.username.replace(/^@/, '')}` : res.user.displayName || rawVal;
-            walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.08)';
-            walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.25)';
+            walletRecipientStatus.style.background = 'rgba(16, 185, 129, 0.1)';
+            walletRecipientStatus.style.borderColor = 'rgba(16, 185, 129, 0.35)';
             walletRecipientStatus.innerHTML = `
-              <div style="color: var(--accent-emerald); font-weight: 600; display: flex; align-items: center; gap: 6px;">
-                <span>✓</span> <span>Verified Sivan User: ${resolvedP2PDisplayName} (${celoWallet.slice(0, 6)}...${celoWallet.slice(-4)})</span>
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="display: flex; align-items: center;">${getCheckCircleSvg(14, 'var(--accent-emerald)')}</span>
+                  <div>
+                    <div style="color: var(--accent-emerald); font-weight: 700; font-size: 13px;">
+                      Resolved: <span style="font-family: monospace;">${resolvedP2PDisplayName}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 1px;">
+                      Verified Sivan User · <span style="font-family: monospace; color: var(--accent-cyan);">${celoWallet.slice(0, 6)}...${celoWallet.slice(-4)}</span>
+                    </div>
+                  </div>
+                </div>
+                <span style="font-size: 10px; background: rgba(16, 185, 129, 0.2); color: var(--accent-emerald); padding: 3px 8px; border-radius: 12px; font-weight: 700;">
+                  Sub-Second
+                </span>
               </div>
             `;
             return;
@@ -459,11 +506,11 @@ export async function renderCashout(
         }
         walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
         walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Sivan handle not found. Please verify handle or enter a 0x address.</span>';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444; font-size: 12px;">Sivan handle not found. Please verify handle or enter a 0x address.</span>';
       } catch {
         walletRecipientStatus.style.background = 'rgba(239, 68, 68, 0.08)';
         walletRecipientStatus.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-        walletRecipientStatus.innerHTML = '<span style="color: #ef4444;">⚠️ Identity resolution unavailable right now.</span>';
+        walletRecipientStatus.innerHTML = '<span style="color: #ef4444; font-size: 12px;">Identity resolution unavailable right now.</span>';
       }
     }, 350);
   });
@@ -662,6 +709,7 @@ export async function renderCashout(
   // Dropdown open/close event
   tokenTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
+    if (tokenItems.length <= 1) return;
     const isOpen = tokenMenu.classList.contains('open');
     if (isOpen) {
       tokenMenu.classList.remove('open');
@@ -740,7 +788,7 @@ export async function renderCashout(
           kycBanner.style.cursor = 'default';
           kycBanner.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">✓</span>
+              <span>${getShieldIconSvg(16, 'var(--accent-emerald)')}</span>
               <div>
                 <span style="font-weight: 700; color: var(--accent-emerald); font-size: 11px; display: block;">Identity Verified</span>
                 <span style="color: var(--text-muted); font-size: 11px;">Full bank cashout access enabled via Busha / NIBSS</span>
@@ -753,7 +801,7 @@ export async function renderCashout(
           kycBanner.style.borderColor = 'rgba(245, 158, 11, 0.25)';
           kycBanner.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">⏳</span>
+              <span>${getHourglassIconSvg(16, '#f59e0b')}</span>
               <div>
                 <span style="font-weight: 700; color: #f59e0b; font-size: 11px; display: block;">Review in Progress</span>
                 <span style="color: var(--text-muted); font-size: 11px;">Busha compliance team is reviewing your identity. Usually 1–5 mins.</span>
@@ -766,7 +814,7 @@ export async function renderCashout(
           kycBanner.style.borderColor = 'rgba(239, 68, 68, 0.25)';
           kycBanner.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-              <span style="font-size: 16px;">🛡️</span>
+              <span>${getShieldIconSvg(16, '#ef4444')}</span>
               <div>
                 <span style="font-weight: 700; color: #ef4444; font-size: 11px; display: block;">Identity Verification Required</span>
                 <span style="color: var(--text-muted); font-size: 11px;">Tap to verify identity with Busha before cashing out to your bank.</span>
@@ -781,18 +829,25 @@ export async function renderCashout(
         updateBannerForState(localKyc.state);
       }
 
-      // Always refresh KYC status from live API silently
-      textileKycService.getKycStatus(state.address).then(res => {
-        if (res.kyc?.state) {
-          updateBannerForState(res.kyc.state);
-        }
-      }).catch(() => { /* silent */ });
+      if (state.address) {
+        void textileKycService.getKycStatus(state.address).then(res => {
+          if (res?.kyc?.state) {
+            updateBannerForState(res.kyc.state);
+          }
+        });
+      }
     }
   }
 
-  // NUBAN live account verification
-  const checkAccount = async () => {
-    const val = acctEl.value.trim();
+  // Live account number verification listener
+  let lookupTimeout: any = null;
+  const checkAccount = () => {
+    if (lookupTimeout) clearTimeout(lookupTimeout);
+    lookupTimeout = setTimeout(doAccountCheck, 400);
+  };
+
+  const doAccountCheck = async () => {
+    const val = acctEl?.value.trim() || '';
 
     if (isNigeria) {
       const cleanVal = val.replace(/\D/g, '').slice(0, 10);
@@ -807,7 +862,7 @@ export async function renderCashout(
         if (!bankHiddenEl.value) {
           acctStatusEl.style.background = 'rgba(245, 158, 11, 0.08)';
           acctStatusEl.style.borderColor = 'rgba(245, 158, 11, 0.25)';
-          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">👆 Please select destination bank to verify recipient</span>';
+          acctStatusEl.innerHTML = '<span style="color: #f59e0b;">Please select destination bank to verify recipient</span>';
           return;
         }
 
@@ -839,13 +894,13 @@ export async function renderCashout(
             resolvedRecipientName = '';
             acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
             acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-            acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Invalid account number or bank rail mismatch. Please verify details.</span>';
+            acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">Invalid account number or bank rail mismatch. Please verify details.</span>';
           }
         } catch {
           resolvedRecipientName = '';
           acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
           acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-          acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">⚠️ Could not verify account right now. Check details or try again.</span>';
+          acctStatusEl.innerHTML = '<span style="color: #ef4444; font-size: 12px;">Could not verify account right now. Check details or try again.</span>';
         }
       } else if (cleanVal.length > 0) {
         resolvedRecipientName = '';
@@ -884,7 +939,7 @@ export async function renderCashout(
           resolvedRecipientName = '';
           acctStatusEl.style.background = 'rgba(239, 68, 68, 0.08)';
           acctStatusEl.style.borderColor = 'rgba(239, 68, 68, 0.25)';
-          acctStatusEl.innerHTML = `<span style="color: #ef4444; font-size: 12px;">⚠️ Invalid recipient number for ${country.name}.</span>`;
+          acctStatusEl.innerHTML = `<span style="color: #ef4444; font-size: 12px;">Invalid recipient number for ${country.name}.</span>`;
         }
       } else if (val.length > 0) {
         resolvedRecipientName = '';
@@ -902,13 +957,14 @@ export async function renderCashout(
 
   acctEl?.addEventListener('input', checkAccount);
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
+  container.querySelector('#btn-jump-swap')?.addEventListener('click', () => onNavigate('swap'));
 
   const form = container.querySelector('#form-cashout') as HTMLFormElement;
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     if (!state.address) {
-      showToast('⚠️ Please connect your wallet first.');
+      showToast('Please connect your wallet first.');
       return;
     }
 
@@ -916,7 +972,7 @@ export async function renderCashout(
     const tok = tokenHiddenEl.value;
 
     if (!amt || amt <= 0) {
-      showToast('⚠️ Please enter a valid transfer amount.');
+      showToast('Please enter a valid transfer amount.');
       return;
     }
 
@@ -924,19 +980,19 @@ export async function renderCashout(
     const availableNum = tokenBal ? parseFloat(tokenBal.balanceFormatted.replace(/,/g, '')) : 0;
 
     if (amt > availableNum) {
-      showToast(`⚠️ Insufficient ${tok} balance. Available: ${availableNum} ${tok}`);
+      showToast(`Insufficient ${tok} balance. Available: ${availableNum} ${tok}`);
       return;
     }
 
     if (activeTab === 'wallet') {
       // P2P Transfer Mode
       if (!resolvedP2PAddress) {
-        showToast('⚠️ Please specify a valid @handle or Celo address.');
+        showToast('Please specify a valid @handle or Celo address.');
         return;
       }
 
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⚡ Quoting & Signing Celo Transfer...</span>';
+      submitBtn.innerHTML = '<span>Quoting & Signing Celo Transfer...</span>';
 
       try {
         const quote = await fxQuotesService.fetchTransferFeeQuote(amt, tok, resolvedP2PAddress);
@@ -944,7 +1000,7 @@ export async function renderCashout(
         const netAmount = quote.netAmount;
         const targetFeeWallet = ((quote.feeWallet as `0x${string}`) || (getActiveNetwork().feeWallet as `0x${string}`) || (getSivanFeeWallet() as `0x${string}`));
 
-        submitBtn.innerHTML = '<span>⚡ Confirming Transfer in Wallet...</span>';
+        submitBtn.innerHTML = '<span>Confirming Transfer in Wallet...</span>';
 
         const txRes = await miniPayService.sendAttributedTransfer({
           to: resolvedP2PAddress as `0x${string}`,
@@ -954,15 +1010,15 @@ export async function renderCashout(
           feeWallet: targetFeeWallet,
           onProgress: (step) => {
             if (step === 'fee') {
-              submitBtn.innerHTML = '<span>⚡ Confirming Protocol Fee to Sivan Wallet...</span>';
+              submitBtn.innerHTML = '<span>Confirming Protocol Fee to Sivan Wallet...</span>';
             }
           },
         });
 
         if (!txRes.success || !txRes.txHash) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = `<span>⚡ Send ${netAmount.toFixed(2)} ${tok} on Celo (Attributed)</span>`;
-          showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
+          submitBtn.innerHTML = `<span>Send ${netAmount.toFixed(2)} ${tok} on Celo (Attributed)</span>`;
+          showToast(`${txRes.error || 'Transfer cancelled in wallet'}`);
           return;
         }
 
@@ -979,17 +1035,17 @@ export async function renderCashout(
           txHash: txRes.txHash,
         });
 
-        submitBtn.innerHTML = '<span>🚀 Transfer Dispatched...</span>';
+        submitBtn.innerHTML = '<span>Transfer Dispatched...</span>';
         const feeNote = txRes.feeTxHash ? ' · Fee settled ✓' : '';
-        showToast(`🎉 Transfer confirmed! Tx: ${txRes.txHash.slice(0, 10)}... Sent ${netAmount.toFixed(2)} ${tok} to ${resolvedP2PDisplayName}${feeNote}!`);
+        showToast(`Transfer confirmed! Sent ${netAmount.toFixed(2)} ${tok} to ${resolvedP2PDisplayName}${feeNote}`);
 
         setTimeout(() => {
           onNavigate('history');
         }, 1500);
       } catch (err: any) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>⚡ Send Instantly on Celo (Attributed)</span>';
-        showToast(`❌ Transfer error: ${err.message || 'Execution failed'}`);
+        submitBtn.innerHTML = '<span>Send Instantly on Celo (Attributed)</span>';
+        showToast(`Transfer error: ${err.message || 'Execution failed'}`);
       }
       return;
     }
@@ -997,10 +1053,10 @@ export async function renderCashout(
     // Bank Cash Out Mode
     const acctNum = acctEl.value.trim();
     if (isNigeria && acctNum.length !== 10) {
-      showToast('⚠️ Please enter a valid 10-digit NUBAN account number.');
+      showToast('Please enter a valid 10-digit NUBAN account number.');
       return;
     } else if (!isNigeria && acctNum.length < 9) {
-      showToast(`⚠️ Please enter a valid ${country.name} account or phone number.`);
+      showToast(`Please enter a valid ${country.name} account or phone number.`);
       return;
     }
 
@@ -1008,7 +1064,7 @@ export async function renderCashout(
     const bankCode = bankHiddenEl.value || '';
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>⚡ Signing Celo Transfer...</span>';
+    submitBtn.innerHTML = '<span>Signing Celo Transfer...</span>';
 
     try {
       // Dynamic deposit address from live quote or registered settlement wallet
@@ -1034,8 +1090,8 @@ export async function renderCashout(
 
       if (!targetDepositAddress) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
-        showToast('⚠️ Off-ramp liquidity deposit address unavailable. Please retry.');
+        submitBtn.innerHTML = '<span>Confirm Cash Out (Under 1-2 Mins)</span>';
+        showToast('Off-ramp liquidity deposit address unavailable. Please retry.');
         return;
       }
 
@@ -1049,12 +1105,12 @@ export async function renderCashout(
 
       if (!txRes.success || !txRes.txHash) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
-        showToast(`❌ ${txRes.error || 'Transfer cancelled in wallet'}`);
+        submitBtn.innerHTML = '<span>Confirm Cash Out (Under 1-2 Mins)</span>';
+        showToast(`${txRes.error || 'Transfer cancelled in wallet'}`);
         return;
       }
 
-      submitBtn.innerHTML = '<span>⚡ Dispatching NIBSS Bank Payout...</span>';
+      submitBtn.innerHTML = '<span>Dispatching NIBSS Bank Payout...</span>';
 
       // Live backend execution: Notify Sivan payment gateway to trigger Textile/Busha NIBSS payout
       try {
@@ -1087,16 +1143,16 @@ export async function renderCashout(
         txHash: txRes.txHash,
       });
 
-      submitBtn.innerHTML = '<span>🚀 Off-Ramp Dispatched...</span>';
-      showToast(`✅ Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`);
+      submitBtn.innerHTML = '<span>Off-Ramp Dispatched...</span>';
+      showToast(`Celo Tx Confirmed: ${txRes.txHash.slice(0, 8)}... Payout dispatched to ${bankName}. Credit typically in 1-2 mins!`);
 
       setTimeout(() => {
         onNavigate('history');
       }, 1500);
     } catch (err: any) {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>💸 Confirm Cash Out (Under 1-2 Mins)</span>';
-      showToast(`❌ Transfer error: ${err.message || 'Execution failed'}`);
+      submitBtn.innerHTML = '<span>Confirm Cash Out (Under 1-2 Mins)</span>';
+      showToast(`Transfer error: ${err.message || 'Execution failed'}`);
     }
   });
 }
