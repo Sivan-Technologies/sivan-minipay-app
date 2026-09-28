@@ -2382,5 +2382,426 @@ body {
 }
 
 
+/* ===========================================================================
+   Create Agreement View — Premium Redesign (ca-*)
+   =========================================================================== */
 
+/* Page Header */
+.ca-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+}
 
+.ca-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ca-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ca-back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.ca-page-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.ca-page-subtitle {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  font-weight: 400;
+}
+
+.ca-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.22);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-emerald);
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ca-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-emerald);
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+/* Form */
+.ca-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Field Cards */
+.ca-field-card {
+  background: rgba(17, 24, 39, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 16px;
+  transition: border-color 0.2s ease;
+  backdrop-filter: blur(8px);
+}
+
+.ca-field-card:focus-within {
+  border-color: rgba(16, 185, 129, 0.35);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.06);
+}
+
+.ca-step-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+}
+
+.ca-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(6, 182, 212, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-emerald);
+  flex-shrink: 0;
+  letter-spacing: 0;
+}
+
+.ca-field-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ca-field-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 6px 0 0;
+  line-height: 1.4;
+}
+
+.ca-resolution-badge {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* Input styles (shared by text, number, textarea) */
+.ca-input {
+  width: 100%;
+  background: rgba(9, 14, 23, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-family: var(--font-main);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.ca-input:focus {
+  border-color: rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.ca-input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ca-textarea {
+  min-height: 86px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+/* Payment Row: token selector + amount side-by-side */
+.ca-payment-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.ca-token-col,
+.ca-amount-col {
+  min-width: 0;
+}
+
+.ca-token-trigger {
+  height: 44px !important;
+  border-radius: 10px !important;
+}
+
+.ca-deadline-trigger {
+  height: 44px !important;
+  border-radius: 10px !important;
+}
+
+.ca-amount-input {
+  height: 44px;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  text-align: right;
+  padding-right: 14px;
+  letter-spacing: -0.01em;
+}
+
+/* Live Balance Pill */
+.ca-balance-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-emerald);
+}
+
+/* Fee Summary Card */
+.ca-summary-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.06) 0%, rgba(6, 182, 212, 0.04) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 14px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.ca-summary-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.ca-summary-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ca-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 13px;
+}
+
+.ca-summary-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.ca-summary-val {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ca-summary-fee {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.ca-summary-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  margin: 4px 0;
+}
+
+.ca-summary-net-row {
+  padding: 10px 0 4px;
+}
+
+.ca-summary-net-label {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ca-summary-net-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--accent-emerald);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.ca-attribution-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ca-attr-tag {
+  color: var(--accent-cyan);
+  font-size: 10.5px;
+  font-family: monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Primary Submit CTA Button */
+.ca-submit-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #fff;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 24px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(0,0,0,0.3);
+  margin-top: 4px;
+  position: relative;
+  overflow: hidden;
+}
+
+.ca-submit-btn::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  transform: skewX(-15deg);
+  animation: ca-shimmer 3.5s infinite;
+}
+
+@keyframes ca-shimmer {
+  0%   { left: -75%; }
+  100% { left: 130%; }
+}
+
+.ca-submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 32px rgba(16, 185, 129, 0.45), 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.ca-submit-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+}
+
+.ca-submit-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ca-submit-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.18);
+  flex-shrink: 0;
+}
+
+.ca-submit-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 1;
+}
+
+.ca-submit-main {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.ca-submit-sub {
+  font-size: 10.5px;
+  font-weight: 500;
+  opacity: 0.75;
+  letter-spacing: 0.02em;
+  margin-top: 2px;
+}
+
+.ca-submit-arrow {
+  flex-shrink: 0;
+  opacity: 0.8;
+  transition: transform 0.2s ease;
+}
+
+.ca-submit-btn:hover .ca-submit-arrow {
+  transform: translateX(3px);
+  opacity: 1;
+}
+
+/* Spinner keyframe (used in loading state) */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

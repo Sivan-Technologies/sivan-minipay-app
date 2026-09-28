@@ -19,44 +19,71 @@ export async function renderCreateAgreement(
   const balances = await fetchTokenBalances(state.address);
 
   container.innerHTML = `
-    <div class="section-header" style="margin-bottom: 20px;">
-      <h2 class="section-title">New Service Agreement</h2>
-      <span class="section-link" id="btn-cancel-create">Back</span>
+    <!-- Premium Page Header -->
+    <div class="ca-page-header">
+      <div class="ca-header-left">
+        <button type="button" class="ca-back-btn" id="btn-cancel-create">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div>
+          <h2 class="ca-page-title">New Service Agreement</h2>
+          <p class="ca-page-subtitle">Lock client funds before work begins</p>
+        </div>
+      </div>
+      <div class="ca-header-badge">
+        <span class="ca-live-dot"></span>
+        <span>Celo Mainnet</span>
+      </div>
     </div>
 
-    <form id="form-create-deal">
-      <div class="form-group" style="margin-bottom: 18px;">
-        <label class="form-label" for="deal-title">Deal Title</label>
+    <form id="form-create-deal" class="ca-form">
+
+      <!-- Step 1: Deal Title -->
+      <div class="ca-field-card">
+        <div class="ca-step-row">
+          <span class="ca-step-num">1</span>
+          <label class="ca-field-label" for="deal-title">Deal Title</label>
+        </div>
         <input 
           type="text" 
           id="deal-title" 
-          class="form-input" 
+          class="ca-input" 
           placeholder="e.g. Mobile App UI Design or Smart Contract Review" 
           required 
         />
       </div>
 
-      <div class="form-group" style="margin-bottom: 18px;">
-        <label class="form-label" for="deal-contractor">Contractor (Phone, @username, or Celo 0x)</label>
+      <!-- Step 2: Contractor -->
+      <div class="ca-field-card">
+        <div class="ca-step-row">
+          <span class="ca-step-num">2</span>
+          <label class="ca-field-label" for="deal-contractor">Contractor</label>
+        </div>
         <input 
           type="text" 
           id="deal-contractor" 
-          class="form-input" 
-          placeholder="e.g. +2348012345678, @soliame, or 0x..." 
+          class="ca-input" 
+          placeholder="Phone, @username, or Celo 0x address" 
           required 
         />
-        <div id="contractor-resolution-badge" class="form-helper" style="font-size: 11px; margin-top: 4px; display: none;"></div>
-        <div class="form-helper">Enter the contractor's phone number, Telegram handle, or Celo wallet</div>
+        <div id="contractor-resolution-badge" class="ca-resolution-badge" style="display: none;"></div>
+        <p class="ca-field-hint">Phone number, Telegram handle, or Celo wallet address</p>
       </div>
 
-      <div class="form-group" style="margin-bottom: 18px;">
-        <div style="display: grid; grid-template-columns: 145px 1fr; gap: 12px; align-items: flex-start;">
-          <!-- Left Column: Stablecoin Selector -->
-          <div style="min-width: 0;">
-            <label class="form-label" style="margin-bottom: 6px;">Stablecoin</label>
+      <!-- Step 3: Token + Amount -->
+      <div class="ca-field-card">
+        <div class="ca-step-row">
+          <span class="ca-step-num">3</span>
+          <label class="ca-field-label">Payment</label>
+        </div>
+        <div class="ca-payment-row">
+          <!-- Stablecoin Selector -->
+          <div class="ca-token-col">
             <div class="custom-select-wrap" id="deal-currency-wrap">
-              <div class="custom-select-trigger" id="deal-currency-trigger" style="height: 46px; border-radius: var(--radius-md);">
-                <span id="deal-currency-display" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
+              <div class="custom-select-trigger ca-token-trigger" id="deal-currency-trigger">
+                <span id="deal-currency-display" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700;">${getTokenIconSvg('USDC', 16)} <span>USDC</span></span>
                 <span class="chevron">▾</span>
               </div>
               <div class="custom-select-menu" id="deal-currency-menu">
@@ -73,34 +100,37 @@ export async function renderCreateAgreement(
               <input type="hidden" id="deal-currency" value="USDC" />
             </div>
           </div>
-
-          <!-- Right Column: Amount Input -->
-          <div style="min-width: 0;">
-            <label class="form-label" for="deal-amount" style="margin-bottom: 6px;">Amount</label>
+          <!-- Amount -->
+          <div class="ca-amount-col">
             <input 
               type="number" 
               id="deal-amount" 
-              class="form-input" 
+              class="ca-input ca-amount-input" 
               placeholder="0.00" 
               min="0.01" 
               step="any" 
-              style="height: 46px; font-size: 15px; font-weight: 600; box-sizing: border-box;"
               required 
             />
           </div>
         </div>
-        <div id="avail-bal-note" class="form-helper" style="color: var(--accent-emerald); font-weight: 500; margin-top: 8px; font-size: 11.5px;">
-          Available: Loading...
+        <!-- Live Balance Pill -->
+        <div class="ca-balance-pill" id="avail-bal-note">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.7"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>Available: Loading...</span>
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 18px;">
-        <label class="form-label">Delivery Deadline</label>
+      <!-- Step 4: Deadline -->
+      <div class="ca-field-card">
+        <div class="ca-step-row">
+          <span class="ca-step-num">4</span>
+          <label class="ca-field-label">Delivery Deadline</label>
+        </div>
         <input type="hidden" id="deal-deadline" value="48">
         <div class="custom-select-wrap" id="deadline-select-wrap">
-          <div class="custom-select-trigger" id="deadline-select-trigger" style="height: 46px; border-radius: var(--radius-md);">
+          <div class="custom-select-trigger ca-deadline-trigger" id="deadline-select-trigger">
             <span id="deadline-display" style="display: flex; align-items: center; gap: 8px; font-size: 14px;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.7"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style="opacity:0.6"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm4.24 16L11 13V7h1.5v5.25l4.5 2.67-1.01 1.66z"/></svg>
               48 Hours (2 Days)
             </span>
             <span class="chevron">▾</span>
@@ -116,42 +146,63 @@ export async function renderCreateAgreement(
         </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 20px;">
-        <label class="form-label" for="deal-desc">Deliverable Scope & Criteria</label>
+      <!-- Step 5: Scope -->
+      <div class="ca-field-card">
+        <div class="ca-step-row">
+          <span class="ca-step-num">5</span>
+          <label class="ca-field-label" for="deal-desc">Deliverable Scope & Criteria</label>
+        </div>
         <textarea 
           id="deal-desc" 
-          class="form-textarea" 
-          placeholder="Describe deliverables and verification requirements before payment is released..." 
-          style="min-height: 80px;"
+          class="ca-input ca-textarea" 
+          placeholder="Describe deliverables and the verification criteria that must be met before funds are released..." 
           required
         ></textarea>
       </div>
 
-      <!-- Live Calculation Box -->
-      <div class="quote-box" id="calc-box">
-        <div class="quote-row">
-          <span>Gross Agreement Value:</span>
-          <span id="calc-gross">0.00 USDC</span>
+      <!-- Live Fee Summary Card -->
+      <div class="ca-summary-card" id="calc-box">
+        <div class="ca-summary-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          Live Fee Breakdown
         </div>
-        <div class="quote-row">
-          <span id="calc-fee-label">Sivan Platform Fee:</span>
-          <span id="calc-fee">0.00 USDC</span>
+        <div class="ca-summary-rows">
+          <div class="ca-summary-row">
+            <span class="ca-summary-label">Gross Agreement Value</span>
+            <span class="ca-summary-val" id="calc-gross">0.00 USDC</span>
+          </div>
+          <div class="ca-summary-row">
+            <span class="ca-summary-label" id="calc-fee-label">Sivan Platform Fee</span>
+            <span class="ca-summary-val ca-summary-fee" id="calc-fee">0.00 USDC</span>
+          </div>
+          <div class="ca-summary-divider"></div>
+          <div class="ca-summary-row ca-summary-net-row">
+            <span class="ca-summary-net-label">Net Contractor Payout</span>
+            <span class="ca-summary-net-val" id="calc-net">0.00 USDC</span>
+          </div>
         </div>
-        <div class="quote-row">
-          <span>Net Contractor Payout:</span>
-          <span id="calc-net">0.00 USDC</span>
-        </div>
-        <div style="margin-top: 8px; font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-          ${getTagIconSvg(13, 'var(--text-muted)')}
-          <span>Official Attribution:</span>
-          <code style="color: var(--accent-cyan);">${CELO_CONFIG.attributionTag}</code>
+        <div class="ca-attribution-row">
+          ${getTagIconSvg(12, 'var(--text-muted)')}
+          <span>Attribution:</span>
+          <code class="ca-attr-tag">${CELO_CONFIG.attributionTag}</code>
         </div>
       </div>
 
-      <button type="submit" class="btn-primary" id="btn-submit-deal" style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-        ${getLockIconSvg(15, '#ffffff')}
-        <span>Fund & Lock Deal (Celo Mainnet)</span>
+      <!-- Primary CTA -->
+      <button type="submit" class="ca-submit-btn" id="btn-submit-deal">
+        <div class="ca-submit-icon">
+          ${getLockIconSvg(16, '#ffffff')}
+        </div>
+        <div class="ca-submit-text">
+          <span class="ca-submit-main">Fund & Lock Deal</span>
+          <span class="ca-submit-sub">Celo Mainnet · Instant On-Chain</span>
+        </div>
+        <svg class="ca-submit-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
       </button>
+
     </form>
   `;
 
@@ -382,7 +433,12 @@ export async function renderCreateAgreement(
     }
 
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>Waiting for wallet confirmation...</span>';
+    submitBtn.innerHTML = `
+      <span style="display:inline-flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        Waiting for wallet confirmation...
+      </span>
+    `;
 
     try {
       // Execute genuine on-chain transfer to lock deal under Sivan AI Autonomous Service Agreement
@@ -395,7 +451,7 @@ export async function renderCreateAgreement(
       if (!txRes.success || !txRes.txHash) {
         showToast(`Transaction failed: ${txRes.error || 'User cancelled'}`);
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `${getLockIconSvg(15, '#ffffff')} <span>Fund & Lock Deal (Celo Mainnet)</span>`;
+        submitBtn.innerHTML = `<div class="ca-submit-icon">${getLockIconSvg(16, '#ffffff')}</div><div class="ca-submit-text"><span class="ca-submit-main">Fund & Lock Deal</span><span class="ca-submit-sub">Celo Mainnet · Instant On-Chain</span></div>`;
         return;
       }
 
@@ -426,7 +482,7 @@ export async function renderCreateAgreement(
       console.error('Deal funding error:', err);
       showToast(`Error: ${err.message || 'Transaction could not be completed'}`);
       submitBtn.disabled = false;
-      submitBtn.innerHTML = `${getLockIconSvg(15, '#ffffff')} <span>Fund & Lock Deal (Celo Mainnet)</span>`;
+      submitBtn.innerHTML = `<div class="ca-submit-icon">${getLockIconSvg(16, '#ffffff')}</div><div class="ca-submit-text"><span class="ca-submit-main">Fund & Lock Deal</span><span class="ca-submit-sub">Celo Mainnet · Instant On-Chain</span></div>`;
     }
   });
 }
