@@ -188,47 +188,12 @@ export async function renderDashboard(
           </div>
         </div>
 
-        <!-- Slide 2: Instant Bank Cashout -->
-        <div class="banner-slide slide-cashout" data-slide-index="2" data-action="cashout">
-          <div class="banner-content">
-            <div class="banner-badge badge-purple">
-              <span class="badge-dot pulse-purple"></span>
-              <span>NIBSS DIRECT SETTLEMENT</span>
-            </div>
-            <h3 class="banner-title">Earn in USD, Spend in Naira</h3>
-            <p class="banner-desc">Withdraw USDC & USDm to Nigerian banks in under 2 minutes via local rails.</p>
-            <div class="banner-cta">
-              <span>Instant Cash Out</span>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-                <polyline points="12 5 19 12 12 19"></polyline>
-              </svg>
-            </div>
-          </div>
-          <div class="banner-graphic">
-            <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <linearGradient id="cashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#10b981" />
-                  <stop offset="100%" stop-color="#06b6d4" />
-                </linearGradient>
-              </defs>
-              <circle cx="50" cy="50" r="38" fill="rgba(16,185,129,0.12)" />
-              <circle cx="50" cy="50" r="28" fill="url(#cashGrad)" opacity="0.9" />
-              <circle cx="50" cy="50" r="24" fill="#091428" />
-              <text x="50" y="57" text-anchor="middle" fill="#10b981" font-size="20" font-weight="bold" font-family="system-ui">₦</text>
-              <path d="M68 28L60 42H70L62 58" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-            </svg>
-          </div>
-        </div>
-
       </div>
 
       <!-- Carousel Pagination Indicator Dots -->
       <div class="carousel-indicators">
         <span class="indicator-dot active" data-dot-index="0"></span>
         <span class="indicator-dot" data-dot-index="1"></span>
-        <span class="indicator-dot" data-dot-index="2"></span>
       </div>
     </div>
 
