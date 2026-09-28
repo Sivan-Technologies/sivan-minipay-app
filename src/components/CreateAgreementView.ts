@@ -222,6 +222,7 @@ export async function renderCreateAgreement(
   const currencyMenu = container.querySelector('#deal-currency-menu') as HTMLElement;
   const currencyDisplay = container.querySelector('#deal-currency-display') as HTMLElement;
   const currencyItems = container.querySelectorAll('#deal-currency-menu .custom-select-item');
+  const clickController = new AbortController();
 
   const availNote = container.querySelector('#avail-bal-note') as HTMLElement;
   const grossEl = container.querySelector('#calc-gross') as HTMLElement;
@@ -293,13 +294,23 @@ export async function renderCreateAgreement(
     });
   });
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click — scoped to this view's lifetime via AbortController
   document.addEventListener('click', () => {
     currencyMenu?.classList.remove('open');
     currencyTrigger?.classList.remove('active');
     deadlineMenu?.classList.remove('open');
     deadlineTrigger?.classList.remove('active');
+  }, { signal: clickController.signal });
+
+  // Auto-cleanup when container leaves DOM (on navigation)
+  const _caObserver = new MutationObserver(() => {
+    if (!document.body.contains(container)) {
+      clickController.abort();
+      clearTimeout(resolveTimer);
+      _caObserver.disconnect();
+    }
   });
+  _caObserver.observe(document.body, { childList: true, subtree: true });
 
   // Deadline custom dropdown
   const deadlineHiddenInput = container.querySelector('#deal-deadline') as HTMLInputElement;

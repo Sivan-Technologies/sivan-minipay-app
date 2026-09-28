@@ -20,6 +20,7 @@ export async function renderSwap(
   let toToken: SwapToken = 'cNGN';
   let currentQuote: SwapQuoteResult | null = null;
   let quoteTimer: any = null;
+  const clickController = new AbortController();
 
   const isFrom = (tok: SwapToken) => (fromToken as string) === tok ? 'selected' : '';
   const isTo = (tok: SwapToken) => (toToken as string) === tok ? 'selected' : '';
@@ -327,10 +328,21 @@ export async function renderSwap(
     fromMenu.classList.remove('open');
   });
 
+  // Close dropdowns on outside click — scoped to this view's lifetime via AbortController
   document.addEventListener('click', () => {
     fromMenu?.classList.remove('open');
     toMenu?.classList.remove('open');
+  }, { signal: clickController.signal });
+
+  // Auto-cleanup when container is removed from DOM (on navigation)
+  const observer = new MutationObserver(() => {
+    if (!document.body.contains(container)) {
+      clickController.abort();
+      clearTimeout(quoteTimer);
+      observer.disconnect();
+    }
   });
+  observer.observe(document.body, { childList: true, subtree: true });
 
   fromMenu.querySelectorAll('.custom-select-item').forEach(item => {
     item.addEventListener('click', (e) => {

@@ -1939,6 +1939,7 @@ body {
   pointer-events: none;
   transform: translateX(12px);
   transition: opacity 0.35s ease, transform 0.35s ease;
+  will-change: opacity, transform;
 }
 
 .banner-slide.active {
@@ -2480,6 +2481,7 @@ body {
   padding: 16px;
   transition: border-color 0.2s ease;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .ca-field-card:focus-within {
@@ -2592,6 +2594,7 @@ body {
   text-align: right;
   padding-right: 14px;
   letter-spacing: -0.01em;
+  box-sizing: border-box;
 }
 
 /* Live Balance Pill */
@@ -2616,6 +2619,7 @@ body {
   border-radius: 14px;
   padding: 16px;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .ca-summary-title {
@@ -2720,6 +2724,8 @@ body {
   margin-top: 4px;
   position: relative;
   overflow: hidden;
+  will-change: transform;
+  box-sizing: border-box;
 }
 
 .ca-submit-btn::before {

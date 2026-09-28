@@ -432,4 +432,13 @@ export async function renderDashboard(
   container.querySelectorAll('.agreement-card').forEach(card => {
     card.addEventListener('click', () => onNavigate('deals'));
   });
+
+  // Auto-stop carousel interval when user navigates away (container removed from DOM)
+  const _dashObserver = new MutationObserver(() => {
+    if (!document.body.contains(container)) {
+      stopSlideTimer();
+      _dashObserver.disconnect();
+    }
+  });
+  _dashObserver.observe(document.body, { childList: true, subtree: true });
 }
