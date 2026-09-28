@@ -117,13 +117,13 @@ export async function renderDashboard(
             </div>
             <h3 class="banner-title">More Than An Invoice</h3>
             <p class="banner-desc">Client funds are locked safely in smart agreement vaults before work begins. Release on delivery.</p>
-            <div class="banner-cta">
+            <button type="button" class="banner-cta" id="btn-banner-how-it-works">
               <span>How It Works</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
               </svg>
-            </div>
+            </button>
           </div>
           <div class="banner-graphic">
             <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -160,13 +160,13 @@ export async function renderDashboard(
             </div>
             <h3 class="banner-title">Never Work For Free Again</h3>
             <p class="banner-desc">Clients deposit funds before you begin. Guarantee your milestone payout every time.</p>
-            <div class="banner-cta">
+            <button type="button" class="banner-cta" id="btn-banner-create-deal">
               <span>Create Deal</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="5" y1="12" x2="19" y2="12"></line>
                 <polyline points="12 5 19 12 12 19"></polyline>
               </svg>
-            </div>
+            </button>
           </div>
           <div class="banner-graphic">
             <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -374,31 +374,50 @@ export async function renderDashboard(
     });
   });
 
-  // Slide click actions
+  // Direct banner CTA button listeners
+  container.querySelector('#btn-banner-how-it-works')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openServiceAgreementExplainerModal(onNavigate);
+  });
+
+  container.querySelector('#btn-banner-create-deal')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onNavigate('create');
+  });
+
+  // Slide click actions (clicking on the active slide body)
   slides.forEach(slide => {
-    slide.addEventListener('click', () => {
+    slide.addEventListener('click', (e) => {
+      // Ignore if clicking on indicators or child buttons (already handled)
+      if ((e.target as HTMLElement).closest('.carousel-indicators')) return;
+      if ((e.target as HTMLElement).closest('.banner-cta')) return;
+
       const action = slide.getAttribute('data-action');
       if (action === 'explainer') {
         openServiceAgreementExplainerModal(onNavigate);
       } else if (action === 'create') {
         onNavigate('create');
-      } else if (action === 'cashout') {
-        onNavigate('cashout');
       }
     });
   });
 
-  // Touch swipe support
+  // Touch swipe support (distinguish tap from swipe)
   let touchStartX = 0;
+  let touchStartTime = 0;
+
   carouselEl?.addEventListener('touchstart', (e: any) => {
     touchStartX = e.touches[0].clientX;
+    touchStartTime = Date.now();
     stopSlideTimer();
   }, { passive: true });
 
   carouselEl?.addEventListener('touchend', (e: any) => {
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX - touchEndX;
-    if (Math.abs(diff) > 40) {
+    const elapsed = Date.now() - touchStartTime;
+
+    // Only swipe if dragged more than 40px
+    if (Math.abs(diff) > 40 && elapsed < 800) {
       if (diff > 0) {
         // Swiped left -> next slide
         showSlide(currentSlideIndex + 1);

@@ -12,13 +12,13 @@ export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) =>
   closeServiceAgreementExplainerModal();
 
   const overlay = document.createElement('div');
-  overlay.className = 'sivan-custom-overlay sivan-explainer-overlay';
+  overlay.className = 'sivan-explainer-overlay';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   activeModalOverlay = overlay;
 
   overlay.innerHTML = `
-    <div class="sivan-custom-modal sivan-explainer-modal">
+    <div class="sivan-explainer-modal">
       <!-- Modal Header -->
       <div class="explainer-header">
         <div class="explainer-header-badge">
@@ -121,6 +121,11 @@ export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) =>
 
   document.body.appendChild(overlay);
 
+  // Trigger active animation
+  requestAnimationFrame(() => {
+    overlay.classList.add('active');
+  });
+
   // Close handlers
   overlay.querySelector('#btn-close-explainer')?.addEventListener('click', closeServiceAgreementExplainerModal);
   overlay.addEventListener('click', (e) => {
@@ -139,8 +144,16 @@ export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) =>
 }
 
 export function closeServiceAgreementExplainerModal() {
-  if (activeModalOverlay && activeModalOverlay.parentNode) {
-    activeModalOverlay.parentNode.removeChild(activeModalOverlay);
-    activeModalOverlay = null;
+  if (activeModalOverlay) {
+    const el = activeModalOverlay;
+    el.classList.remove('active');
+    setTimeout(() => {
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+      if (activeModalOverlay === el) {
+        activeModalOverlay = null;
+      }
+    }, 200);
   }
 }
