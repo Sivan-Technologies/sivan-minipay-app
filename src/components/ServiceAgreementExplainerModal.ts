@@ -4,6 +4,8 @@
  * and how Service Agreements protect both buyers and contractors.
  */
 
+import { getLockIconSvg, getFlashIconSvg, getBankIconSvg } from '../utils/ui-icons';
+
 let activeModalOverlay: HTMLElement | null = null;
 
 export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) => void) {
@@ -89,17 +91,17 @@ export function openServiceAgreementExplainerModal(onNavigate?: (tab: string) =>
       <!-- Trust Badges Strip -->
       <div class="explainer-trust-strip">
         <div class="explainer-trust-item">
-          <span class="trust-icon">🔒</span>
+          ${getLockIconSvg(13, '#38bdf8')}
           <span>Smart Vault</span>
         </div>
         <div class="explainer-trust-dot">•</div>
         <div class="explainer-trust-item">
-          <span class="trust-icon">⚡</span>
+          ${getFlashIconSvg(13, '#34d399')}
           <span>Celo Mainnet</span>
         </div>
         <div class="explainer-trust-dot">•</div>
         <div class="explainer-trust-item">
-          <span class="trust-icon">🏛️</span>
+          ${getBankIconSvg(13, '#c084fc')}
           <span>NIBSS Off-Ramp</span>
         </div>
       </div>
