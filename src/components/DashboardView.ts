@@ -6,6 +6,7 @@ import { countryService } from '../config/countries.config';
 import { fxQuotesService } from '../services/fx-quotes.service';
 import { getTokenIconSvg } from '../utils/token-icons';
 import { openLegalModal } from './LegalSupportModal';
+import { openServiceAgreementExplainerModal } from './ServiceAgreementExplainerModal';
 import { getCountdownStatus } from '../utils/deadline';
 
 export async function renderDashboard(container: HTMLElement, onNavigate: (tab: string) => void) {
@@ -89,6 +90,134 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
             <span class="pill-val">₦${cngnBal} cNGN</span>
           </div>
         ` : ''}
+      </div>
+    </div>
+
+    <!-- Sivan Service Agreement Value Banner Carousel -->
+    <div class="sivan-banner-carousel" id="sivan-banner-carousel">
+      <div class="carousel-track" id="carousel-track">
+        
+        <!-- Slide 0: Autonomous Service Agreements (Core Value) -->
+        <div class="banner-slide slide-security active" data-slide-index="0" data-action="explainer">
+          <div class="banner-content">
+            <div class="banner-badge badge-emerald">
+              <span class="badge-dot pulse-emerald"></span>
+              <span>100% PAYMENT PROTECTION</span>
+            </div>
+            <h3 class="banner-title">Autonomous Service Agreements</h3>
+            <p class="banner-desc">Lock funds safely in smart contract vaults. Release only upon approved milestones.</p>
+            <div class="banner-cta">
+              <span>How It Works</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="banner-graphic">
+            <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#06b6d4" />
+                  <stop offset="50%" stop-color="#3b82f6" />
+                  <stop offset="100%" stop-color="#10b981" />
+                </linearGradient>
+                <filter id="glowFilt" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="3" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+              <circle cx="50" cy="50" r="38" fill="rgba(6,182,212,0.12)" />
+              <path d="M50 16L78 28V52C78 68 66 81 50 86C34 81 22 68 22 52V28L50 16Z" fill="url(#shieldGrad)" opacity="0.9" filter="url(#glowFilt)" />
+              <path d="M50 22L72 32V50C72 63 63 74 50 78C37 74 28 63 28 50V32L50 22Z" fill="#091428" />
+              <rect x="42" y="46" width="16" height="14" rx="3" fill="#10b981" />
+              <path d="M45 46V41C45 38.2 47.2 36 50 36C52.8 36 55 38.2 55 41V46" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
+              <circle cx="50" cy="52" r="1.5" fill="#091428" />
+              <circle cx="22" cy="28" r="2" fill="#06b6d4" />
+              <circle cx="80" cy="36" r="2.5" fill="#10b981" />
+              <circle cx="76" cy="70" r="1.5" fill="#60a5fa" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Slide 1: Freelancer & Client Security -->
+        <div class="banner-slide slide-freelance" data-slide-index="1" data-action="create">
+          <div class="banner-content">
+            <div class="banner-badge badge-cyan">
+              <span class="badge-dot pulse-cyan"></span>
+              <span>ZERO GHOSTING RISK</span>
+            </div>
+            <h3 class="banner-title">Never Work For Free Again</h3>
+            <p class="banner-desc">Clients deposit funds before you begin. Guarantee your milestone payout every time.</p>
+            <div class="banner-cta">
+              <span>Create Deal</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="banner-graphic">
+            <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="docGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#3b82f6" />
+                  <stop offset="100%" stop-color="#8b5cf6" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="38" fill="rgba(59,130,246,0.12)" />
+              <rect x="28" y="20" width="44" height="60" rx="8" fill="url(#docGrad)" opacity="0.9" />
+              <rect x="32" y="24" width="36" height="52" rx="6" fill="#091428" />
+              <line x1="38" y1="34" x2="62" y2="34" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" />
+              <line x1="38" y1="42" x2="58" y2="42" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+              <line x1="38" y1="50" x2="54" y2="50" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" />
+              <circle cx="58" cy="62" r="10" fill="#10b981" />
+              <path d="M54 62L57 65L62 59" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- Slide 2: Instant Bank Cashout -->
+        <div class="banner-slide slide-cashout" data-slide-index="2" data-action="cashout">
+          <div class="banner-content">
+            <div class="banner-badge badge-purple">
+              <span class="badge-dot pulse-purple"></span>
+              <span>NIBSS DIRECT SETTLEMENT</span>
+            </div>
+            <h3 class="banner-title">Earn in USD, Spend in Naira</h3>
+            <p class="banner-desc">Withdraw USDC & USDm to Nigerian banks in under 2 minutes via local rails.</p>
+            <div class="banner-cta">
+              <span>Instant Cash Out</span>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </div>
+          </div>
+          <div class="banner-graphic">
+            <svg class="graphic-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="cashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#06b6d4" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="38" fill="rgba(16,185,129,0.12)" />
+              <circle cx="50" cy="50" r="28" fill="url(#cashGrad)" opacity="0.9" />
+              <circle cx="50" cy="50" r="24" fill="#091428" />
+              <text x="50" y="57" text-anchor="middle" fill="#10b981" font-size="20" font-weight="bold" font-family="system-ui">₦</text>
+              <path d="M68 28L60 42H70L62 58" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Carousel Pagination Indicator Dots -->
+      <div class="carousel-indicators">
+        <span class="indicator-dot active" data-dot-index="0"></span>
+        <span class="indicator-dot" data-dot-index="1"></span>
+        <span class="indicator-dot" data-dot-index="2"></span>
       </div>
     </div>
 
@@ -214,6 +343,99 @@ export async function renderDashboard(container: HTMLElement, onNavigate: (tab: 
   container.querySelector('#link-footer-terms')?.addEventListener('click', () => openLegalModal('terms'));
   container.querySelector('#link-footer-privacy')?.addEventListener('click', () => openLegalModal('privacy'));
   container.querySelector('#link-footer-support')?.addEventListener('click', () => openLegalModal('support'));
+
+  // Carousel state & controller
+  const carouselEl = container.querySelector('#sivan-banner-carousel');
+  const slides = container.querySelectorAll<HTMLElement>('.banner-slide');
+  const dots = container.querySelectorAll<HTMLElement>('.indicator-dot');
+  let currentSlideIndex = 0;
+  let slideTimer: any = null;
+
+  const showSlide = (index: number) => {
+    currentSlideIndex = (index + slides.length) % slides.length;
+    slides.forEach((s, idx) => {
+      if (idx === currentSlideIndex) {
+        s.classList.add('active');
+      } else {
+        s.classList.remove('active');
+      }
+    });
+    dots.forEach((d, idx) => {
+      if (idx === currentSlideIndex) {
+        d.classList.add('active');
+      } else {
+        d.classList.remove('active');
+      }
+    });
+  };
+
+  const startSlideTimer = () => {
+    stopSlideTimer();
+    slideTimer = setInterval(() => {
+      showSlide(currentSlideIndex + 1);
+    }, 5200);
+  };
+
+  const stopSlideTimer = () => {
+    if (slideTimer) {
+      clearInterval(slideTimer);
+      slideTimer = null;
+    }
+  };
+
+  // Start auto-rotation
+  startSlideTimer();
+
+  // Pause on pointer enter / resume on leave
+  carouselEl?.addEventListener('mouseenter', stopSlideTimer);
+  carouselEl?.addEventListener('mouseleave', startSlideTimer);
+
+  // Indicator dots click
+  dots.forEach(dot => {
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      stopSlideTimer();
+      const targetIdx = parseInt(dot.getAttribute('data-dot-index') || '0', 10);
+      showSlide(targetIdx);
+      startSlideTimer();
+    });
+  });
+
+  // Slide click actions
+  slides.forEach(slide => {
+    slide.addEventListener('click', () => {
+      const action = slide.getAttribute('data-action');
+      if (action === 'explainer') {
+        openServiceAgreementExplainerModal(onNavigate);
+      } else if (action === 'create') {
+        onNavigate('create');
+      } else if (action === 'cashout') {
+        onNavigate('cashout');
+      }
+    });
+  });
+
+  // Touch swipe support
+  let touchStartX = 0;
+  carouselEl?.addEventListener('touchstart', (e: any) => {
+    touchStartX = e.touches[0].clientX;
+    stopSlideTimer();
+  }, { passive: true });
+
+  carouselEl?.addEventListener('touchend', (e: any) => {
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) {
+        // Swiped left -> next slide
+        showSlide(currentSlideIndex + 1);
+      } else {
+        // Swiped right -> prev slide
+        showSlide(currentSlideIndex - 1);
+      }
+    }
+    startSlideTimer();
+  }, { passive: true });
 
   container.querySelectorAll('.agreement-card').forEach(card => {
     card.addEventListener('click', () => onNavigate('deals'));
