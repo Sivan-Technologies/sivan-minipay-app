@@ -260,16 +260,41 @@ export async function renderCreateAgreement(
     netEl.textContent = `${feeResult.netAmount.toFixed(2)} ${curr}`;
   };
 
+  // ── Fixed-position dropdown helper ─────────────────────────────────────
+  // Positions the menu as position:fixed anchored below the trigger using
+  // getBoundingClientRect, escaping overflow-y:auto and any stacking context.
+  const positionAndOpenMenu = (trigger: HTMLElement, menu: HTMLElement) => {
+    const rect = trigger.getBoundingClientRect();
+    menu.style.position = 'fixed';
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.left = `${rect.left}px`;
+    menu.style.width = `${rect.width}px`;
+    menu.style.zIndex = '99999';
+    menu.classList.add('open');
+  };
+
+  const closeMenu = (trigger: HTMLElement, menu: HTMLElement) => {
+    menu.classList.remove('open');
+    menu.style.position = '';
+    menu.style.top = '';
+    menu.style.left = '';
+    menu.style.width = '';
+    menu.style.zIndex = '';
+    trigger.classList.remove('active');
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   // Dropdown open/close event
   currencyTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = currencyMenu.classList.contains('open');
+    // Close deadline menu if open first
+    if (deadlineMenu) closeMenu(deadlineTrigger, deadlineMenu);
     if (isOpen) {
-      currencyMenu.classList.remove('open');
-      currencyTrigger.classList.remove('active');
+      closeMenu(currencyTrigger, currencyMenu);
     } else {
-      currencyMenu.classList.add('open');
       currencyTrigger.classList.add('active');
+      positionAndOpenMenu(currencyTrigger, currencyMenu);
     }
   });
 
@@ -286,8 +311,7 @@ export async function renderCreateAgreement(
       currencyItems.forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
 
-      currencyMenu.classList.remove('open');
-      currencyTrigger.classList.remove('active');
+      closeMenu(currencyTrigger, currencyMenu);
 
       updateBalanceDisplay();
       updateCalc();
@@ -296,10 +320,8 @@ export async function renderCreateAgreement(
 
   // Close dropdowns on outside click — scoped to this view's lifetime via AbortController
   document.addEventListener('click', () => {
-    currencyMenu?.classList.remove('open');
-    currencyTrigger?.classList.remove('active');
-    deadlineMenu?.classList.remove('open');
-    deadlineTrigger?.classList.remove('active');
+    if (currencyMenu) closeMenu(currencyTrigger, currencyMenu);
+    if (deadlineMenu) closeMenu(deadlineTrigger, deadlineMenu);
   }, { signal: clickController.signal });
 
   // Auto-cleanup when container leaves DOM (on navigation)
@@ -322,8 +344,14 @@ export async function renderCreateAgreement(
   deadlineTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = deadlineMenu.classList.contains('open');
-    deadlineMenu.classList.toggle('open', !isOpen);
-    deadlineTrigger.classList.toggle('active', !isOpen);
+    // Close currency menu if open first
+    if (currencyMenu) closeMenu(currencyTrigger, currencyMenu);
+    if (isOpen) {
+      closeMenu(deadlineTrigger, deadlineMenu);
+    } else {
+      deadlineTrigger.classList.add('active');
+      positionAndOpenMenu(deadlineTrigger, deadlineMenu);
+    }
   });
 
   deadlineItems.forEach(item => {
@@ -342,8 +370,7 @@ export async function renderCreateAgreement(
       deadlineItems.forEach(i => i.classList.remove('selected'));
       el.classList.add('selected');
 
-      deadlineMenu.classList.remove('open');
-      deadlineTrigger.classList.remove('active');
+      closeMenu(deadlineTrigger, deadlineMenu);
     });
   });
 
