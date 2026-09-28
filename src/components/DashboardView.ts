@@ -48,6 +48,12 @@ export async function renderDashboard(
   });
 
   container.innerHTML = `
+    <!-- Purpose-Driven Brand Tagline -->
+    <div class="dashboard-brand-tagline">
+      <span class="tagline-pulse-dot"></span>
+      <span>Smart Milestone Vaults for Freelancers & Clients</span>
+    </div>
+
     <!-- BitGifty-Inspired Available Balance Hero Card -->
     <div class="hero-balance-card">
       <div class="hero-top-row">
@@ -109,8 +115,8 @@ export async function renderDashboard(
               <span class="badge-dot pulse-emerald"></span>
               <span>100% PAYMENT PROTECTION</span>
             </div>
-            <h3 class="banner-title">Autonomous Service Agreements</h3>
-            <p class="banner-desc">Lock funds safely in smart contract vaults. Release only upon approved milestones.</p>
+            <h3 class="banner-title">More Than An Invoice</h3>
+            <p class="banner-desc">Client funds are locked safely in smart agreement vaults before work begins. Release on delivery.</p>
             <div class="banner-cta">
               <span>How It Works</span>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -269,10 +275,12 @@ export async function renderDashboard(
           <div class="empty-agreements-icon" style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin: 0 auto 12px; border-radius: 12px; background: rgba(52, 211, 153, 0.1); color: var(--accent-emerald);">
             ${getHandshakeIconSvg(24, 'var(--accent-emerald)')}
           </div>
-          <div class="empty-agreements-title">No active service agreements yet</div>
-          <div class="empty-agreements-desc">Lock funds with milestone deliverables and ERC-8021 attribution.</div>
+          <div class="empty-agreements-title">Protect your next freelance gig</div>
+          <div class="empty-agreements-desc" style="max-width: 320px; margin: 0 auto 16px; line-height: 1.45; font-size: 12px; color: var(--text-muted);">
+            Unlike ordinary invoices, Sivan locks client funds in a smart agreement vault before work begins. Start work with 100% confidence.
+          </div>
           <button class="btn-empty-create" id="btn-empty-create">
-            + Create First Deal
+            + Create Service Agreement
           </button>
         </div>
       ` : agreements.slice(0, 3).map(agr => {
