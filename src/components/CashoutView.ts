@@ -383,6 +383,10 @@ export async function renderCashout(
             <span style="font-weight: 600; color: var(--accent-emerald);">MoneyGram Global Locations</span>
           </div>
           <div class="quote-row">
+            <span>Estimated Cash Payout:</span>
+            <span id="moneygram-est-payout" style="font-weight: 700; color: var(--accent-emerald);">~0.00 ${isGhana ? 'GHS' : isKenya ? 'KES' : 'NGN'}</span>
+          </div>
+          <div class="quote-row">
             <span>Sivan Platform Fee:</span>
             <span style="font-weight: 700; color: var(--accent-emerald);">0.00 USDC (0.00% Zero Fee)</span>
           </div>
@@ -430,7 +434,6 @@ export async function renderCashout(
   const tokenTrigger = container.querySelector('#token-select-trigger') as HTMLElement;
   const tokenMenu = container.querySelector('#token-select-menu') as HTMLElement;
   const tokenDisplay = container.querySelector('#selected-token-display') as HTMLElement;
-  const tokenItems = container.querySelectorAll('#token-select-menu .custom-select-item');
 
   const availEl = container.querySelector('#cashout-avail-bal') as HTMLElement;
   const rateEl = container.querySelector('#q-rate') as HTMLElement;
@@ -505,9 +508,218 @@ export async function renderCashout(
     }
   };
 
+  const updateBalanceDisplay = () => {
+    const tok = tokenHiddenEl.value;
+    const tokenBal = balances.find(b => b.symbol === tok);
+    const balFormatted = tokenBal?.balanceFormatted || '0.00';
+    availEl.textContent = state.address 
+      ? `Wallet Balance: ${balFormatted} ${tok}`
+      : 'Wallet not connected';
+  };
+
+  const defaultToken = isNigeria ? 'cNGN' : 'USDC';
+  let currentLiveRate: number = isNigeria ? 1.0 : fxQuotesService.getLatestRate(defaultToken, country.code);
+  let currentRateSource: string = isNigeria ? 'Parity' : '';
+  let currentDepositAddress: string = '';
+  let currentQuoteId: string | undefined = undefined;
+  let currentGrossNgn: number | undefined = undefined;
+  let currentSivanFeeNgn: number | undefined = undefined;
+  let currentNetNgn: number | undefined = undefined;
+  let rateDebounceTimer: any = null;
+
+  const updateQuoteDisplay = async () => {
+    const amt = parseFloat(amountEl.value) || 0;
+    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const sym = country.currencySymbol;
+
+    const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent('NGN');
+
+    if (token === 'cNGN' && isNigeria) {
+      rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
+      const grossOutput = amt;
+      let protocolFeeAmount = currentSivanFeeNgn !== undefined 
+        ? currentSivanFeeNgn 
+        : Math.round(grossOutput * liveFeePercent * 100) / 100;
+      let netOutput = currentNetNgn !== undefined 
+        ? currentNetNgn 
+        : Math.max(0, Math.round((grossOutput - protocolFeeAmount) * 100) / 100);
+
+      if (feeLabelEl) {
+        const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
+        feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
+      }
+      grossEl.textContent = `${sym}${grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      feeEl.textContent = `-${sym}${protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      netEl.textContent = `${sym}${netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+      return;
+    }
+
+    if (currentLiveRate <= 0) {
+      rateEl.textContent = `Fetching live ${token} market rate...`;
+      grossEl.textContent = `${sym}0.00`;
+      feeEl.textContent = `-${sym}0.00`;
+      netEl.textContent = `${sym}0.00`;
+      return;
+    }
+
+    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
+    rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource || 'Live Liquidity'})`;
+
+    if (feeLabelEl) {
+      const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
+      feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
+    }
+    const grossDisplay = currentGrossNgn ?? quote.grossOutput;
+    const feeDisplay = currentSivanFeeNgn ?? quote.protocolFeeAmount;
+    const netDisplay = currentNetNgn ?? quote.netOutput;
+
+    grossEl.textContent = `${sym}${grossDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    feeEl.textContent = `-${sym}${feeDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    netEl.textContent = `${sym}${netDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  };
+
+  const fetchAndRefreshRate = async () => {
+    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
+    const amt = parseFloat(amountEl.value) || (token === 'cNGN' ? 5000 : 10);
+
+    if (currentLiveRate <= 0 && token !== 'cNGN') {
+      rateEl.textContent = `Fetching live ${token} market rate...`;
+    }
+
+    try {
+      const res = await fxQuotesService.fetchLiveCashoutQuote(
+        token,
+        amt,
+        country.code,
+        acctEl?.value?.trim() || undefined,
+        bankHiddenEl?.value || undefined
+      );
+      if (res.rate > 0) {
+        currentLiveRate = res.rate;
+        currentRateSource = res.source;
+        if (res.depositAddress) currentDepositAddress = res.depositAddress;
+        if (res.quoteId) currentQuoteId = res.quoteId;
+        if (res.grossNgn !== undefined) currentGrossNgn = res.grossNgn;
+        if (res.sivanFeeNgn !== undefined) currentSivanFeeNgn = res.sivanFeeNgn;
+        if (res.netNgn !== undefined) currentNetNgn = res.netNgn;
+      }
+    } catch {
+      // retain current cached rate if available
+    }
+    void updateQuoteDisplay();
+  };
+
+  const updateMoneyGramDisplay = () => {
+    const amt = parseFloat(amountEl.value) || 0;
+    const rate = isGhana ? 15.5 : isKenya ? 129.8 : 1620;
+    const targetCur = isGhana ? 'GHS' : isKenya ? 'KES' : 'NGN';
+    const estEl = container.querySelector('#moneygram-est-payout');
+    if (estEl) {
+      const targetAmt = amt * rate;
+      estEl.textContent = `~${targetAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCur}`;
+    }
+  };
+
+  // Dynamic Token Mode Switcher (USDC for MoneyGram, cNGN/USDC for Bank, USD stables for Wallet)
+  const setTokenMode = (mode: 'bank' | 'moneygram' | 'wallet') => {
+    let allowedTokens: Array<{ symbol: string; label: string }> = [];
+    let selectedToken = 'USDC';
+
+    if (mode === 'moneygram') {
+      // MoneyGram is Global Physical Cash Pickup for USDC
+      allowedTokens = [
+        { symbol: 'USDC', label: 'USDC (Celo)' },
+        { symbol: 'USDT', label: 'USDT (Celo)' },
+        { symbol: 'cUSD', label: 'USDm (Celo)' },
+      ];
+      selectedToken = 'USDC';
+    } else if (mode === 'wallet') {
+      allowedTokens = [
+        { symbol: 'USDC', label: 'USDC (Celo)' },
+        { symbol: 'USDT', label: 'USDT (Celo)' },
+        { symbol: 'cUSD', label: 'USDm (Celo)' },
+      ];
+      if (isNigeria) {
+        allowedTokens.push({ symbol: 'cNGN', label: 'cNGN (Celo)' });
+      }
+      const cur = tokenHiddenEl.value;
+      selectedToken = allowedTokens.some(t => t.symbol === cur) ? cur : 'USDC';
+    } else {
+      // Bank mode
+      if (isNigeria) {
+        allowedTokens = [{ symbol: 'cNGN', label: 'cNGN (Celo)' }];
+        selectedToken = 'cNGN';
+      } else {
+        allowedTokens = [
+          { symbol: 'USDC', label: 'USDC (Celo)' },
+          { symbol: 'USDT', label: 'USDT (Celo)' },
+          { symbol: 'cUSD', label: 'USDm (Celo)' },
+        ];
+        selectedToken = 'USDC';
+      }
+    }
+
+    tokenHiddenEl.value = selectedToken;
+    const displayName = selectedToken === 'cUSD' ? 'USDm' : selectedToken;
+    tokenDisplay.innerHTML = `${getTokenIconSvg(selectedToken, 16)} <span style="font-weight: 700;">${displayName}</span>`;
+
+    tokenMenu.innerHTML = allowedTokens.map(t => {
+      const isSel = t.symbol === selectedToken;
+      return `
+        <div class="custom-select-item ${isSel ? 'selected' : ''}" data-value="${t.symbol}" style="display: flex; align-items: center; gap: 8px;">
+          ${getTokenIconSvg(t.symbol, 16)} <span>${t.label}</span>
+        </div>
+      `;
+    }).join('');
+
+    tokenMenu.querySelectorAll('.custom-select-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const el = e.currentTarget as HTMLElement;
+        const val = el.dataset.value!;
+        tokenHiddenEl.value = val;
+        const name = val === 'cUSD' ? 'USDm' : val;
+        tokenDisplay.innerHTML = `${getTokenIconSvg(val, 16)} <span style="font-weight: 700;">${name}</span>`;
+
+        tokenMenu.querySelectorAll('.custom-select-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+
+        tokenMenu.classList.remove('open');
+        tokenTrigger.classList.remove('active');
+
+        updateBalanceDisplay();
+        if (activeTab === 'bank') {
+          void fetchAndRefreshRate();
+        } else if (activeTab === 'wallet') {
+          void updateP2PQuoteDisplay();
+        } else if (activeTab === 'moneygram') {
+          updateMoneyGramDisplay();
+        }
+      });
+    });
+
+    let chevronEl = tokenTrigger.querySelector('.chevron');
+    if (allowedTokens.length > 1) {
+      tokenTrigger.style.cursor = 'pointer';
+      if (!chevronEl) {
+        tokenTrigger.insertAdjacentHTML('beforeend', '<span class="chevron">▾</span>');
+      }
+    } else {
+      tokenTrigger.style.cursor = 'default';
+      if (chevronEl) {
+        chevronEl.remove();
+      }
+    }
+
+    updateBalanceDisplay();
+  };
+
   // Tab Switching Logic
   const switchTab = (tab: 'bank' | 'wallet' | 'moneygram') => {
     activeTab = tab;
+    const kycBanner = container.querySelector('#kyc-status-banner') as HTMLElement | null;
+    const swapNudgeBox = container.querySelector('#swap-nudge-box') as HTMLElement | null;
+
     if (tab === 'bank') {
       tabBankBtn?.classList.add('active');
       tabMoneyGramBtn?.classList.remove('active');
@@ -521,6 +733,12 @@ export async function renderCashout(
       submitBtnText.textContent = 'Confirm Cash Out (Under 1-2 Mins)';
       acctEl.required = true;
       walletRecipientInput.required = false;
+
+      if (kycBanner) kycBanner.style.display = isNigeria ? 'flex' : 'none';
+      if (swapNudgeBox) swapNudgeBox.style.display = isNigeria ? 'flex' : 'none';
+      amountEl.placeholder = isNigeria ? '0.00' : '0.00 USDC';
+
+      setTokenMode('bank');
       void updateQuoteDisplay();
     } else if (tab === 'moneygram') {
       tabMoneyGramBtn?.classList.add('active');
@@ -535,6 +753,14 @@ export async function renderCashout(
       submitBtnText.textContent = 'Generate MoneyGram Cash Pickup Voucher';
       acctEl.required = false;
       walletRecipientInput.required = false;
+
+      // MoneyGram is Global Physical Cash Pickup for USDC
+      if (kycBanner) kycBanner.style.display = 'none';
+      if (swapNudgeBox) swapNudgeBox.style.display = 'none';
+      amountEl.placeholder = '0.00 USDC';
+
+      setTokenMode('moneygram');
+      updateMoneyGramDisplay();
     } else {
       tabWalletBtn?.classList.add('active');
       tabBankBtn?.classList.remove('active');
@@ -548,6 +774,12 @@ export async function renderCashout(
       submitBtnText.textContent = 'Send Instantly on Celo (Attributed)';
       acctEl.required = false;
       walletRecipientInput.required = true;
+
+      if (kycBanner) kycBanner.style.display = 'none';
+      if (swapNudgeBox) swapNudgeBox.style.display = 'none';
+      amountEl.placeholder = '0.00 USDC';
+
+      setTokenMode('wallet');
       void updateP2PQuoteDisplay();
     }
   };
@@ -753,111 +985,15 @@ export async function renderCashout(
     renderBankItems('');
   });
 
-  const updateBalanceDisplay = () => {
-    const tok = tokenHiddenEl.value;
-    const tokenBal = balances.find(b => b.symbol === tok);
-    const balFormatted = tokenBal?.balanceFormatted || '0.00';
-    availEl.textContent = state.address 
-      ? `Wallet Balance: ${balFormatted} ${tok}`
-      : 'Wallet not connected';
-  };
-
-  const defaultToken = isNigeria ? 'cNGN' : 'USDC';
-  let currentLiveRate: number = isNigeria ? 1.0 : fxQuotesService.getLatestRate(defaultToken, country.code);
-  let currentRateSource: string = isNigeria ? 'Parity' : '';
-  let currentDepositAddress: string = '';
-  let currentQuoteId: string | undefined = undefined;
-  let currentGrossNgn: number | undefined = undefined;
-  let currentSivanFeeNgn: number | undefined = undefined;
-  let currentNetNgn: number | undefined = undefined;
-  let rateDebounceTimer: any = null;
-
-  const updateQuoteDisplay = async () => {
-    const amt = parseFloat(amountEl.value) || 0;
-    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const sym = country.currencySymbol;
-
-    const liveFeePercent = await fxQuotesService.fetchLiveOfframpFeePercent('NGN');
-
-    if (token === 'cNGN' && isNigeria) {
-      rateEl.textContent = `1 cNGN = ${sym}1.00 (Parity)`;
-      const grossOutput = amt;
-      let protocolFeeAmount = currentSivanFeeNgn !== undefined 
-        ? currentSivanFeeNgn 
-        : Math.round(grossOutput * liveFeePercent * 100) / 100;
-      let netOutput = currentNetNgn !== undefined 
-        ? currentNetNgn 
-        : Math.max(0, Math.round((grossOutput - protocolFeeAmount) * 100) / 100);
-
-      if (feeLabelEl) {
-        const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
-        feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
-      }
-      grossEl.textContent = `${sym}${grossOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      feeEl.textContent = `-${sym}${protocolFeeAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      netEl.textContent = `${sym}${netOutput.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-      return;
-    }
-
-    if (currentLiveRate <= 0) {
-      rateEl.textContent = `Fetching live ${token} market rate...`;
-      grossEl.textContent = `${sym}0.00`;
-      feeEl.textContent = `-${sym}0.00`;
-      netEl.textContent = `${sym}0.00`;
-      return;
-    }
-
-    const quote = fxQuotesService.getQuote(amt, token, currentLiveRate, country.code);
-    rateEl.textContent = `1 ${token} = ${sym}${currentLiveRate.toLocaleString(undefined, { minimumFractionDigits: 2 })} (${currentRateSource || 'Live Liquidity'})`;
-
-    if (feeLabelEl) {
-      const pctLabel = (liveFeePercent * 100).toFixed(liveFeePercent * 100 % 1 === 0 ? 0 : 2);
-      feeLabelEl.textContent = `Sivan Off-Ramp Fee (${pctLabel}%):`;
-    }
-    const grossDisplay = currentGrossNgn ?? quote.grossOutput;
-    const feeDisplay = currentSivanFeeNgn ?? quote.protocolFeeAmount;
-    const netDisplay = currentNetNgn ?? quote.netOutput;
-
-    grossEl.textContent = `${sym}${grossDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    feeEl.textContent = `-${sym}${feeDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-    netEl.textContent = `${sym}${netDisplay.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
-  };
-
-  const fetchAndRefreshRate = async () => {
-    const token = tokenHiddenEl.value as 'USDC' | 'USDT' | 'cNGN' | 'cUSD';
-    const amt = parseFloat(amountEl.value) || (token === 'cNGN' ? 5000 : 10);
-
-    if (currentLiveRate <= 0 && token !== 'cNGN') {
-      rateEl.textContent = `Fetching live ${token} market rate...`;
-    }
-
-    try {
-      const res = await fxQuotesService.fetchLiveCashoutQuote(
-        token,
-        amt,
-        country.code,
-        acctEl?.value?.trim() || undefined,
-        bankHiddenEl?.value || undefined
-      );
-      if (res.rate > 0) {
-        currentLiveRate = res.rate;
-        currentRateSource = res.source;
-        if (res.depositAddress) currentDepositAddress = res.depositAddress;
-        if (res.quoteId) currentQuoteId = res.quoteId;
-        if (res.grossNgn !== undefined) currentGrossNgn = res.grossNgn;
-        if (res.sivanFeeNgn !== undefined) currentSivanFeeNgn = res.sivanFeeNgn;
-        if (res.netNgn !== undefined) currentNetNgn = res.netNgn;
-      }
-    } catch {
-      // retain current cached rate if available
-    }
-    void updateQuoteDisplay();
-  };
+  // Initialize default token mode for active corridor
+  setTokenMode('bank');
+  void fetchAndRefreshRate();
 
   // Dropdown open/close event
   tokenTrigger?.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (tokenItems.length <= 1) return;
+    const count = tokenMenu.querySelectorAll('.custom-select-item').length;
+    if (count <= 1) return;
     const isOpen = tokenMenu.classList.contains('open');
     if (isOpen) {
       tokenMenu.classList.remove('open');
@@ -868,38 +1004,29 @@ export async function renderCashout(
     }
   });
 
-  tokenItems.forEach(item => {
-    item.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const el = e.currentTarget as HTMLElement;
-      const val = el.dataset.value!;
+  tokenMenu?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
 
-      tokenHiddenEl.value = val;
-      tokenDisplay.innerHTML = `${getTokenIconSvg(val, 16)} <span>${val}</span>`;
-
-      tokenItems.forEach(i => i.classList.remove('selected'));
-      el.classList.add('selected');
-
-      tokenMenu.classList.remove('open');
-      tokenTrigger.classList.remove('active');
-
-      updateBalanceDisplay();
-      void fetchAndRefreshRate();
-      void updateP2PQuoteDisplay();
-    });
+  // Close menus when clicking outside
+  container.addEventListener('click', () => {
+    tokenMenu?.classList.remove('open');
+    tokenTrigger?.classList.remove('active');
   });
 
   amountEl?.addEventListener('input', () => {
-    void updateQuoteDisplay();
-    void updateP2PQuoteDisplay();
-    clearTimeout(rateDebounceTimer);
-    rateDebounceTimer = setTimeout(() => {
-      void fetchAndRefreshRate();
-    }, 400);
+    if (activeTab === 'bank') {
+      void updateQuoteDisplay();
+      clearTimeout(rateDebounceTimer);
+      rateDebounceTimer = setTimeout(() => {
+        void fetchAndRefreshRate();
+      }, 400);
+    } else if (activeTab === 'wallet') {
+      void updateP2PQuoteDisplay();
+    } else if (activeTab === 'moneygram') {
+      updateMoneyGramDisplay();
+    }
   });
-
-  updateBalanceDisplay();
-  void fetchAndRefreshRate();
 
   // KYC Status Banner: Live update for Nigeria corridor (non-blocking)
   if (isNigeria && state.address) {
@@ -1110,9 +1237,11 @@ export async function renderCashout(
   container.querySelectorAll('.corridor-pill-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const code = btn.getAttribute('data-country-code');
-      if (code && code !== country.code) {
+      if (!code) return;
+      if (code !== country.code) {
         countryService.setCountry(code);
-        void renderCashout(container, onNavigate, showToast);
+      } else if (activeTab !== 'bank') {
+        switchTab('bank');
       }
     });
   });
