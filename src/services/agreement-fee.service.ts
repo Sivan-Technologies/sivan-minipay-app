@@ -62,9 +62,8 @@ class AgreementFeeService {
     const apiBase = getPaymentApiUrl();
     const gatewayOrigin = apiBase.replace(/\/api\/payment\/?$/, '');
     const endpoints = [
-      `${gatewayOrigin}/api/settings/limits`,
       `${apiBase}/api/settings/limits`,
-      `${apiBase}/api/v1/agreement/limits`,
+      `${gatewayOrigin}/api/settings/limits`,
     ];
 
     for (const url of endpoints) {
@@ -109,7 +108,30 @@ class AgreementFeeService {
       return cached.quote;
     }
 
-    // Evaluate live platform settings directly from sivan-escrow-agent /api/settings/limits
+    const apiBase = getPaymentApiUrl();
+
+    // Priority 1: Query live quote endpoint from Sivan Payment backend
+    try {
+      const quoteUrl = `${apiBase}/api/agreements/quote?amount=${encodeURIComponent(amount)}&network=celo&feePayer=seller`;
+      const quoteRes = await fetch(quoteUrl, { signal: AbortSignal.timeout(3000) }).catch(() => null);
+      if (quoteRes && quoteRes.ok) {
+        const qData = await quoteRes.json();
+        if (qData && typeof qData.feeAmount === 'number') {
+          const liveQuote: AgreementFeeQuote = {
+            amount,
+            currency,
+            protocolFee: qData.feeAmount,
+            netAmount: typeof qData.sellerNetAmount === 'number' ? qData.sellerNetAmount : Math.max(0, amount - qData.feeAmount),
+            feeFormula: qData.explanation || `${qData.feePercent || 2}% Sivan Platform Fee`,
+            source: 'sivan_payment_quote_api',
+          };
+          this.quoteCache.set(cacheKey, { quote: liveQuote, timestamp: now });
+          return liveQuote;
+        }
+      }
+    } catch {}
+
+    // Priority 2: Evaluate live platform settings from /api/settings/limits
     const limits = this.adminLimits || (await this.fetchDynamicLimits());
     if (limits) {
       const isNaira = currency === 'cNGN' || currency === 'NGN' || currency === 'NAIRA';
