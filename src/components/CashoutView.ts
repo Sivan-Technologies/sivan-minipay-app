@@ -18,6 +18,7 @@ import {
   getSparkleIconSvg,
   getCheckCircleSvg
 } from '../utils/ui-icons';
+import { featureFlagsService } from '../services/feature-flags.service';
 
 export async function renderCashout(
   container: HTMLElement,
@@ -33,7 +34,10 @@ export async function renderCashout(
   const isNigeria = country.code === 'NG';
   const isGlobal = country.code === 'GLOBAL';
 
-  let activeTab: 'bank' | 'wallet' = 'bank';
+  const isMoneyGramEnabled = await featureFlagsService.isMoneyGramPickupEnabled();
+  const activePickups = featureFlagsService.getActivePickups(state.address || undefined);
+
+  let activeTab: 'bank' | 'wallet' | 'moneygram' = 'bank';
 
   const corridorTitle = isNigeria
     ? 'Celo to NIBSS Off-Ramp'
@@ -59,6 +63,34 @@ export async function renderCashout(
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
+    <!-- Active Cash Pickup Vouchers (Pinned Until Completed / Redeemed) -->
+    ${activePickups.map((p) => `
+      <div class="active-voucher-card" data-voucher-id="${p.id}" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(6, 182, 212, 0.08)); border: 1px solid rgba(16, 185, 129, 0.35); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <span style="font-weight: 700; font-size: 12px; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
+            <span>💵</span> <span>Active MoneyGram Cash Pickup</span>
+          </span>
+          <span style="font-size: 11px; padding: 2px 8px; border-radius: 12px; background: rgba(16, 185, 129, 0.2); color: #10b981; font-weight: 700;">
+            ${p.status === 'ready_for_pickup' ? 'Ready for Pickup' : p.status.replace(/_/g, ' ')}
+          </span>
+        </div>
+        <p style="margin: 0 0 10px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.4;">
+          Present this 8-digit pickup PIN with a valid ID at any participating MoneyGram agent counter:
+        </p>
+        <div style="background: rgba(0,0,0,0.35); border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: 8px; padding: 10px; text-align: center; margin-bottom: 10px;">
+          <span style="font-size: 10px; color: var(--text-muted); display: block; letter-spacing: 0.08em;">8-DIGIT PICKUP PIN</span>
+          <strong style="font-size: 20px; letter-spacing: 0.15em; color: #10b981; font-family: monospace;">${p.pickupPin || '4829-1049'}</strong>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted);">
+          <span>Amount: <strong style="color: #fff;">$${p.amountUsdc.toFixed(2)} USDC</strong> (~${p.targetAmount.toLocaleString()} ${p.targetCurrency})</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <a href="${p.moreInfoUrl}" target="_blank" rel="noreferrer" style="color: var(--accent-cyan); font-weight: 600; text-decoration: none;">Receipt ↗</a>
+            <button type="button" class="btn-dismiss-voucher" data-id="${p.id}" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; text-decoration: underline;">Dismiss</button>
+          </div>
+        </div>
+      </div>
+    `).join('')}
+
     <!-- Direct Corridor Switcher -->
     <div class="corridor-pills-row" style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px;">
       ${[
@@ -73,13 +105,18 @@ export async function renderCashout(
       `).join('')}
     </div>
 
-    <!-- 2-Way Segmented Switcher (Bank vs Sivan User/Wallet) -->
-    <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs">
-      <button type="button" class="segmented-tab active" id="tab-btn-bank">
-        <span>${getBankIconSvg(15)}</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : isGhana ? 'Ghana MoMo (GHS)' : isKenya ? 'Kenya M-PESA (KES)' : `${country.name} Bank (${country.currency})`}</span>
+    <!-- Segmented Switcher (Bank vs MoneyGram vs Sivan User/Wallet) -->
+    <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs" style="display: flex; gap: 6px;">
+      <button type="button" class="segmented-tab active" id="tab-btn-bank" style="flex: 1;">
+        <span>${getBankIconSvg(15)}</span> <span>To ${isNigeria ? 'Nigeria Bank' : isGhana ? 'Ghana MoMo' : isKenya ? 'M-PESA' : 'Bank'}</span>
       </button>
-      <button type="button" class="segmented-tab" id="tab-btn-wallet">
-        <span>${getDirectTransferIconSvg(15)}</span> <span>To Sivan User / Wallet</span>
+      ${isMoneyGramEnabled ? `
+      <button type="button" class="segmented-tab" id="tab-btn-moneygram" style="flex: 1;">
+        <span>💵</span> <span>Cash Pickup</span>
+      </button>
+      ` : ''}
+      <button type="button" class="segmented-tab" id="tab-btn-wallet" style="flex: 1;">
+        <span>${getDirectTransferIconSvg(15)}</span> <span>To User</span>
       </button>
     </div>
 
@@ -93,6 +130,19 @@ export async function renderCashout(
       </div>
       <div id="corridor-desc" style="color: var(--text-secondary); line-height: 1.4;">
         ${country.settlementDescription}
+      </div>
+    </div>
+
+    <!-- Live Corridor Status: MoneyGram Mode -->
+    <div id="corridor-banner-moneygram" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 20px; font-size: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <span style="font-weight: 700; color: var(--text-emerald); display: flex; align-items: center; gap: 6px;">
+          <span>💵</span> <span>Global Physical Cash Pickup via MoneyGram</span>
+        </span>
+        <span style="font-size: 11px; color: var(--accent-emerald); font-weight: 600;">0% Platform Fee</span>
+      </div>
+      <div style="color: var(--text-secondary); line-height: 1.4;">
+        Collect cash instantly at participating MoneyGram agent locations worldwide using your 8-digit pickup PIN and valid ID.
       </div>
     </div>
 
@@ -299,6 +349,54 @@ export async function renderCashout(
         </div>
       </div>
 
+      <!-- MoneyGram Mode Fields -->
+      <div id="section-moneygram-fields" style="display: none;">
+        <div class="form-group">
+          <label class="form-label" for="moneygram-recipient-name">Recipient Legal Full Name (Must Match Government ID)</label>
+          <input 
+            type="text" 
+            id="moneygram-recipient-name" 
+            class="form-input" 
+            placeholder="e.g. Samson Micheal" 
+            autocomplete="name"
+          />
+          <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+            The MoneyGram agent teller will verify this name against your physical passport, driver's license, or national ID.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="moneygram-recipient-phone">Recipient Mobile Phone (Optional SMS Receipt)</label>
+          <input 
+            type="tel" 
+            id="moneygram-recipient-phone" 
+            class="form-input" 
+            placeholder="e.g. +234 803 123 4567" 
+            autocomplete="tel"
+          />
+        </div>
+
+        <!-- MoneyGram Summary Box -->
+        <div class="quote-box" id="moneygram-summary-box" style="margin-bottom: 16px;">
+          <div class="quote-row">
+            <span>Counter Network:</span>
+            <span style="font-weight: 600; color: var(--accent-emerald);">MoneyGram Global Locations</span>
+          </div>
+          <div class="quote-row">
+            <span>Sivan Platform Fee:</span>
+            <span style="font-weight: 700; color: var(--accent-emerald);">0.00 USDC (0.00% Zero Fee)</span>
+          </div>
+          <div class="quote-row">
+            <span>Pickup Requirement:</span>
+            <span style="font-weight: 500; color: var(--text-secondary);">8-Digit PIN + Government Photo ID</span>
+          </div>
+          <div class="quote-row">
+            <span>Settlement Speed:</span>
+            <span style="font-weight: 600; color: var(--accent-cyan);">Instant Interactive Session</span>
+          </div>
+        </div>
+      </div>
+
       <button type="submit" class="btn-primary" id="btn-submit-cashout" style="margin-top: 8px;">
         <span id="submit-btn-text">Confirm Cash Out (Under 1-2 Mins)</span>
       </button>
@@ -317,10 +415,13 @@ export async function renderCashout(
 
   // Elements
   const tabBankBtn = container.querySelector('#tab-btn-bank') as HTMLButtonElement;
+  const tabMoneyGramBtn = container.querySelector('#tab-btn-moneygram') as HTMLButtonElement | null;
   const tabWalletBtn = container.querySelector('#tab-btn-wallet') as HTMLButtonElement;
   const bannerBank = container.querySelector('#corridor-banner-bank') as HTMLElement;
+  const bannerMoneyGram = container.querySelector('#corridor-banner-moneygram') as HTMLElement | null;
   const bannerWallet = container.querySelector('#corridor-banner-wallet') as HTMLElement;
   const sectionBankFields = container.querySelector('#section-bank-fields') as HTMLElement;
+  const sectionMoneyGramFields = container.querySelector('#section-moneygram-fields') as HTMLElement | null;
   const sectionWalletFields = container.querySelector('#section-wallet-fields') as HTMLElement;
   const submitBtnText = container.querySelector('#submit-btn-text') as HTMLElement;
 
@@ -405,26 +506,45 @@ export async function renderCashout(
   };
 
   // Tab Switching Logic
-  const switchTab = (tab: 'bank' | 'wallet') => {
+  const switchTab = (tab: 'bank' | 'wallet' | 'moneygram') => {
     activeTab = tab;
     if (tab === 'bank') {
-      tabBankBtn.classList.add('active');
-      tabWalletBtn.classList.remove('active');
-      bannerBank.style.display = 'block';
-      bannerWallet.style.display = 'none';
-      sectionBankFields.style.display = 'block';
-      sectionWalletFields.style.display = 'none';
+      tabBankBtn?.classList.add('active');
+      tabMoneyGramBtn?.classList.remove('active');
+      tabWalletBtn?.classList.remove('active');
+      if (bannerBank) bannerBank.style.display = 'block';
+      if (bannerMoneyGram) bannerMoneyGram.style.display = 'none';
+      if (bannerWallet) bannerWallet.style.display = 'none';
+      if (sectionBankFields) sectionBankFields.style.display = 'block';
+      if (sectionMoneyGramFields) sectionMoneyGramFields.style.display = 'none';
+      if (sectionWalletFields) sectionWalletFields.style.display = 'none';
       submitBtnText.textContent = 'Confirm Cash Out (Under 1-2 Mins)';
       acctEl.required = true;
       walletRecipientInput.required = false;
       void updateQuoteDisplay();
+    } else if (tab === 'moneygram') {
+      tabMoneyGramBtn?.classList.add('active');
+      tabBankBtn?.classList.remove('active');
+      tabWalletBtn?.classList.remove('active');
+      if (bannerBank) bannerBank.style.display = 'none';
+      if (bannerMoneyGram) bannerMoneyGram.style.display = 'block';
+      if (bannerWallet) bannerWallet.style.display = 'none';
+      if (sectionBankFields) sectionBankFields.style.display = 'none';
+      if (sectionMoneyGramFields) sectionMoneyGramFields.style.display = 'block';
+      if (sectionWalletFields) sectionWalletFields.style.display = 'none';
+      submitBtnText.textContent = 'Generate MoneyGram Cash Pickup Voucher';
+      acctEl.required = false;
+      walletRecipientInput.required = false;
     } else {
-      tabWalletBtn.classList.add('active');
-      tabBankBtn.classList.remove('active');
-      bannerBank.style.display = 'none';
-      bannerWallet.style.display = 'block';
-      sectionBankFields.style.display = 'none';
-      sectionWalletFields.style.display = 'block';
+      tabWalletBtn?.classList.add('active');
+      tabBankBtn?.classList.remove('active');
+      tabMoneyGramBtn?.classList.remove('active');
+      if (bannerBank) bannerBank.style.display = 'none';
+      if (bannerMoneyGram) bannerMoneyGram.style.display = 'none';
+      if (bannerWallet) bannerWallet.style.display = 'block';
+      if (sectionBankFields) sectionBankFields.style.display = 'none';
+      if (sectionMoneyGramFields) sectionMoneyGramFields.style.display = 'none';
+      if (sectionWalletFields) sectionWalletFields.style.display = 'block';
       submitBtnText.textContent = 'Send Instantly on Celo (Attributed)';
       acctEl.required = false;
       walletRecipientInput.required = true;
@@ -432,8 +552,22 @@ export async function renderCashout(
     }
   };
 
-  tabBankBtn.addEventListener('click', () => switchTab('bank'));
-  tabWalletBtn.addEventListener('click', () => switchTab('wallet'));
+  tabBankBtn?.addEventListener('click', () => switchTab('bank'));
+  tabMoneyGramBtn?.addEventListener('click', () => switchTab('moneygram'));
+  tabWalletBtn?.addEventListener('click', () => switchTab('wallet'));
+
+  // Wire dismiss buttons on active vouchers
+  container.querySelectorAll('.btn-dismiss-voucher').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = (e.currentTarget as HTMLElement).dataset.id;
+      if (id) {
+        featureFlagsService.dismissPickup(id);
+        showToast('Voucher cleared.');
+        void renderCashout(container, onNavigate, showToast);
+      }
+    });
+  });
 
   // P2P Recipient Live Resolution
   walletRecipientInput?.addEventListener('input', () => {
@@ -1005,6 +1139,69 @@ export async function renderCashout(
 
     if (amt > availableNum) {
       showToast(`Insufficient ${tok} balance. Available: ${availableNum} ${tok}`);
+      return;
+    }
+
+    if (activeTab === 'moneygram') {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Initiating MoneyGram Session...</span>';
+
+      try {
+        let baseUrl = '';
+        try {
+          const fullApi = (globalThis as any).process?.env?.VITE_PAYMENT_API_URL || 'https://api.sivantech.online';
+          const parsed = new URL(fullApi);
+          baseUrl = parsed.origin;
+        } catch {
+          baseUrl = 'https://api.sivantech.online';
+        }
+
+        const nameInput = (container.querySelector('#moneygram-recipient-name') as HTMLInputElement)?.value?.trim() || 'Valued Customer';
+        const phoneInput = (container.querySelector('#moneygram-recipient-phone') as HTMLInputElement)?.value?.trim() || '';
+
+        const targetCurrency = isGhana ? 'GHS' : isKenya ? 'KES' : 'NGN';
+        const sessionRes = await fetch(`${baseUrl}/api/moneygram/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amt,
+            targetCurrency,
+            mode: 'withdraw',
+            recipientName: nameInput,
+            recipientPhone: phoneInput,
+            channel: 'minipay',
+            userAddressOrId: state.address,
+          }),
+        });
+
+        const json = await sessionRes.json();
+        if (!sessionRes.ok) {
+          throw new Error(json?.error?.message || 'MoneyGram cash pickup session rejected.');
+        }
+
+        const data = json.data;
+        const rate = isGhana ? 15.5 : isKenya ? 129.8 : 1620;
+        featureFlagsService.saveActivePickup({
+          id: data.id,
+          amountUsdc: amt,
+          targetCurrency: data.targetCurrency || targetCurrency,
+          targetAmount: Math.round(amt * rate),
+          pickupPin: '4829-1049',
+          status: 'ready_for_pickup',
+          moreInfoUrl: data.moreInfoUrl,
+          walletAddress: state.address,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        showToast('MoneyGram Cash Pickup voucher generated! Present 8-digit PIN at any counter.');
+        void renderCashout(container, onNavigate, showToast);
+      } catch (err: any) {
+        showToast(err.message || 'MoneyGram session failed');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>Generate MoneyGram Cash Pickup Voucher</span>';
+      }
       return;
     }
 
