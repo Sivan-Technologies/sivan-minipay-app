@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  plugins: [],
   server: {
     // Allows MiniPay Developer Mode ngrok tunnels to test without "Blocked request" errors
     allowedHosts: [
