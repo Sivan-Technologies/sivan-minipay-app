@@ -59,7 +59,14 @@ export async function renderCashout(
 
   container.innerHTML = `
     <div class="section-header" style="margin-bottom: 16px;">
-      <h2 class="section-title">Send & Cash Out</h2>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <h2 class="section-title">Send & Cash Out</h2>
+        <button type="button" id="btn-cashout-change-country" title="Select Country & Payout Rail" style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: 11px; font-weight: 600; cursor: pointer;">
+          <span>${country.flag}</span>
+          <span>${country.name}</span>
+          <span style="font-size: 9px; opacity: 0.6;">▾</span>
+        </button>
+      </div>
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
@@ -91,19 +98,6 @@ export async function renderCashout(
       </div>
     `).join('')}
 
-    <!-- Direct Corridor Switcher -->
-    <div class="corridor-pills-row" style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px;">
-      ${[
-        { code: 'NG', flag: '🇳🇬', label: 'Nigeria (NGN)' },
-        { code: 'GH', flag: '🇬🇭', label: 'Ghana MoMo (GHS)' },
-        { code: 'KE', flag: '🇰🇪', label: 'Kenya M-PESA (KES)' },
-        { code: 'GLOBAL', flag: '🌐', label: 'Global Direct' },
-      ].map(c => `
-        <button type="button" class="corridor-pill-btn ${country.code === c.code ? 'active' : ''}" data-country-code="${c.code}" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid ${country.code === c.code ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${country.code === c.code ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-glass)'}; color: ${country.code === c.code ? 'var(--text-emerald)' : 'var(--text-secondary)'}; white-space: nowrap;">
-          <span>${c.flag}</span> <span>${c.label}</span>
-        </button>
-      `).join('')}
-    </div>
 
     <!-- Segmented Switcher (Bank vs MoneyGram vs Sivan User/Wallet) -->
     <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs" style="display: flex; gap: 6px;">
@@ -1234,16 +1228,9 @@ export async function renderCashout(
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
   container.querySelector('#btn-jump-swap')?.addEventListener('click', () => onNavigate('swap'));
 
-  container.querySelectorAll('.corridor-pill-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const code = btn.getAttribute('data-country-code');
-      if (!code) return;
-      if (code !== country.code) {
-        countryService.setCountry(code);
-      } else if (activeTab !== 'bank') {
-        switchTab('bank');
-      }
-    });
+  container.querySelector('#btn-cashout-change-country')?.addEventListener('click', () => {
+    const modalBtn = document.querySelector('#btn-country-modal') as HTMLElement | null;
+    if (modalBtn) modalBtn.click();
   });
 
   const form = container.querySelector('#form-cashout') as HTMLFormElement;

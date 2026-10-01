@@ -133,22 +133,27 @@ export function detectDefaultCountry(): SupportedCountry {
 
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
     const tzLower = timeZone.toLowerCase();
+    const lang = (
+      (typeof navigator !== 'undefined' && (navigator.language || (navigator.languages && navigator.languages[0]))) ||
+      ''
+    ).toLowerCase();
 
     // Specific African regional corridors
-    if (tzLower.includes('accra') || tzLower.includes('ghana')) {
+    if (tzLower.includes('accra') || tzLower.includes('ghana') || lang.endsWith('-gh') || lang === 'ak') {
       return SUPPORTED_COUNTRIES.GH;
     }
-    if (tzLower.includes('nairobi') || tzLower.includes('kenya')) {
+    if (tzLower.includes('nairobi') || tzLower.includes('kenya') || lang.endsWith('-ke') || lang === 'sw' || lang.startsWith('sw-')) {
       return SUPPORTED_COUNTRIES.KE;
     }
-    if (tzLower.includes('johannesburg') || tzLower.includes('south_africa')) {
+    if (tzLower.includes('johannesburg') || tzLower.includes('south_africa') || lang.endsWith('-za') || lang === 'af') {
       return SUPPORTED_COUNTRIES.ZA;
     }
     if (
       tzLower.includes('lagos') ||
       tzLower.includes('nigeria') ||
       tzLower.includes('west_africa') ||
-      tzLower.includes('wat')
+      tzLower.includes('wat') ||
+      lang.endsWith('-ng')
     ) {
       return SUPPORTED_COUNTRIES.NG;
     }
