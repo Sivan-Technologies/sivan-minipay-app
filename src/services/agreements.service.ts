@@ -176,6 +176,9 @@ class AgreementsService {
           channel: 'minipay',
           fundingTxHash: agreement.fundingTxHash || undefined,
           attributionTag: agreement.attributionTag,
+          feePayer: 'seller',
+          feeAmountUsdc: agreement.protocolFee,
+          sellerNetAmountUsdc: agreement.netAmount,
         }),
       });
 
@@ -355,6 +358,9 @@ class AgreementsService {
         const data = await res.json();
         if (data.releaseTxHash) {
           agreement.releaseTxHash = data.releaseTxHash;
+          if (data.feeTxHash) {
+            agreement.feeTxHash = data.feeTxHash;
+          }
           this.saveAgreements();
           return { success: true, releaseTxHash: data.releaseTxHash };
         }
@@ -429,6 +435,18 @@ class AgreementsService {
             agr.disputeReason = backendData.disputeReason;
             hasChanges = true;
           }
+          if (backendData.feeTxHash && backendData.feeTxHash !== agr.feeTxHash) {
+            agr.feeTxHash = backendData.feeTxHash;
+            hasChanges = true;
+          }
+          if (backendData.feeAmountUsdc !== undefined && backendData.feeAmountUsdc !== agr.protocolFee) {
+            agr.protocolFee = backendData.feeAmountUsdc;
+            hasChanges = true;
+          }
+          if (backendData.sellerNetAmountUsdc !== undefined && backendData.sellerNetAmountUsdc !== agr.netAmount) {
+            agr.netAmount = backendData.sellerNetAmountUsdc;
+            hasChanges = true;
+          }
         } else if (res.status === 404) {
           // If agreement exists in local storage but missing on backend, auto-heal it
           await this.syncAgreementToBackend(agr);
@@ -472,6 +490,7 @@ class AgreementsService {
                   deadlineTimestamp: item.deliveryDueAt ? new Date(item.deliveryDueAt).getTime() : Date.now() + (item.deadlineDays || 1) * 86400000,
                   fundingTxHash: item.fundingTxHash || undefined,
                   releaseTxHash: item.releaseTxHash || undefined,
+                  feeTxHash: item.feeTxHash || undefined,
                   refundTxHash: item.refundTxHash || undefined,
                   deliverableProofUrl: item.deliverableProofUrl || undefined,
                   disputeReason: item.disputeReason || undefined,

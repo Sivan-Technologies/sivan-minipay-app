@@ -442,6 +442,14 @@ export function renderAgreementsList(
       ? `₦${agr.amount.toLocaleString()} cNGN`
       : `${agr.amount} ${agr.currency}`;
 
+    const formattedFee = typeof agr.protocolFee === 'number' && agr.protocolFee > 0
+      ? (agr.currency === 'cNGN' ? `₦${agr.protocolFee.toLocaleString()} cNGN` : `${agr.protocolFee} ${agr.currency}`)
+      : null;
+
+    const formattedNet = typeof agr.netAmount === 'number' && agr.netAmount > 0
+      ? (agr.currency === 'cNGN' ? `₦${agr.netAmount.toLocaleString()} cNGN` : `${agr.netAmount} ${agr.currency}`)
+      : formattedAmount;
+
     return `
       <div class="agreement-card ${isOverdue ? 'agreement-card-overdue' : ''}" style="margin-bottom: 16px;">
         <div class="agreement-header">
@@ -518,9 +526,15 @@ export function renderAgreementsList(
               ${formatDeadlineHours(agr.deadlineHours)} ${isOverdue ? '(Expired)' : ''}
             </span>
           </div>
+          ${formattedFee ? `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Sivan Platform Fee:</span>
+            <span style="color: var(--accent-cyan); font-weight: 600;">${formattedFee}</span>
+          </div>
+          ` : ''}
           <div style="display: flex; justify-content: space-between; padding-top: 4px; border-top: 1px solid var(--border-subtle);">
             <span style="color: var(--text-muted);">Settlement Net:</span>
-            <span style="font-weight: 700; color: var(--text-emerald);">${formattedAmount}</span>
+            <span style="font-weight: 700; color: var(--text-emerald);">${formattedNet}</span>
           </div>
         </div>
 
@@ -563,13 +577,19 @@ export function renderAgreementsList(
               <span style="display: inline-flex; align-items: center; gap: 4px; color: var(--accent-emerald);">${getCheckCircleSvg(12, 'var(--accent-emerald)')} Settled on Celo Mainnet</span><br/>
               ${agr.releaseTxHash ? (agr.releaseTxHash.length === 66 ? `
                 <a href="${getNetworkExplorer('celo', agr.releaseTxHash).url}" target="_blank" style="font-size: 10px; color: var(--accent-cyan); font-family: monospace; text-decoration: underline;">
-                  Tx: ${agr.releaseTxHash.slice(0, 14)}... ↗
+                  Payout Tx: ${agr.releaseTxHash.slice(0, 10)}...${agr.releaseTxHash.slice(-4)} ↗
                 </a>
               ` : `
                 <span style="font-size: 10px; color: var(--accent-cyan); font-family: monospace;" title="${agr.releaseTxHash}">
                   Sig: ${agr.releaseTxHash.slice(0, 14)}...
                 </span>
               `) : ''}
+              ${agr.feeTxHash && agr.feeTxHash.length === 66 ? `
+                <br/>
+                <a href="${getNetworkExplorer('celo', agr.feeTxHash).url}" target="_blank" style="font-size: 10px; color: #a78bfa; font-family: monospace; text-decoration: underline;">
+                  Fee Tx: ${agr.feeTxHash.slice(0, 10)}...${agr.feeTxHash.slice(-4)} ↗
+                </a>
+              ` : ''}
             </div>
             <button class="btn-secondary btn-cashout-shortcut" style="width: auto; padding: 8px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
               ${getBankIconSvg(14, 'currentColor')}
@@ -656,7 +676,7 @@ export function renderAgreementsList(
                 ${isDelivered ? `
                   <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">
                     ${getFlashIconSvg(15, '#000')}
-                    <span>Release ${formattedAmount}</span>
+                    <span>Release ${formattedNet}</span>
                   </button>
                 ` : isDisputed ? `
                   <button class="btn-primary btn-release-payment" data-id="${agr.id}" style="flex: 1; font-size: 13px; padding: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;">

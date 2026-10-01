@@ -499,6 +499,8 @@ export async function renderCreateAgreement(
         ? `${contractorInput.slice(0, 6)}...${contractorInput.slice(-4)}`
         : contractorInput;
 
+      const feeQuote = await agreementFeeService.getDynamicFeeQuote(amount, currency);
+
       // Save genuine service agreement with the real connected buyer wallet address
       const created = await agreementsService.createAgreement({
         title,
@@ -510,6 +512,8 @@ export async function renderCreateAgreement(
         currency,
         deadlineHours,
         fundingTxHash: txRes.txHash,
+        protocolFee: feeQuote.protocolFee,
+        netAmount: feeQuote.netAmount,
       });
 
       showToast(`Deal confirmed on Celo Mainnet! Tx: ${txRes.txHash.slice(0, 10)}...`);

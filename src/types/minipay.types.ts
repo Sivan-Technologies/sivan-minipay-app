@@ -37,6 +37,7 @@ export interface ServiceAgreement {
   deliverableProofUrl?: string;
   fundingTxHash?: string;
   releaseTxHash?: string;
+  feeTxHash?: string;
   disputeReason?: string;
   disputeTxHash?: string;
   refundTxHash?: string;
