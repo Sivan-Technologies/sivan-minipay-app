@@ -345,6 +345,42 @@ export async function renderCashout(
 
       <!-- MoneyGram Mode Fields -->
       <div id="section-moneygram-fields" style="display: none;">
+        <!-- Recipient Pickup Country Selector -->
+        <div class="form-group">
+          <label class="form-label">Recipient Country (Cash Pickup Location)</label>
+          <div class="custom-select-wrap" id="mg-country-select-wrap" style="position: relative;">
+            <div class="custom-select-trigger" id="mg-country-trigger" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; cursor: pointer;">
+              <span id="selected-mg-country-display" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 600;">
+                <span>${country.flag}</span> <span>${country.name} (${country.currency === 'USD' ? 'USD' : country.currency})</span>
+              </span>
+              <span class="chevron">▾</span>
+            </div>
+            <div class="custom-select-menu" id="mg-country-menu" style="width: 100%; max-height: 230px; overflow-y: auto;">
+              ${[
+                { code: 'NG', flag: '🇳🇬', name: 'Nigeria', currency: 'NGN', prefix: '+234', rate: 1620 },
+                { code: 'GH', flag: '🇬🇭', name: 'Ghana', currency: 'GHS', prefix: '+233', rate: 15.65 },
+                { code: 'KE', flag: '🇰🇪', name: 'Kenya', currency: 'KES', prefix: '+254', rate: 129.8 },
+                { code: 'ZA', flag: '🇿🇦', name: 'South Africa', currency: 'ZAR', prefix: '+27', rate: 18.25 },
+                { code: 'GLOBAL', flag: '🌐', name: 'United States & Global', currency: 'USD', prefix: '+1', rate: 1.0 },
+                { code: 'GB', flag: '🇬🇧', name: 'United Kingdom', currency: 'GBP', prefix: '+44', rate: 0.79 },
+                { code: 'EU', flag: '🇪🇺', name: 'Europe (SEPA)', currency: 'EUR', prefix: '+49', rate: 0.92 },
+                { code: 'PH', flag: '🇵🇭', name: 'Philippines', currency: 'PHP', prefix: '+63', rate: 58.5 },
+                { code: 'CA', flag: '🇨🇦', name: 'Canada', currency: 'CAD', prefix: '+1', rate: 1.38 },
+              ].map(c => `
+                <div class="custom-select-item mg-country-option ${c.code === country.code ? 'selected' : ''}" data-code="${c.code}" data-flag="${c.flag}" data-name="${c.name}" data-currency="${c.currency}" data-prefix="${c.prefix}" data-rate="${c.rate}" style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 15px;">${c.flag}</span>
+                  <span style="font-size: 13px; font-weight: 500;">${c.name} (${c.currency})</span>
+                </div>
+              `).join('')}
+            </div>
+            <input type="hidden" id="mg-target-country" value="${country.code}" />
+            <input type="hidden" id="mg-target-currency" value="${country.currency === 'USD' ? 'USD' : country.currency}" />
+          </div>
+          <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">
+            The recipient will collect physical fiat cash in this selected country.
+          </small>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="moneygram-recipient-name">Recipient Legal Full Name (Must Match Government ID)</label>
           <input 
@@ -365,7 +401,7 @@ export async function renderCashout(
             type="tel" 
             id="moneygram-recipient-phone" 
             class="form-input" 
-            placeholder="e.g. +234 803 123 4567" 
+            placeholder="${country.code === 'GH' ? 'e.g. +233 24 123 4567' : country.code === 'KE' ? 'e.g. +254 712 345 678' : country.code === 'ZA' ? 'e.g. +27 82 123 4567' : country.code === 'GLOBAL' ? 'e.g. +1 415 555 2671' : 'e.g. +234 803 123 4567'}" 
             autocomplete="tel"
           />
         </div>
@@ -603,14 +639,15 @@ export async function renderCashout(
     void updateQuoteDisplay();
   };
 
+  let mgSelectedCurrency = country.currency === 'USD' ? 'USD' : (country.currency || 'NGN');
+  let mgSelectedRate = country.code === 'GH' ? 15.65 : country.code === 'KE' ? 129.8 : country.code === 'ZA' ? 18.25 : country.code === 'GLOBAL' ? 1.0 : 1620;
+
   const updateMoneyGramDisplay = () => {
     const amt = parseFloat(amountEl.value) || 0;
-    const rate = isGhana ? 15.5 : isKenya ? 129.8 : 1620;
-    const targetCur = isGhana ? 'GHS' : isKenya ? 'KES' : 'NGN';
     const estEl = container.querySelector('#moneygram-est-payout');
     if (estEl) {
-      const targetAmt = amt * rate;
-      estEl.textContent = `~${targetAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCur}`;
+      const targetAmt = amt * mgSelectedRate;
+      estEl.textContent = `~${targetAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${mgSelectedCurrency}`;
     }
   };
 
@@ -1002,10 +1039,67 @@ export async function renderCashout(
     e.stopPropagation();
   });
 
+  const mgCountryTrigger = container.querySelector('#mg-country-trigger') as HTMLElement | null;
+  const mgCountryMenu = container.querySelector('#mg-country-menu') as HTMLElement | null;
+  const mgCountryDisplay = container.querySelector('#selected-mg-country-display') as HTMLElement | null;
+  const mgTargetCountryEl = container.querySelector('#mg-target-country') as HTMLInputElement | null;
+  const mgTargetCurrencyEl = container.querySelector('#mg-target-currency') as HTMLInputElement | null;
+  const mgPhoneInput = container.querySelector('#moneygram-recipient-phone') as HTMLInputElement | null;
+
+  mgCountryTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = mgCountryMenu?.classList.contains('open');
+    if (isOpen) {
+      mgCountryMenu?.classList.remove('open');
+      mgCountryTrigger.classList.remove('active');
+    } else {
+      mgCountryMenu?.classList.add('open');
+      mgCountryTrigger.classList.add('active');
+    }
+  });
+
+  mgCountryMenu?.addEventListener('click', (e) => {
+    e.stopPropagation();
+  });
+
+  container.querySelectorAll('.mg-country-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const el = opt as HTMLElement;
+      const code = el.dataset.code || 'NG';
+      const flag = el.dataset.flag || '🇳🇬';
+      const name = el.dataset.name || 'Nigeria';
+      const cur = el.dataset.currency || 'NGN';
+      const prefix = el.dataset.prefix || '+234';
+      const rate = parseFloat(el.dataset.rate || '1620');
+
+      mgSelectedCurrency = cur;
+      mgSelectedRate = rate;
+
+      if (mgCountryDisplay) {
+        mgCountryDisplay.innerHTML = `<span>${flag}</span> <span>${name} (${cur})</span>`;
+      }
+      if (mgTargetCountryEl) mgTargetCountryEl.value = code;
+      if (mgTargetCurrencyEl) mgTargetCurrencyEl.value = cur;
+      if (mgPhoneInput) {
+        mgPhoneInput.placeholder = `e.g. ${prefix} ...`;
+      }
+
+      container.querySelectorAll('.mg-country-option').forEach(o => o.classList.remove('selected'));
+      el.classList.add('selected');
+
+      mgCountryMenu?.classList.remove('open');
+      mgCountryTrigger?.classList.remove('active');
+
+      updateMoneyGramDisplay();
+    });
+  });
+
   // Close menus when clicking outside
   container.addEventListener('click', () => {
     tokenMenu?.classList.remove('open');
     tokenTrigger?.classList.remove('active');
+    mgCountryMenu?.classList.remove('open');
+    mgCountryTrigger?.classList.remove('active');
   });
 
   amountEl?.addEventListener('input', () => {
@@ -1274,8 +1368,8 @@ export async function renderCashout(
 
         const nameInput = (container.querySelector('#moneygram-recipient-name') as HTMLInputElement)?.value?.trim() || 'Valued Customer';
         const phoneInput = (container.querySelector('#moneygram-recipient-phone') as HTMLInputElement)?.value?.trim() || '';
+        const targetCurrency = (container.querySelector('#mg-target-currency') as HTMLInputElement)?.value || mgSelectedCurrency || 'NGN';
 
-        const targetCurrency = isGhana ? 'GHS' : isKenya ? 'KES' : 'NGN';
         const sessionRes = await fetch(`${baseUrl}/api/moneygram/session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1296,12 +1390,11 @@ export async function renderCashout(
         }
 
         const data = json.data;
-        const rate = isGhana ? 15.5 : isKenya ? 129.8 : 1620;
         featureFlagsService.saveActivePickup({
           id: data.id,
           amountUsdc: amt,
           targetCurrency: data.targetCurrency || targetCurrency,
-          targetAmount: Math.round(amt * rate),
+          targetAmount: Math.round(amt * mgSelectedRate),
           pickupPin: '4829-1049',
           status: 'ready_for_pickup',
           moreInfoUrl: data.moreInfoUrl,
