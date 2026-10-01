@@ -59,10 +59,24 @@ export async function renderCashout(
       <span class="section-link" id="btn-back-cashout">Back</span>
     </div>
 
+    <!-- Direct Corridor Switcher -->
+    <div class="corridor-pills-row" style="display: flex; gap: 8px; margin-bottom: 14px; overflow-x: auto; padding-bottom: 2px;">
+      ${[
+        { code: 'NG', flag: '🇳🇬', label: 'Nigeria (NGN)' },
+        { code: 'GH', flag: '🇬🇭', label: 'Ghana MoMo (GHS)' },
+        { code: 'KE', flag: '🇰🇪', label: 'Kenya M-PESA (KES)' },
+        { code: 'GLOBAL', flag: '🌐', label: 'Global Direct' },
+      ].map(c => `
+        <button type="button" class="corridor-pill-btn ${country.code === c.code ? 'active' : ''}" data-country-code="${c.code}" style="display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid ${country.code === c.code ? 'var(--accent-emerald)' : 'var(--border-subtle)'}; background: ${country.code === c.code ? 'rgba(16, 185, 129, 0.12)' : 'var(--bg-glass)'}; color: ${country.code === c.code ? 'var(--text-emerald)' : 'var(--text-secondary)'}; white-space: nowrap;">
+          <span>${c.flag}</span> <span>${c.label}</span>
+        </button>
+      `).join('')}
+    </div>
+
     <!-- 2-Way Segmented Switcher (Bank vs Sivan User/Wallet) -->
     <div class="segmented-tabs-wrapper" id="cashout-segmented-tabs">
       <button type="button" class="segmented-tab active" id="tab-btn-bank">
-        <span>${getBankIconSvg(15)}</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : `${country.name} Bank (${country.currency})`}</span>
+        <span>${getBankIconSvg(15)}</span> <span>To ${isNigeria ? 'Nigeria Bank (NGN)' : isGhana ? 'Ghana MoMo (GHS)' : isKenya ? 'Kenya M-PESA (KES)' : `${country.name} Bank (${country.currency})`}</span>
       </button>
       <button type="button" class="segmented-tab" id="tab-btn-wallet">
         <span>${getDirectTransferIconSvg(15)}</span> <span>To Sivan User / Wallet</span>
@@ -237,7 +251,7 @@ export async function renderCashout(
             </div>
             <div class="custom-select-menu" id="bank-select-menu" style="width: 100%; max-height: 250px; overflow: hidden;">
               <div class="bank-search-box">
-                <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="Search ${isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
+                <input type="text" id="bank-filter-input" class="bank-search-input" placeholder="Search ${isKenya ? 'M-PESA or bank (Safaricom, Airtel, Equity...)' : isGhana ? 'MoMo or bank (MTN, Telecel, GCB...)' : 'bank (GTB, Zenith, OPay, PalmPay...)'}" />
               </div>
               <div class="bank-items-scroll" id="bank-items-container">
                 <!-- populated dynamically -->
@@ -959,6 +973,16 @@ export async function renderCashout(
   container.querySelector('#btn-back-cashout')?.addEventListener('click', () => onNavigate('dashboard'));
   container.querySelector('#btn-jump-swap')?.addEventListener('click', () => onNavigate('swap'));
 
+  container.querySelectorAll('.corridor-pill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const code = btn.getAttribute('data-country-code');
+      if (code && code !== country.code) {
+        countryService.setCountry(code);
+        void renderCashout(container, onNavigate, showToast);
+      }
+    });
+  });
+
   const form = container.querySelector('#form-cashout') as HTMLFormElement;
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1110,7 +1134,7 @@ export async function renderCashout(
         return;
       }
 
-      submitBtn.innerHTML = '<span>Dispatching NIBSS Bank Payout...</span>';
+      submitBtn.innerHTML = `<span>Dispatching ${isGhana ? 'GhIPSS MoMo' : isKenya ? 'M-PESA Mobile' : 'NIBSS Bank'} Payout...</span>`;
 
       // Live backend execution: Notify Sivan payment gateway to trigger Textile/Busha NIBSS payout
       try {
