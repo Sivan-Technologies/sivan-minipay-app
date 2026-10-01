@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "VITE_PAYMENT_API_URL=https://api.sivantech.online/api/payment PAYMENT_API_URL=https://api.sivantech.online/api/payment VITE_TEXTILE_API_URL=https://api.textilecredit.com npx --yes tsx test/production-e2e-minipay-lifecycle.test.ts && npx --yes tsx test/e2e-agreement-lifecycle.test.ts && npx --yes tsx test/e2e-send-cashout.test.ts && npx --yes tsx test/buy-cngn-request.test.ts && npx --yes tsx test/buy-cngn-shell.test.ts && npx --yes tsx test/buy-view-session.test.ts"
   },
   "devDependencies": {
     "typescript": "6.0.3",
