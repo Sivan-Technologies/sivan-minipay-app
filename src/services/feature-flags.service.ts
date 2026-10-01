@@ -32,6 +32,7 @@ export interface ActivePickupVoucher {
   pickupPin?: string;
   status: 'pending_user_transfer_start' | 'pending_user_transfer_complete' | 'ready_for_pickup' | 'completed' | 'refunded' | 'expired';
   moreInfoUrl: string;
+  interactiveUrl?: string;
   walletAddress: string;
   createdAt: string;
   updatedAt: string;

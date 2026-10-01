@@ -91,6 +91,7 @@ export async function renderCashout(
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--text-muted);">
           <span>Amount: <strong style="color: #fff;">$${p.amountUsdc.toFixed(2)} USDC</strong> (~${p.targetAmount.toLocaleString()} ${p.targetCurrency})</span>
           <div style="display: flex; gap: 8px; align-items: center;">
+            ${p.interactiveUrl ? `<a href="${p.interactiveUrl}" target="_blank" rel="noreferrer" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none; background: rgba(16, 185, 129, 0.15); padding: 3px 8px; border-radius: 6px; font-size: 10.5px;">Portal ↗</a>` : ''}
             <a href="${p.moreInfoUrl}" target="_blank" rel="noreferrer" style="color: var(--accent-cyan); font-weight: 600; text-decoration: none;">Receipt ↗</a>
             <button type="button" class="btn-dismiss-voucher" data-id="${p.id}" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; font-size: 11px; text-decoration: underline;">Dismiss</button>
           </div>
@@ -1395,15 +1396,20 @@ export async function renderCashout(
           amountUsdc: amt,
           targetCurrency: data.targetCurrency || targetCurrency,
           targetAmount: Math.round(amt * mgSelectedRate),
-          pickupPin: '4829-1049',
+          pickupPin: data.referencePin || data.pickupPin || '4829-1049',
           status: 'ready_for_pickup',
           moreInfoUrl: data.moreInfoUrl,
+          interactiveUrl: data.interactiveUrl,
           walletAddress: state.address,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         });
 
-        showToast('MoneyGram Cash Pickup voucher generated! Present 8-digit PIN at any counter.');
+        if (data.interactiveUrl && typeof window !== 'undefined') {
+          window.open(data.interactiveUrl, '_blank', 'noopener,noreferrer');
+        }
+
+        showToast('MoneyGram Cash Pickup session connected! Present PIN or complete verification in portal.');
         void renderCashout(container, onNavigate, showToast);
       } catch (err: any) {
         showToast(err.message || 'MoneyGram session failed');
