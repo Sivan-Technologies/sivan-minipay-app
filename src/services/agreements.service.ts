@@ -157,37 +157,42 @@ class AgreementsService {
 
     try {
       const url = `${this.apiBase}/api/agreements`;
+      const sellerId = agreement.contractorAddress || agreement.contractorIdentifier || 'contractor_direct';
       const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: agreement.id,
           buyerUserId: agreement.buyerAddress,          // Real Celo wallet address of the buyer
-          sellerUserId: agreement.contractorAddress || agreement.contractorIdentifier,
+          sellerUserId: sellerId,
           buyerWalletAddress: agreement.buyerAddress,  // Explicit wallet field for backend indexing
           sellerWalletAddress: agreement.contractorAddress || undefined,
-          title: agreement.title,
-          description: agreement.description,
+          title: agreement.title || 'Service Agreement',
+          description: agreement.description || '',
           amountUsdc: agreement.amount,
-          currency: agreement.currency,
+          currency: agreement.currency || 'USDm',
           network: 'celo',
-          deadlineDays: Math.max(1, Math.round(agreement.deadlineHours / 24)),
+          deadlineDays: Math.max(1, Math.round((agreement.deadlineHours || 72) / 24)),
           channel: 'minipay',
           fundingTxHash: agreement.fundingTxHash || undefined,
           attributionTag: agreement.attributionTag,
         }),
       });
 
-      // If agreement has been funded on-chain, ensure backend marks it funded immediately
-      if (agreement.fundingTxHash || agreement.status === 'funded') {
-        fetch(`${this.apiBase}/api/agreements/${agreement.id}/fund`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fundingTxHash: agreement.fundingTxHash }),
-        }).catch(() => {});
+      // If agreement has been funded on-chain or released, ensure backend marks it funded immediately
+      if ((res.ok || res.status === 409) && (agreement.fundingTxHash || agreement.status === 'funded' || agreement.status === 'released')) {
+        try {
+          await fetch(`${this.apiBase}/api/agreements/${encodeURIComponent(agreement.id)}/fund`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fundingTxHash: agreement.fundingTxHash || '0x0000000000000000000000000000000000000000000000000000000000000000' }),
+          });
+        } catch {
+          // ignore network warning
+        }
       }
 
-      return res.ok;
+      return res.ok || res.status === 409;
     } catch (e) {
       console.warn('[AgreementsService.syncAgreementToBackend] note:', e);
       return false;
@@ -329,6 +334,9 @@ class AgreementsService {
     const agreement = this.agreements.find(a => a.id === id);
     if (!agreement) return { success: false };
 
+    // Auto-heal: Ensure agreement exists and is in funded state on backend before calling release
+    await this.syncAgreementToBackend(agreement);
+
     agreement.status = 'released';
     if (releaseSignature) {
       agreement.releaseTxHash = releaseSignature;
@@ -336,7 +344,7 @@ class AgreementsService {
     this.saveAgreements();
 
     try {
-      const res = await fetch(`${this.apiBase}/api/agreements/${agreement.id}/release`, {
+      const res = await fetch(`${this.apiBase}/api/agreements/${encodeURIComponent(agreement.id)}/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -421,9 +429,9 @@ class AgreementsService {
             agr.disputeReason = backendData.disputeReason;
             hasChanges = true;
           }
-        } else if (res.status === 404 && (agr.status === 'funded' || Boolean(agr.fundingTxHash))) {
-          // If agreement exists in local storage with on-chain funding but missing on backend, sync it
-          this.syncAgreementToBackend(agr).catch(() => {});
+        } else if (res.status === 404) {
+          // If agreement exists in local storage but missing on backend, auto-heal it
+          await this.syncAgreementToBackend(agr);
         }
       } catch (err) {
         // Silently skip if network blip
